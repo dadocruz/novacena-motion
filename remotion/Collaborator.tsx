@@ -1,5 +1,11 @@
 import { Composition } from 'remotion';
-import type { MotionProject, AudioAnalysis } from '../remotion/types';
+import type { MotionProject } from '../remotion/types';
+
+type AudioAnalysis = {
+  bpm?: number;
+  beats?: number[];
+  energy?: number;
+};
 
 /**
  * Novo template: Collaborator / Feat. Artist

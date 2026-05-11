@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useEditorStore } from '../../store/useEditorStore';
-import type { TemplateId } from '../../remotion/types';
+import { useEditorStore } from '../store/useEditorStore';
+import type { TemplateId } from '../remotion/types';
 import { GripVertical } from 'lucide-react';
 
 export const TEMPLATE_INFO: Record<TemplateId, { label: string; description: string; emoji: string }> = {

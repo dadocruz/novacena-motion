@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useEditorStore } from '../store/useEditorStore';
 import { Preview } from './Preview';
 import { TemplateSelector, MotionPanel, FormatSelector } from './ControlPanels';
 import { Upload, Download, Plus, Settings } from 'lucide-react';

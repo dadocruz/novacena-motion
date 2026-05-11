@@ -125,31 +125,26 @@ export function useMotionConfig(initialConfig?: MotionConfig) {
     const smartConfigs: Record<string, Partial<MotionConfig>> = {
       dark: {
         glowColor: 'rgba(190, 90, 255, 0.32)', // Purple
-        background: { overlay: '0.75', blur: 12 },
-        particlesEnabled: true,
+                particlesEnabled: true,
         speed: 0.9,
       },
       bright: {
         glowColor: 'rgba(255, 200, 80, 0.32)', // Gold
-        background: { overlay: 0.5, blur: 8 },
         particlesEnabled: true,
         speed: 1.1,
       },
       vibrant: {
         glowColor: 'rgba(255, 60, 60, 0.32)', // Red
-        background: { overlay: 0.6, blur: 10 },
         particlesEnabled: true,
         speed: 1.0,
       },
       vintage: {
         glowColor: 'rgba(255, 140, 60, 0.32)', // Orange
-        background: { overlay: 0.7, blur: 15 },
         particlesEnabled: false,
         speed: 0.8,
       },
       minimal: {
         glowColor: 'rgba(255, 255, 255, 0.20)', // Off-white
-        background: { overlay: 0.5, blur: 20 },
         particlesEnabled: false,
         speed: 1.0,
       },

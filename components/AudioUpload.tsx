@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { useAudioAnalysis } from '../../hooks/useAudioAnalysis';
-import { useEditorStore } from '../../store/useEditorStore';
+import { useAudioAnalysis } from '../hooks/useAudioAnalysis';
+import { useEditorStore } from '../store/useEditorStore';
 import { Music, Loader } from 'lucide-react';
 
 export interface AudioUploadProps {
@@ -26,13 +26,18 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ className = '' }) => {
         const audioAnalysis = await analyzeAudio(file);
 
         // Atualizar projeto com dados de áudio
+        const audioUrl = URL.createObjectURL(file);
+
         updateProject({
-          media: {
-            audioFile: file,
-            audioPath: URL.createObjectURL(file),
-          },
           motion: {
             speed: getBPMMultiplier(audioAnalysis.bpm || 120),
+            background: {
+              audioSrc: audioUrl,
+              audioStartSec: 0,
+              audioVolume: 0.9,
+              audioFadeInSec: 1,
+              audioFadeOutSec: 1,
+            },
             // Ajustar outros params baseado em BPM
           },
         });

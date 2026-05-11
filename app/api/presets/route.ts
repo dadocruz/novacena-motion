@@ -6,7 +6,7 @@ import * as path from 'path';
 const PresetSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Nome é obrigatório'),
-  config: z.record(z.any()),
+  config: z.record(z.string(), z.any()),
   thumbnail: z.string().optional(),
   createdAt: z.number().optional(),
 });
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validação falhou', details: error.errors },
+        { error: 'Validação falhou', details: error.issues },
         { status: 400 }
       );
     }

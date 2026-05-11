@@ -2,16 +2,16 @@
 
 import React, { useMemo, useCallback } from 'react';
 import { Player } from '@remotion/player';
-import { useEditorStore } from '../../store/useEditorStore';
-import { useLazyFonts } from '../../hooks/useLazyFonts';
-import { useRenderCache } from '../../hooks/useRenderCache';
-import type { TemplateId, MotionProject } from '../../remotion/types';
+import { useEditorStore } from '../store/useEditorStore';
+import { useLazyFonts } from '../hooks/useLazyFonts';
+import { useRenderCache } from '../hooks/useRenderCache';
+import type { TemplateId, MotionProject } from '../remotion/types';
 
 // Lazy load componentes
-const AvailableNow = React.lazy(() => import('../../remotion/AvailableNow'));
-const WatchOnYouTube = React.lazy(() => import('../../remotion/WatchOnYouTube'));
-const Milestone = React.lazy(() => import('../../remotion/Milestone'));
-const OutNow = React.lazy(() => import('../../remotion/OutNow'));
+const AvailableNow = React.lazy(() => import('../remotion/AvailableNow').then((m) => ({ default: m.AvailableNow })));
+const WatchOnYouTube = React.lazy(() => import('../remotion/WatchOnYouTube').then((m) => ({ default: m.WatchOnYouTube })));
+const Milestone = React.lazy(() => import('../remotion/Milestone').then((m) => ({ default: m.Milestone })));
+const OutNow = React.lazy(() => import('../remotion/OutNow').then((m) => ({ default: m.OutNow })));
 
 const COMPONENTS: Record<TemplateId, React.LazyExoticComponent<any>> = {
   available_now: AvailableNow,
@@ -116,8 +116,8 @@ export const Preview: React.FC<PreviewProps> = ({ className = '' }) => {
         <Player
           component={Component}
           durationInFrames={240}
-          compositionWidth={project.format.width}
-          compositionHeight={project.format.height}
+          compositionWidth={project.format.primary.width}
+          compositionHeight={project.format.primary.height}
           fps={30}
           controls
           loop
@@ -125,13 +125,6 @@ export const Preview: React.FC<PreviewProps> = ({ className = '' }) => {
           style={{
             width: '100%',
             height: '100%',
-          }}
-          onError={(error) => {
-            console.error('Preview error:', error);
-            setIsRenderingPreview(false);
-          }}
-          onProgress={({ frame, totalFrames }) => {
-            setPreviewProgress((frame / totalFrames) * 100);
           }}
         />
       </React.Suspense>

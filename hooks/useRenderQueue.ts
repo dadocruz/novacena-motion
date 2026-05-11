@@ -25,7 +25,7 @@ export function useRenderQueue(maxParallel: number = 2) {
     maxParallel,
   });
 
-  const processRef = useRef<NodeJS.Timeout>();
+  const processRef = useRef<NodeJS.Timeout | null>(null);
 
   // Adicionar job à fila
   const enqueue = useCallback((template: string, format: 'story' | 'feed') => {
@@ -73,7 +73,11 @@ export function useRenderQueue(maxParallel: number = 2) {
       });
     }, 1000);
 
-    return () => clearInterval(processRef.current);
+    return () => {
+      if (processRef.current) {
+        clearInterval(processRef.current);
+      }
+    };
   }, []);
 
   // Atualizar progresso de um job

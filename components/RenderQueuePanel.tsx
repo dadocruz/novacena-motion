@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRenderQueueStore } from '../../store/useRenderQueueStore';
+import { useRenderQueueStore } from '../store/useRenderQueueStore';
 import { Loader, Check, AlertCircle, Trash2 } from 'lucide-react';
 
 export interface RenderQueuePanelProps {

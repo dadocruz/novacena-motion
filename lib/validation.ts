@@ -74,7 +74,7 @@ export const MotionConfigSchema = z
     ctaSwapFrame: z.number().min(0).max(360).optional(),
     cta2InFrame: z.number().min(0).max(360).optional(),
     logosInFrame: z.number().min(0).max(360).optional(),
-    customLogos: z.record(z.string()).optional(),
+    customLogos: z.record(z.string(), z.string()).optional(),
     overlays: z
       .array(
         z.object({

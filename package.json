@@ -9,12 +9,10 @@
     "lint": "eslint",
     "studio": "remotion studio remotion/index.ts",
     "cut-media": "node scripts/cut-media.mjs",
-    
     "render:story": "remotion render remotion/index.ts AvailableNow out/story.mp4",
     "render:feed": "remotion render remotion/index.ts AvailableNowFeed out/feed.mp4",
     "render:all": "node scripts/render-all.mjs",
     "render:all:v2": "node scripts/render-all-v2.mjs",
-    
     "render:available": "remotion render remotion/index.ts AvailableNow out/available-now-story.mp4",
     "render:available:feed": "remotion render remotion/index.ts AvailableNowFeed out/available-now-feed.mp4",
     "render:youtube": "remotion render remotion/index.ts WatchOnYouTube out/youtube-story.mp4",
@@ -23,7 +21,6 @@
     "render:milestone:feed": "remotion render remotion/index.ts MilestoneFeed out/milestone-feed.mp4",
     "render:outnow": "remotion render remotion/index.ts OutNow out/out-now-story.mp4",
     "render:outnow:feed": "remotion render remotion/index.ts OutNowFeed out/out-now-feed.mp4",
-    
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
@@ -34,20 +31,21 @@
     "@remotion/player": "^4.0.459",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
+    "minio": "^8.0.5",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "remotion": "^4.0.459",
-    "minio": "^8.0.5",
-    "zustand": "^4.4.0",
+    "swr": "^2.2.0",
     "zod": "4.3.6",
-    "swr": "^2.2.0"
+    "zustand": "^4.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
     "@vitest/ui": "^1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",

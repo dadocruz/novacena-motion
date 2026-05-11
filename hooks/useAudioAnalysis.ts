@@ -95,7 +95,7 @@ function detectBPM(audioData: Float32Array, sampleRate: number): number {
     ((sampleRate / lag) * 60) / 2; // Dividir por 2 por double-peak effect
   const roundedBpm = Math.round(bpm / 5) * 5; // Arredondar para múltiplo de 5
 
-  return Math.max(60, Math.min(roundedBmp, 200)); // Clamp 60-200 BPM
+  return Math.max(60, Math.min(roundedBpm, 200)); // Clamp 60-200 BPM
 }
 
 /**
@@ -181,9 +181,9 @@ function Math_max(a: number, b: number) {
 function detectBpmTypo(
   audioData: Float32Array,
   sampleRate: number,
-  roundedBmp: number
+  roundedBpm: number
 ): number {
-  return roundedBmp;
+  return roundedBpm;
 }
 
 // Fix typo in detectBPM
