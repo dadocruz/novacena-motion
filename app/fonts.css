@@ -1,0 +1,102 @@
+/* ============================================================
+   NovaCena Motion — Fontes Premium
+   18 fontes curadas. Carregadas localmente via /public/fonts/.
+   ============================================================ */
+
+/* ─── DISPLAY ─── */
+@font-face {
+  font-family: 'TuskerGrotesk Super';
+  src: url('/fonts/TuskerGrotesk-8800Super.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TuskerGrotesk Medium';
+  src: url('/fonts/TuskerGrotesk-6500Medium.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'TuskerGrotesk Thin';
+  src: url('/fonts/TuskerGrotesk-5500Medium.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'BebasNeue';
+  src: url('/fonts/BebasNeue-Regular.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Antonio';
+  src: url('/fonts/Antonio-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Oswald';
+  src: url('/fonts/Oswald-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 200 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'BurbankBig';
+  src: url('/fonts/BurbankBig-Black.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'BurbankCond';
+  src: url('/fonts/BurbankBigCond-Bold.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Gobold';
+  src: url('/fonts/Gobold-Extra.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'InterstateBlackCond';
+  src: url('/fonts/Interstate-BlackCond.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PantonBlackItalic';
+  src: url('/fonts/Panton-BlackitalicCaps.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'BoldVision';
+  src: url('/fonts/BoldVision-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
+/* ─── SANS ─── */
+@font-face {
+  font-family: 'Panton';
+  src: url('/fonts/Panton-Regular.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Klein';
+  src: url('/fonts/Klein-Text.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Coco';
+  src: url('/fonts/Coco-Regular.otf') format('opentype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Ubuntu';
+  src: url('/fonts/Ubuntu-Medium.ttf') format('truetype');
+  font-display: swap;
+}
+
+/* ─── SPECIAL ─── */
+@font-face {
+  font-family: 'AuthorityRounded';
+  src: url('/fonts/Authority-Rounded.ttf') format('truetype');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Toxico';
+  src: url('/fonts/Toxico.otf') format('opentype');
+  font-display: swap;
+}

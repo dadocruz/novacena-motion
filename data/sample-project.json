@@ -1,0 +1,68 @@
+{
+  "format": {
+    "primary": {
+      "width": 1080,
+      "height": 1920
+    },
+    "safeArea": {
+      "width": 1080,
+      "height": 1350,
+      "x": 0,
+      "y": 285
+    }
+  },
+  "defaults": {
+    "artistName": "Amaurir Júnior",
+    "songTitle": "Momentos de amor",
+    "releaseDate": "07/06",
+    "coverImage": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5Nn0sAAAAASUVORK5CYII=",
+    "platforms": [
+      "Spotify",
+      "Deezer",
+      "Apple Music",
+      "YouTube Music"
+    ],
+    "media": {
+      "type": "image",
+      "file": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5Nn0sAAAAASUVORK5CYII=",
+      "sourceFormat": "square",
+      "framingMode": "background_blur"
+    },
+    "minioCover": {
+      "bucket": "novacena-single-covers",
+      "objectName": "amaurir-j-nior/momentos-de-amor/1778467555240-CAPA-SINGLE---PRA-ONDE-EU-IREI-.jpg",
+      "url": "https://s3.automatizadoria.cloud/novacena-single-covers/amaurir-j-nior/momentos-de-amor/1778467555240-CAPA-SINGLE---PRA-ONDE-EU-IREI-.jpg"
+    }
+  },
+  "templates": {
+    "available_now": {
+      "type": "available_now",
+      "headline": "Laçamento",
+      "cta": "FAÇA O PRÉ-SAVE",
+      "cta2": "EM TODAS AS PLATAFORMAS DIGITAIS",
+      "channelName": "",
+      "metricPrefix": "ULTRAPASSAMOS",
+      "metricNumber": "100.000",
+      "metricLabel": "OUVINTES"
+    },
+    "watch_youtube": {
+      "type": "watch_youtube",
+      "headline": "ASSISTA NO YOUTUBE",
+      "cta": "CLIPE OFICIAL DISPONÍVEL",
+      "channelName": "Grupo Façanha Oficial"
+    },
+    "milestone": {
+      "type": "milestone",
+      "headline": "ULTRAPASSAMOS",
+      "cta": "OBRIGADO POR FAZER PARTE",
+      "metricPrefix": "ULTRAPASSAMOS",
+      "metricNumber": "100.000",
+      "metricLabel": "OUVINTES"
+    },
+    "out_now": {
+      "type": "out_now",
+      "headline": "OUÇA AGORA",
+      "cta": "DISPONÍVEL EM TODOS OS APPS"
+    }
+  }
+}
