@@ -1,7 +1,35 @@
-FROM node:20-bookworm
+# ============================================
+# STAGE 1: deps — instala dependências
+# ============================================
+FROM node:20-bookworm AS deps
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-RUN apt-get update && apt-get install -y \
+# ============================================
+# STAGE 2: builder — build do Next standalone
+# ============================================
+FROM node:20-bookworm AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+RUN npm run build
+
+# ============================================
+# STAGE 3: runner — runtime mínimo + ffmpeg + libs do Chromium (Remotion)
+# ============================================
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
+
+# Dependências de runtime do Remotion (Chromium headless + ffmpeg)
+RUN apt-get update && apt-get install -y --no-install-recommends \
   ffmpeg \
+  curl \
+  ca-certificates \
   libnspr4 \
   libnss3 \
   libatk-bridge2.0-0 \
@@ -17,25 +45,39 @@ RUN apt-get update && apt-get install -y \
   libasound2 \
   libpangocairo-1.0-0 \
   libgtk-3-0 \
-  fonts-liberation \
   libu2f-udev \
   libvulkan1 \
-  ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-
-RUN npm run build
+  fonts-liberation \
+  && rm -rf /var/lib/apt/lists/* \
+  && apt-get clean
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Cria usuário não-root pra rodar Next
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -m -s /bin/bash nextjs
+
+# Copia output standalone do Next + estáticos + public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copia node_modules COMPLETO (Remotion precisa de binários, fontes, etc que o standalone não inclui)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Cria pastas de runtime
+RUN mkdir -p /app/data /app/public/uploads /app/out \
+  && chown -R nextjs:nodejs /app/data /app/public/uploads /app/out
+
+USER nextjs
+
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+# Healthcheck Docker-nativo (defesa em profundidade — Traefik também faz)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -fsS http://localhost:3000/api/health || exit 1
+
+# server.js é gerado pelo Next standalone output
+CMD ["node", "server.js"]
