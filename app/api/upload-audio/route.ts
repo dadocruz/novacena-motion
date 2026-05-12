@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 const MAX_SIZE = 300 * 1024 * 1024; // 300MB
-const ALLOWED_EXT = ['.mp3', '.wav', '.m4a', '.aac', '.ogg'];
+const ALLOWED_EXT = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.mp4', '.mov', '.webm'];
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const ext = path.extname(file.name).toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
-        { ok: false, error: `Tipo não suportado: ${ext}. Use MP3/WAV/M4A.` },
+        { ok: false, error: `Tipo não suportado: ${ext}. Use MP3/WAV/M4A/MP4/MOV/WEBM.` },
         { status: 400 }
       );
     }
