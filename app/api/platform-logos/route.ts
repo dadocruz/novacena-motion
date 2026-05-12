@@ -5,7 +5,7 @@ import {
   listPlatformLogos,
   setPlatformLogo,
 } from '../../../lib/storage';
-import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
+import { PUBLIC_UPLOADS, safeFileName, saveFile, deleteOldFiles } from '../../../lib/uploadHelpers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
     const filename = safeFileName(file.name, ext);
     const dir = path.join(PUBLIC_UPLOADS, 'platform-logos');
     const buffer = Buffer.from(await file.arrayBuffer());
+    await deleteOldFiles(dir, filename);
     await saveFile(dir, filename, buffer);
-    const publicPath = `/uploads/platform-logos/${filename}`;
+    const publicPath = `/api/uploads/platform-logos/${filename}`;
     const logo = await setPlatformLogo(platform, filename, publicPath);
     return NextResponse.json({ ok: true, logo });
   } catch (err) {

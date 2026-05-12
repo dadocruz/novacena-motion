@@ -112,9 +112,7 @@ export const PlatformLogo: React.FC<Props> = ({
               objectFit: 'contain',
             }}
           />
-        ) : (
-          <PlatformSvg name={name} size={size} />
-        )}
+        ) : null}
       </div>
     </div>
   );
