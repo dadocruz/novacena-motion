@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
+import { access } from 'fs/promises';
 import {
   deletePlatformLogo,
   listPlatformLogos,
@@ -15,7 +16,28 @@ const ALLOWED_EXT = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
 
 export async function GET() {
   const logos = await listPlatformLogos();
-  return NextResponse.json({ ok: true, logos });
+
+  const existing = [];
+  for (const logo of logos) {
+    const relPath = logo.path
+      .replace(/^\/api\/uploads\//, '')
+      .replace(/^\/uploads\//, '');
+    const filePath = path.join(PUBLIC_UPLOADS, relPath);
+
+    try {
+      await access(filePath);
+      existing.push({
+        ...logo,
+        path: logo.path.startsWith('/api/uploads/')
+          ? logo.path
+          : logo.path.replace('/uploads/', '/api/uploads/'),
+      });
+    } catch {
+      // Ignora logo quebrado para não travar preview/render
+    }
+  }
+
+  return NextResponse.json({ ok: true, logos: existing });
 }
 
 export async function POST(req: NextRequest) {

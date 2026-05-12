@@ -454,11 +454,6 @@ export default function Home() {
 
   const project = useMemo(() => {
     const base = getProject(template);
-    const persistentCover =
-      isBlobUrl(coverImage) && (base as any).minioCover?.url
-        ? (base as any).minioCover.url
-        : normalizeAssetUrl(coverImage) ?? coverImage;
-
     return {
       ...base,
       releaseDate,
@@ -470,11 +465,11 @@ export default function Home() {
       metricNumber,
       metricLabel,
       platforms: platformsSel,
-      coverImage: persistentCover,
+      coverImage: normalizeAssetUrl(coverImage) ?? coverImage,
       motion,
       media: {
         type: 'image' as const,
-        file: persistentCover,
+        file: normalizeAssetUrl(coverImage) ?? coverImage,
         sourceFormat: 'square' as const,
         framingMode: 'background_blur' as const,
       },
@@ -991,11 +986,26 @@ export default function Home() {
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg"
-            onChange={(e) => {
+            onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
-              const url = URL.createObjectURL(f);
-              setCoverImage(url);
+
+              const formData = new FormData();
+              formData.append('cover', f);
+
+              const r = await fetch('/api/upload-cover', {
+                method: 'POST',
+                body: formData,
+              });
+
+              const d = await r.json();
+
+              if (!d.ok || !d.coverSrc) {
+                alert(`Erro ao subir capa: ${d.error ?? 'falha desconhecida'}`);
+                return;
+              }
+
+              setCoverImage(d.coverSrc);
             }}
             style={{ display: 'none' }}
           />
