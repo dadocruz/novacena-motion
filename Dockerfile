@@ -67,6 +67,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Copia node_modules COMPLETO (Remotion precisa de binários, fontes, etc que o standalone não inclui)
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
+# Arquivos necessários para o CLI do Remotion (chamado via npm run render:*)
+COPY --from=builder --chown=nextjs:nodejs /app/remotion ./remotion
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
+
 # Cria pastas de runtime
 RUN mkdir -p /app/data /app/public/uploads /app/out \
   && chown -R nextjs:nodejs /app/data /app/public/uploads /app/out
@@ -75,7 +81,7 @@ USER nextjs
 
 EXPOSE 3000
 
-# Healthcheck Docker-nativo (defesa em profundidade — Traefik também faz)
+# Healthcheck Docker-nativo
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl -fsS http://localhost:3000/api/health || exit 1
 
