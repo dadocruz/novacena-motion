@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+out
+public/uploads
+*.backup-*
+*.backup-*.ts
+*.backup-*.tsx
+.DS_Store
+npm-debug.log
