@@ -136,7 +136,7 @@ export const CinematicBackground: React.FC<Props> = ({
   const audioVolumeBase = bg.audioVolume ?? 0.8;
   const audioFadeInFrames = Math.floor((bg.audioFadeInSec ?? 0.5) * 30);
   const audioFadeOutFrames = Math.floor((bg.audioFadeOutSec ?? 1) * 30);
-  const useVideoAudio = bg.useVideoAudio ?? false;
+  const useVideoAudio = bg.audioSrc ? false : (bg.useVideoAudio ?? false);
   const { durationInFrames } = useVideoConfig();
 
   // Cálculo do volume com fade in/out
