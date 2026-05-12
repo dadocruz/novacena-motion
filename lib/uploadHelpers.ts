@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, readdir, unlink } from 'fs/promises';
 import path from 'path';
 
 export function safeFileName(name: string, defaultExt = '.bin'): string {
@@ -23,3 +23,15 @@ export async function saveFile(
 }
 
 export const PUBLIC_UPLOADS = path.join(process.cwd(), 'public', 'uploads');
+
+export async function deleteOldFiles(dir: string, newFilename: string): Promise<void> {
+  try {
+    const newBase = newFilename.replace(/^[0-9]+-/, '');
+    const entries = await readdir(dir);
+    await Promise.all(
+      entries
+        .filter(f => f !== newFilename && f.replace(/^[0-9]+-/, '') === newBase)
+        .map(f => unlink(path.join(dir, f)).catch(() => {}))
+    );
+  } catch {}
+}

@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# NovaCena local uploads/render outputs
+public/uploads/audio/*
+public/uploads/videos/*
+public/uploads/covers/*
+public/uploads/overlays/*
+public/uploads/platform-logos/*
+out/*
+*.backup-*
+*.backup-*.tsx
+*.backup-*.ts

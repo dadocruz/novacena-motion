@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, writeFile, readdir, unlink } from 'fs/promises';
 import path from 'path';
 
 export const runtime = 'nodejs';
@@ -18,6 +18,18 @@ function safeFileName(name: string): string {
       .replace(/[^a-zA-Z0-9-_]+/g, '-')
       .slice(0, 42) || 'video';
   return `${Date.now()}-${base}${ext}`;
+}
+
+async function deleteOldVideos(dir: string, newFilename: string): Promise<void> {
+  try {
+    const newBase = newFilename.replace(/^[0-9]+-/, '');
+    const entries = await readdir(dir);
+    await Promise.all(
+      entries
+        .filter(f => f !== newFilename && f.replace(/^[0-9]+-/, '') === newBase)
+        .map(f => unlink(path.join(dir, f)).catch(() => {}))
+    );
+  } catch {}
 }
 
 export async function POST(req: NextRequest) {
@@ -58,9 +70,10 @@ export async function POST(req: NextRequest) {
     const filename = safeFileName(file.name);
     const buffer = Buffer.from(await file.arrayBuffer());
     const localPath = path.join(VIDEOS_DIR, filename);
+    await deleteOldVideos(VIDEOS_DIR, filename);
     await writeFile(localPath, buffer);
 
-    const publicPath = `/uploads/videos/${filename}`;
+    const publicPath = `/api/uploads/videos/${filename}`;
 
     return NextResponse.json({
       ok: true,

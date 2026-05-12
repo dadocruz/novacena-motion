@@ -25,14 +25,26 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ className = '' }) => {
       try {
         const audioAnalysis = await analyzeAudio(file);
 
-        // Atualizar projeto com dados de áudio
-        const audioUrl = URL.createObjectURL(file);
+        // Enviar áudio para a VPS para render final e preview persistente
+        const formData = new FormData();
+        formData.append('audio', file);
+
+        const uploadResponse = await fetch('/api/upload-audio', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (!uploadResponse.ok || !uploadResult.ok || !uploadResult.audioSrc) {
+          throw new Error(uploadResult.error || 'Falha ao enviar áudio.');
+        }
 
         updateProject({
           motion: {
             speed: getBPMMultiplier(audioAnalysis.bpm || 120),
             background: {
-              audioSrc: audioUrl,
+              audioSrc: uploadResult.audioSrc,
               audioStartSec: 0,
               audioVolume: 0.9,
               audioFadeInSec: 1,

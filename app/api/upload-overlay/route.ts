@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const overlay = await addOverlay({
       label: label || path.basename(file.name, ext),
       filename,
-      path: `/uploads/overlays/${filename}`,
+      path: `/api/uploads/overlays/${filename}`,
       type: isVideo ? 'video' : 'image',
       blendMode,
     });

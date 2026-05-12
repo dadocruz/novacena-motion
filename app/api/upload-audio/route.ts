@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
-import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
+import { PUBLIC_UPLOADS, safeFileName, saveFile, deleteOldFiles } from '../../../lib/uploadHelpers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_SIZE = 300 * 1024 * 1024; // 300MB
 const ALLOWED_EXT = ['.mp3', '.wav', '.m4a', '.aac', '.ogg'];
 
 export async function POST(req: NextRequest) {
@@ -23,15 +23,16 @@ export async function POST(req: NextRequest) {
       );
     }
     if (file.size > MAX_SIZE) {
-      return NextResponse.json({ ok: false, error: 'Máx 50 MB.' }, { status: 413 });
+      return NextResponse.json({ ok: false, error: 'Máx 300 MB.' }, { status: 413 });
     }
     const filename = safeFileName(file.name, ext);
     const dir = path.join(PUBLIC_UPLOADS, 'audio');
     const buffer = Buffer.from(await file.arrayBuffer());
+    await deleteOldFiles(dir, filename);
     await saveFile(dir, filename, buffer);
     return NextResponse.json({
       ok: true,
-      audioSrc: `/uploads/audio/${filename}`,
+      audioSrc: `/api/uploads/audio/${filename}`,
       filename,
     });
   } catch (err) {

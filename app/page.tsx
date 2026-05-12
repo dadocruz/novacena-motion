@@ -279,6 +279,7 @@ export default function Home() {
   const [rendering, setRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
+  const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery'>('studio');
@@ -353,6 +354,11 @@ export default function Home() {
     setMetricNumber(next.metricNumber ?? '100.000');
     setMetricLabel(next.metricLabel ?? 'OUVINTES');
   }, [template]);
+
+  // Carregar arquivos renderizados ao montar
+  useEffect(() => {
+    fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
+  }, []);
 
   // ─── COMPUTED ────────────────────────────────────────────
   const allFonts: FontDef[] = useMemo(
@@ -813,7 +819,7 @@ export default function Home() {
     const response = await fetch('/api/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script }),
+      body: JSON.stringify({ script, props: project }),
     });
     const result = await response.json();
     setRendering(false);
@@ -822,7 +828,9 @@ export default function Home() {
       setRenderMessage(`Erro: ${result.error ?? 'falha'}`);
       return;
     }
-    setRenderMessage(`${label} gerado.`);
+    setRenderMessage(`${label} gerado. ✓`);
+    // Atualizar lista de arquivos disponíveis para download
+    fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
   }
 
   async function openOutFolder() {
@@ -1133,6 +1141,31 @@ export default function Home() {
                 <summary style={{ cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>Log</summary>
                 <pre style={logBoxStyle}>{renderLog.slice(-3000)}</pre>
               </details>
+            )}
+            {renderFiles.length > 0 && (
+              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
+                  Vídeos prontos
+                </div>
+                {renderFiles.map(f => (
+                  <a
+                    key={f.name}
+                    href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
+                    download={f.name}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '7px 10px', borderRadius: 8, fontSize: 12,
+                      background: 'var(--bg-2)', border: '1px solid var(--border)',
+                      color: 'var(--text-1)', textDecoration: 'none', gap: 8,
+                    }}
+                  >
+                    <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{f.name}</span>
+                    <span style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                      {(f.size / 1024 / 1024).toFixed(1)} MB ↓
+                    </span>
+                  </a>
+                ))}
+              </div>
             )}
           </>
         ) : (
