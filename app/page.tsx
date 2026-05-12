@@ -178,6 +178,25 @@ const CTA_TIMING_DEFAULTS = {
   logosInFrame: 158,
 } as const;
 
+
+function normalizeAssetUrl(src?: string): string | undefined {
+  if (!src) return src;
+  if (src.startsWith('/uploads/')) return src.replace('/uploads/', '/api/uploads/');
+  return src;
+}
+
+function normalizeCustomLogos(logos: Record<string, string>): Record<string, string> {
+  const next: Record<string, string> = {};
+  for (const [key, value] of Object.entries(logos)) {
+    next[key] = normalizeAssetUrl(value) ?? value;
+  }
+  return next;
+}
+
+function isBlobUrl(src?: string): boolean {
+  return !!src && src.startsWith('blob:');
+}
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
@@ -405,7 +424,7 @@ export default function Home() {
         audioFadeOutSec: audioFadeOut,
         useVideoAudio,
       },
-      customLogos,
+      customLogos: normalizeCustomLogos(customLogos),
       overlays,
     }),
     [
@@ -435,6 +454,11 @@ export default function Home() {
 
   const project = useMemo(() => {
     const base = getProject(template);
+    const persistentCover =
+      isBlobUrl(coverImage) && (base as any).minioCover?.url
+        ? (base as any).minioCover.url
+        : normalizeAssetUrl(coverImage) ?? coverImage;
+
     return {
       ...base,
       releaseDate,
@@ -446,11 +470,11 @@ export default function Home() {
       metricNumber,
       metricLabel,
       platforms: platformsSel,
-      coverImage,
+      coverImage: persistentCover,
       motion,
       media: {
         type: 'image' as const,
-        file: coverImage,
+        file: persistentCover,
         sourceFormat: 'square' as const,
         framingMode: 'background_blur' as const,
       },
