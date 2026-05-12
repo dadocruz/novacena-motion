@@ -24,7 +24,12 @@ out
 # ============================================
 # Dados em runtime — NÃO vão pra imagem (vêm via volume)
 # ============================================
-data
+# Subpastas mutáveis dentro de data/ (data/*.json estáticos ENTRAM no build)
+data/artists
+data/renders
+data/users
+data/uploads
+data/cache
 public/uploads
 
 # ============================================
