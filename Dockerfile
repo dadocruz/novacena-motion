@@ -69,6 +69,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Arquivos necessários para o CLI do Remotion (chamado via npm run render:*)
 COPY --from=builder --chown=nextjs:nodejs /app/remotion ./remotion
+COPY --from=builder --chown=nextjs:nodejs /app/lib ./lib
+COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
