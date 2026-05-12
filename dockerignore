@@ -1,0 +1,76 @@
+# ============================================
+# Git e VCS
+# ============================================
+.git
+.gitignore
+.gitattributes
+
+# ============================================
+# Node
+# ============================================
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# ============================================
+# Next.js
+# ============================================
+.next
+out
+
+# ============================================
+# Runtime mutável — NÃO vai pra imagem (vem via volume)
+# ============================================
+
+# Uploads do usuário
+public/uploads
+
+# Renders gerados em runtime
+public/renders
+
+# Subpastas mutáveis dentro de data/ (artistas, presets do usuário, etc.)
+# NOTA: data/*.json estáticos (sample-project.json) ENTRAM no build.
+data/artists
+data/renders
+data/users
+data/uploads
+data/cache
+
+# ============================================
+# Backups e temporários
+# ============================================
+*.backup-*
+*.backup-*.ts
+*.backup-*.tsx
+tmp
+*.log
+*.tar
+*.tar.gz
+
+# ============================================
+# Editor / OS
+# ============================================
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+
+# ============================================
+# Env locais
+# ============================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ============================================
+# Docker (não precisa pra dentro da imagem)
+# ============================================
+docker-compose*.yml
+Dockerfile.dev
+Dockerfile.backup-*
