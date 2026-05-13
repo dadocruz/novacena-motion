@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
-import { readFile, writeFile, mkdir, unlink } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { tmpdir } from 'os';
-import { randomBytes } from 'crypto';
+import type { MotionProject } from '../../../remotion/types';
 
 const execAsync = promisify(exec);
 
@@ -41,6 +40,8 @@ const ALLOWED_RENDER_SCRIPTS = new Set([
 
 const renderQueue: Map<string, any> = new Map();
 
+// Converte caminho /api/uploads/... ou /uploads/... em data: URL base64
+// Isso evita o Remotion CLI tentar buscar via HTTP na porta errada.
 async function pathToDataUrl(urlPath: string): Promise<string | null> {
   try {
     let cleanPath = urlPath;
@@ -48,6 +49,8 @@ async function pathToDataUrl(urlPath: string): Promise<string | null> {
       const u = new URL(cleanPath);
       cleanPath = u.pathname;
     }
+    // /api/uploads/foo  → public/uploads/foo
+    // /uploads/foo      → public/uploads/foo
     if (cleanPath.startsWith('/api/uploads/')) {
       cleanPath = cleanPath.replace('/api/uploads/', '/uploads/');
     }
@@ -98,17 +101,18 @@ export async function POST(request: NextRequest) {
       const comp = scriptToComposition[script];
 
       if (props && comp) {
-        await mkdir('out', { recursive: true });
+        const { mkdirSync } = await import('fs');
+        mkdirSync('out', { recursive: true });
 
         const renderProps = JSON.parse(JSON.stringify(props));
 
-        // Cover image → base64 (evita 404 do Remotion CLI na porta 3001)
+        // Cover image: converte pra base64
         if (renderProps?.coverImage && typeof renderProps.coverImage === 'string' && renderProps.coverImage.startsWith('/')) {
           const dataUrl = await pathToDataUrl(renderProps.coverImage);
           if (dataUrl) renderProps.coverImage = dataUrl;
         }
 
-        // Audio/Video de fundo → continua HTTP (arquivos grandes)
+        // Background audio/video: continua localhost:3000 (Remotion lida bem com mp4/wav grandes via HTTP)
         const bg = renderProps?.motion?.background;
         if (bg?.audioSrc && typeof bg.audioSrc === 'string' && bg.audioSrc.startsWith('/')) {
           bg.audioSrc = `http://localhost:3000${bg.audioSrc}`;
@@ -117,52 +121,26 @@ export async function POST(request: NextRequest) {
           bg.videoSrc = `http://localhost:3000${bg.videoSrc}`;
         }
 
-        // Custom logos → base64 inline
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
+        // Custom logos: converte cada um pra base64 (este era o bug)
+        if (renderProps?.customLogos && typeof renderProps.customLogos === 'object') {
+          for (const key of Object.keys(renderProps.customLogos)) {
+            const val = renderProps.customLogos[key];
             if (typeof val === 'string' && val.startsWith('/')) {
               const dataUrl = await pathToDataUrl(val);
               if (dataUrl) {
-                renderProps.motion.customLogos[key] = dataUrl;
+                renderProps.customLogos[key] = dataUrl;
               } else {
-                delete renderProps.motion.customLogos[key];
+                // Arquivo não existe — remove pra não dar 404
+                delete renderProps.customLogos[key];
               }
-            }
-          }
-        }
-
-        
-        // Normaliza logos customizados dentro de motion.customLogos.
-        // O frontend envia customLogos dentro de motion, não na raiz.
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
-
-            if (typeof val === 'string') {
-              let fixed = val;
-
-              if (fixed.startsWith('/uploads/')) {
-                fixed = fixed.replace('/uploads/', '/api/uploads/');
-              }
-
-              if (fixed.startsWith('/')) {
-                fixed = `http://localhost:3000${fixed}`;
-              }
-
-              renderProps.motion.customLogos[key] = fixed;
             }
           }
         }
 
         renderProps.renderTarget = comp.target;
 
-        // FIX E2BIG: escreve props num arquivo temp em vez de passar via --props='...'
-        // O macOS limita argumentos da linha de comando a ~262KB, base64 estoura isso.
-        const tmpFile = join(tmpdir(), `novacena-render-${randomBytes(8).toString('hex')}.json`);
-        await writeFile(tmpFile, JSON.stringify(renderProps), 'utf-8');
-
-        const cmd = `npx remotion render remotion/index.ts ${comp.id} ${comp.out} --props=${tmpFile}`;
+        const propsJson = JSON.stringify(renderProps).replace(/'/g, "\\'");
+        const cmd = `npx remotion render remotion/index.ts ${comp.id} ${comp.out} --props='${propsJson}'`;
 
         try {
           const { stdout, stderr } = await execAsync(cmd, {
@@ -170,10 +148,8 @@ export async function POST(request: NextRequest) {
             maxBuffer: 1024 * 1024 * 100,
           });
           const output = [stdout, stderr].filter(Boolean).join('\n');
-          await unlink(tmpFile).catch(() => {});
           return NextResponse.json({ ok: true, output, outputFile: comp.out });
         } catch (err: any) {
-          await unlink(tmpFile).catch(() => {});
           const output = [err?.stdout, err?.stderr].filter(Boolean).join('\n');
           return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : 'Falha no render', output }, { status: 500 });
         }
@@ -189,7 +165,11 @@ export async function POST(request: NextRequest) {
       } catch (err: any) {
         const output = [err?.stdout, err?.stderr].filter(Boolean).join('\n');
         return NextResponse.json(
-          { ok: false, error: err instanceof Error ? err.message : 'Falha no render', output },
+          {
+            ok: false,
+            error: err instanceof Error ? err.message : 'Falha no render',
+            output,
+          },
           { status: 500 }
         );
       }
@@ -208,14 +188,24 @@ export async function POST(request: NextRequest) {
     };
     renderQueue.set(jobId, job);
     return NextResponse.json(
-      { success: true, jobId, message: `${validated.project.formats.length} render(s) enfileirado(s)` },
+      {
+        success: true,
+        jobId,
+        message: `${validated.project.formats.length} render(s) enfileirado(s)`,
+      },
       { status: 202 }
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validação falhou', details: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validação falhou', details: error.issues },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: 'Erro ao processar request' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erro ao processar request' },
+      { status: 500 }
+    );
   }
 }
 
@@ -237,6 +227,7 @@ export async function GET(request: NextRequest) {
   if (!jobId) {
     return NextResponse.json({ error: 'jobId é obrigatório' }, { status: 400 });
   }
+
   const job = renderQueue.get(jobId);
   if (!job) {
     return NextResponse.json({ error: 'Job não encontrado' }, { status: 404 });

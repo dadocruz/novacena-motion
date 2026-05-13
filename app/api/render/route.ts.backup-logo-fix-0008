@@ -118,39 +118,16 @@ export async function POST(request: NextRequest) {
         }
 
         // Custom logos → base64 inline
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
+        if (renderProps?.customLogos && typeof renderProps.customLogos === 'object') {
+          for (const key of Object.keys(renderProps.customLogos)) {
+            const val = renderProps.customLogos[key];
             if (typeof val === 'string' && val.startsWith('/')) {
               const dataUrl = await pathToDataUrl(val);
               if (dataUrl) {
-                renderProps.motion.customLogos[key] = dataUrl;
+                renderProps.customLogos[key] = dataUrl;
               } else {
-                delete renderProps.motion.customLogos[key];
+                delete renderProps.customLogos[key];
               }
-            }
-          }
-        }
-
-        
-        // Normaliza logos customizados dentro de motion.customLogos.
-        // O frontend envia customLogos dentro de motion, não na raiz.
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
-
-            if (typeof val === 'string') {
-              let fixed = val;
-
-              if (fixed.startsWith('/uploads/')) {
-                fixed = fixed.replace('/uploads/', '/api/uploads/');
-              }
-
-              if (fixed.startsWith('/')) {
-                fixed = `http://localhost:3000${fixed}`;
-              }
-
-              renderProps.motion.customLogos[key] = fixed;
             }
           }
         }

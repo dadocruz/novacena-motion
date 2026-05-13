@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "platform": "Deezer",
+    "path": "/api/uploads/platform-logos/1778643071212-deezer.png",
+    "filename": "1778643071212-deezer.png",
+    "uploadedAt": "2026-05-13T03:31:11.216Z"
+  },
+  {
+    "platform": "Spotify",
+    "path": "/api/uploads/platform-logos/1778642940162-spotify.png",
+    "filename": "1778642940162-spotify.png",
+    "uploadedAt": "2026-05-13T03:29:00.167Z"
+  }
+]

@@ -2,15 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
-import { readFile, writeFile, mkdir, unlink } from 'fs/promises';
-import { join } from 'path';
-import { tmpdir } from 'os';
-import { randomBytes } from 'crypto';
+import type { MotionProject } from '../../../remotion/types';
 
 const execAsync = promisify(exec);
 
 export const runtime = 'nodejs';
 
+// Validação com Zod
 const RenderRequestSchema = z.object({
   project: z.object({
     type: z.enum(['available_now', 'watch_youtube', 'milestone', 'out_now', 'collaborator']),
@@ -21,6 +19,8 @@ const RenderRequestSchema = z.object({
   quality: z.enum(['low', 'medium', 'high']).optional().default('medium'),
   streaming: z.boolean().optional().default(false),
 });
+
+type RenderRequest = z.infer<typeof RenderRequestSchema>;
 
 const ScriptRenderSchema = z.object({
   script: z.string().min(1),
@@ -39,39 +39,18 @@ const ALLOWED_RENDER_SCRIPTS = new Set([
   'render:all:v2',
 ]);
 
+// In-memory render queue (em produção, usar Redis ou Kafka)
 const renderQueue: Map<string, any> = new Map();
 
-async function pathToDataUrl(urlPath: string): Promise<string | null> {
-  try {
-    let cleanPath = urlPath;
-    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
-      const u = new URL(cleanPath);
-      cleanPath = u.pathname;
-    }
-    if (cleanPath.startsWith('/api/uploads/')) {
-      cleanPath = cleanPath.replace('/api/uploads/', '/uploads/');
-    }
-    if (!cleanPath.startsWith('/uploads/')) {
-      return null;
-    }
-    const filePath = join(process.cwd(), 'public', cleanPath);
-    const buf = await readFile(filePath);
-    const ext = (filePath.split('.').pop() || 'png').toLowerCase();
-    const mime =
-      ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
-      ext === 'svg' ? 'image/svg+xml' :
-      ext === 'webp' ? 'image/webp' :
-      'image/png';
-    return `data:${mime};base64,${buf.toString('base64')}`;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * POST /api/render
+ * Enfileirar novo job de render
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Fluxo usado pelo editor atual: { script: "render:...", props?: {...} }
     if (body && typeof body === 'object' && 'script' in body) {
       const parsed = ScriptRenderSchema.parse(body);
       const script = parsed.script.trim();
@@ -84,6 +63,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Mapear script para composition id e output
       const scriptToComposition: Record<string, { id: string; out: string; target: string }> = {
         'render:available':      { id: 'AvailableNow',       out: 'out/available-now-story.mp4', target: 'story' },
         'render:available:feed': { id: 'AvailableNowFeed',   out: 'out/available-now-feed.mp4',  target: 'feed'  },
@@ -97,88 +77,43 @@ export async function POST(request: NextRequest) {
 
       const comp = scriptToComposition[script];
 
+      // Se temos props do editor E é um script individual (não render:all), usar --props
       if (props && comp) {
-        await mkdir('out', { recursive: true });
+        const { mkdirSync } = await import('fs');
+        mkdirSync('out', { recursive: true });
 
+        // Converter URLs relativas para absolutas no audioSrc
         const renderProps = JSON.parse(JSON.stringify(props));
-
-        // Cover image → base64 (evita 404 do Remotion CLI na porta 3001)
-        if (renderProps?.coverImage && typeof renderProps.coverImage === 'string' && renderProps.coverImage.startsWith('/')) {
-          const dataUrl = await pathToDataUrl(renderProps.coverImage);
-          if (dataUrl) renderProps.coverImage = dataUrl;
-        }
-
-        // Audio/Video de fundo → continua HTTP (arquivos grandes)
         const bg = renderProps?.motion?.background;
-        if (bg?.audioSrc && typeof bg.audioSrc === 'string' && bg.audioSrc.startsWith('/')) {
+        if (bg?.audioSrc && bg.audioSrc.startsWith('/')) {
           bg.audioSrc = `http://localhost:3000${bg.audioSrc}`;
         }
-        if (bg?.videoSrc && typeof bg.videoSrc === 'string' && bg.videoSrc.startsWith('/')) {
+        if (bg?.videoSrc && bg.videoSrc.startsWith('/')) {
           bg.videoSrc = `http://localhost:3000${bg.videoSrc}`;
         }
-
-        // Custom logos → base64 inline
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
-            if (typeof val === 'string' && val.startsWith('/')) {
-              const dataUrl = await pathToDataUrl(val);
-              if (dataUrl) {
-                renderProps.motion.customLogos[key] = dataUrl;
-              } else {
-                delete renderProps.motion.customLogos[key];
-              }
-            }
-          }
+        if (renderProps?.coverImage && renderProps.coverImage.startsWith('/')) {
+          renderProps.coverImage = `http://localhost:3000${renderProps.coverImage}`;
         }
-
-        
-        // Normaliza logos customizados dentro de motion.customLogos.
-        // O frontend envia customLogos dentro de motion, não na raiz.
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
-
-            if (typeof val === 'string') {
-              let fixed = val;
-
-              if (fixed.startsWith('/uploads/')) {
-                fixed = fixed.replace('/uploads/', '/api/uploads/');
-              }
-
-              if (fixed.startsWith('/')) {
-                fixed = `http://localhost:3000${fixed}`;
-              }
-
-              renderProps.motion.customLogos[key] = fixed;
-            }
-          }
-        }
-
+        // Garantir renderTarget
         renderProps.renderTarget = comp.target;
 
-        // FIX E2BIG: escreve props num arquivo temp em vez de passar via --props='...'
-        // O macOS limita argumentos da linha de comando a ~262KB, base64 estoura isso.
-        const tmpFile = join(tmpdir(), `novacena-render-${randomBytes(8).toString('hex')}.json`);
-        await writeFile(tmpFile, JSON.stringify(renderProps), 'utf-8');
-
-        const cmd = `npx remotion render remotion/index.ts ${comp.id} ${comp.out} --props=${tmpFile}`;
+        const propsJson = JSON.stringify(renderProps).replace(/'/g, "\'");
+        const cmd = `npx remotion render remotion/index.ts ${comp.id} ${comp.out} --props='${propsJson}'`;
 
         try {
           const { stdout, stderr } = await execAsync(cmd, {
             cwd: process.cwd(),
-            maxBuffer: 1024 * 1024 * 100,
+            maxBuffer: 1024 * 1024 * 50,
           });
           const output = [stdout, stderr].filter(Boolean).join('\n');
-          await unlink(tmpFile).catch(() => {});
           return NextResponse.json({ ok: true, output, outputFile: comp.out });
         } catch (err: any) {
-          await unlink(tmpFile).catch(() => {});
           const output = [err?.stdout, err?.stderr].filter(Boolean).join('\n');
           return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : 'Falha no render', output }, { status: 500 });
         }
       }
 
+      // Fallback: render sem props (usa sample-project.json)
       try {
         const { stdout, stderr } = await execAsync(`npm run ${script}`, {
           cwd: process.cwd(),
@@ -189,14 +124,23 @@ export async function POST(request: NextRequest) {
       } catch (err: any) {
         const output = [err?.stdout, err?.stderr].filter(Boolean).join('\n');
         return NextResponse.json(
-          { ok: false, error: err instanceof Error ? err.message : 'Falha no render', output },
+          {
+            ok: false,
+            error: err instanceof Error ? err.message : 'Falha no render',
+            output,
+          },
           { status: 500 }
         );
       }
     }
 
+    // Validar request
     const validated = RenderRequestSchema.parse(body);
+
+    // Gerar job ID
     const jobId = `render-${validated.project.type}-${Date.now()}`;
+
+    // Criar job
     const job = {
       id: jobId,
       ...validated,
@@ -206,56 +150,107 @@ export async function POST(request: NextRequest) {
       startedAt: null,
       completedAt: null,
     };
+
+    // Armazenar na queue
     renderQueue.set(jobId, job);
+
     return NextResponse.json(
-      { success: true, jobId, message: `${validated.project.formats.length} render(s) enfileirado(s)` },
-      { status: 202 }
+      {
+        success: true,
+        jobId,
+        message: `${validated.project.formats.length} render(s) enfileirado(s)`,
+      },
+      { status: 202 } // 202 Accepted
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validação falhou', details: error.issues }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Validação falhou', details: error.issues },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: 'Erro ao processar request' }, { status: 500 });
+
+    return NextResponse.json(
+      { error: 'Erro ao processar request' },
+      { status: 500 }
+    );
   }
 }
 
+/**
+ * GET /api/render?jobId=xxx
+ * Obter status de um job
+ */
 export async function GET(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get('jobId');
   const listAll = request.nextUrl.searchParams.get('list');
 
   if (listAll === 'true') {
+    // Retornar todos os jobs (útil para dashboard)
     const jobs = Array.from(renderQueue.values());
     return NextResponse.json({
       total: jobs.length,
       queued: jobs.filter((j) => j.status === 'queued').length,
       active: jobs.filter((j) => j.status === 'rendering').length,
       completed: jobs.filter((j) => j.status === 'completed').length,
-      jobs: jobs.slice(-20),
+      jobs: jobs.slice(-20), // Ultimos 20
     });
   }
 
   if (!jobId) {
-    return NextResponse.json({ error: 'jobId é obrigatório' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'jobId é obrigatório' },
+      { status: 400 }
+    );
   }
+
   const job = renderQueue.get(jobId);
+
   if (!job) {
-    return NextResponse.json({ error: 'Job não encontrado' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Job não encontrado' },
+      { status: 404 }
+    );
   }
+
   return NextResponse.json({ job });
 }
 
+/**
+ * DELETE /api/render?jobId=xxx
+ * Cancelar um render
+ */
 export async function DELETE(request: NextRequest) {
   const jobId = request.nextUrl.searchParams.get('jobId');
+
   if (!jobId) {
-    return NextResponse.json({ error: 'jobId é obrigatório' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'jobId é obrigatório' },
+      { status: 400 }
+    );
   }
+
   const job = renderQueue.get(jobId);
+
   if (!job) {
-    return NextResponse.json({ error: 'Job não encontrado' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Job não encontrado' },
+      { status: 404 }
+    );
   }
+
   if (job.status === 'completed') {
-    return NextResponse.json({ error: 'Não pode cancelar um render completo' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Não pode cancelar um render completo' },
+      { status: 400 }
+    );
   }
+
+  // Remover da queue
   renderQueue.delete(jobId);
-  return NextResponse.json({ success: true, message: 'Render cancelado' });
+
+  return NextResponse.json({
+    success: true,
+    message: 'Render cancelado',
+  });
 }
