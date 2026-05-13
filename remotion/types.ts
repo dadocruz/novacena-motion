@@ -53,11 +53,12 @@ export type TextTransitionId =
   | 'rise_clean';
 
 export type CoverMotionId =
-  | 'scale_pop'
-  | 'rotate_y_premium'
-  | 'flip_card'
+  | 'zoom_bounce'
   | 'slide_up_glow'
-  | 'vinyl_spin';
+  | 'slide_left_premium'
+  | 'slide_right_premium'
+  | 'flip_card'
+  | 'vinyl_reveal';
 
 /**
  * Instância de overlay posicionada no tempo (semelhante a clip numa timeline).

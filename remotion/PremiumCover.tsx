@@ -32,29 +32,30 @@ function getCoverMotionTransform(args: {
 }) {
   const { frame, fps, entryFrame, spinStart, spinEnd, spinTurns, wiggleIntensity, coverMotion } = args;
 
-  const longT = eased(frame, entryFrame, entryFrame + 48, easings.outCubic);
-  const softT = eased(frame, entryFrame, entryFrame + 62, easings.outCubic);
-  const cardT = eased(frame, entryFrame, entryFrame + 54, easings.outBack);
+  const intro = eased(frame, entryFrame, entryFrame + 54, easings.outCubic);
+  const introBack = eased(frame, entryFrame, entryFrame + 46, easings.outBack);
+  const settle = eased(frame, entryFrame + 24, entryFrame + 82, easings.outCubic);
+  const long = eased(frame, entryFrame, entryFrame + 78, easings.outCubic);
   const spinT = eased(frame, spinStart, spinEnd, easings.inOutSine);
 
   const pop = spring({
     frame: Math.max(0, frame - entryFrame),
     fps,
     config: {
-      damping: 13,
-      stiffness: 95,
-      mass: 0.85,
+      damping: 11,
+      stiffness: 88,
+      mass: 0.78,
     },
   });
 
-  const wigBase =
-    coverMotion === 'vinyl_spin' ? 0.35 :
-    coverMotion === 'flip_card' ? 0.55 :
-    coverMotion === 'rotate_y_premium' ? 0.65 :
-    0.85;
+  const wiggleAmount =
+    coverMotion === 'vinyl_reveal' ? 0.28 :
+    coverMotion === 'flip_card' ? 0.35 :
+    coverMotion === 'zoom_bounce' ? 0.50 :
+    0.62;
 
-  const wig = elegantWiggle(frame, { intensity: wiggleIntensity * wigBase, offset: 200 });
-  const breath = breathe(frame, { period: 120, amount: 0.009 });
+  const wig = elegantWiggle(frame, { intensity: wiggleIntensity * wiggleAmount, offset: 200 });
+  const breath = breathe(frame, { period: 132, amount: 0.007 });
 
   let x = wig.x;
   let y = wig.y;
@@ -64,69 +65,87 @@ function getCoverMotionTransform(args: {
   let scale = breath;
   let perspective = 1500;
   let blur = 0;
+  let opacityBoost = intro;
 
   switch (coverMotion) {
-    case 'scale_pop': {
-      const overshoot = 0.68 + pop * 0.34;
-      y += (1 - softT) * 78;
-      scale *= overshoot;
-      rotate += (1 - longT) * -3.5;
-      rotateX = (1 - longT) * 5;
-      blur = (1 - longT) * 10;
-      perspective = 1300;
+    case 'zoom_bounce': {
+      // Intro estilo trailer: vem da câmera, dá overshoot e assenta.
+      scale *= 0.42 + pop * 0.62;
+      y += (1 - intro) * 24;
+      rotate += (1 - intro) * -2.5;
+      rotateX = (1 - intro) * 4;
+      blur = (1 - intro) * 18;
+      perspective = 1200;
       break;
     }
 
-    case 'rotate_y_premium': {
-      y += (1 - softT) * 54;
-      scale *= 0.82 + longT * 0.18;
-      rotateY = (1 - longT) * -26 + Math.sin(frame / 34) * 4;
-      rotateX = (1 - longT) * 6 + Math.sin(frame / 47) * 1.2;
-      rotate += Math.sin(frame / 60) * 0.6;
-      blur = (1 - longT) * 8;
+    case 'slide_up_glow': {
+      // Entrada elegante vinda de baixo com brilho.
+      y += (1 - introBack) * 260;
+      scale *= 0.82 + introBack * 0.18;
+      rotate += (1 - settle) * 1.8;
+      rotateX = (1 - intro) * 8 + Math.sin(frame / 54) * 0.8;
+      rotateY = Math.sin(frame / 46) * 1.5;
+      blur = (1 - intro) * 14;
+      perspective = 1450;
+      break;
+    }
+
+    case 'slide_left_premium': {
+      // Vem da esquerda, como card premium entrando no palco.
+      x += (1 - introBack) * -360;
+      y += (1 - intro) * 34;
+      scale *= 0.86 + introBack * 0.14;
+      rotate += (1 - introBack) * -8;
+      rotateY = (1 - intro) * 18 + Math.sin(frame / 50) * 1.4;
+      rotateX = (1 - intro) * 4;
+      blur = (1 - intro) * 12;
+      perspective = 1700;
+      break;
+    }
+
+    case 'slide_right_premium': {
+      // Vem da direita, bom para variações de template.
+      x += (1 - introBack) * 360;
+      y += (1 - intro) * 34;
+      scale *= 0.86 + introBack * 0.14;
+      rotate += (1 - introBack) * 8;
+      rotateY = (1 - intro) * -18 + Math.sin(frame / 50) * 1.4;
+      rotateX = (1 - intro) * 4;
+      blur = (1 - intro) * 12;
       perspective = 1700;
       break;
     }
 
     case 'flip_card': {
-      y += (1 - cardT) * 70;
-      scale *= 0.76 + cardT * 0.24;
-      rotateY = (1 - cardT) * -68 + Math.sin(frame / 28) * 4;
-      rotateX = (1 - cardT) * 11;
-      rotate += (1 - cardT) * -2;
-      blur = (1 - cardT) * 7;
-      perspective = 1850;
+      // Flip curto e chique, sem ficar rodando eternamente.
+      y += (1 - intro) * 80;
+      scale *= 0.78 + introBack * 0.22;
+      rotateY = (1 - introBack) * -72 + Math.sin(frame / 42) * 1.2;
+      rotateX = (1 - introBack) * 10;
+      rotate += (1 - introBack) * -2;
+      blur = (1 - intro) * 10;
+      perspective = 1900;
       break;
     }
 
-    case 'slide_up_glow': {
-      y += (1 - softT) * 210;
-      scale *= 0.84 + softT * 0.16;
-      rotate += (1 - softT) * 1.6;
-      rotateX = (1 - softT) * 7 + Math.sin(frame / 52) * 0.8;
-      rotateY = Math.sin(frame / 38) * 2.4;
-      blur = (1 - softT) * 14;
-      perspective = 1450;
-      break;
-    }
-
-    case 'vinyl_spin': {
-      y += (1 - longT) * 50;
-      scale *= 0.82 + longT * 0.18;
-      rotate += spinT * 126 * Math.max(1, spinTurns * 0.45);
-      rotateY = Math.sin(frame / 26) * 3.2;
-      rotateX = Math.sin(frame / 42) * 1.4;
-      blur = (1 - longT) * 7;
+    case 'vinyl_reveal': {
+      // Disco atrás com rotação musical controlada.
+      y += (1 - intro) * 46;
+      scale *= 0.82 + introBack * 0.18;
+      rotate += spinT * 48 * Math.max(1, spinTurns * 0.25);
+      rotateY = Math.sin(frame / 38) * 1.6;
+      rotateX = Math.sin(frame / 58) * 1.0;
+      blur = (1 - intro) * 8;
       perspective = 1350;
       break;
     }
 
     default: {
-      y += (1 - softT) * 210;
-      scale *= 0.84 + softT * 0.16;
-      rotateX = (1 - softT) * 7;
-      rotateY = Math.sin(frame / 38) * 2.4;
-      blur = (1 - softT) * 14;
+      y += (1 - introBack) * 260;
+      scale *= 0.82 + introBack * 0.18;
+      rotateX = (1 - intro) * 8;
+      blur = (1 - intro) * 14;
       break;
     }
   }
@@ -134,7 +153,8 @@ function getCoverMotionTransform(args: {
   return {
     perspective,
     blur,
-    entryProgress: clamp01(softT),
+    opacityBoost: clamp01(opacityBoost),
+    entryProgress: clamp01(intro),
     transform: `translate(${x}px, ${y}px) rotate(${rotate}deg) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${scale})`,
     rotateY,
   };
@@ -155,8 +175,6 @@ export const PremiumCover: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  const entryOpacity = eased(frame, entryFrame, entryFrame + 28, easings.outCubic);
-
   const motion = getCoverMotionTransform({
     frame,
     fps,
@@ -168,6 +186,8 @@ export const PremiumCover: React.FC<Props> = ({
     coverMotion,
   });
 
+  const entryOpacity = eased(frame, entryFrame, entryFrame + 30, easings.outCubic);
+
   const accentBoost = accentFrames.reduce(
     (acc, f) => acc + hitPulse(frame, f, 18),
     0
@@ -175,28 +195,29 @@ export const PremiumCover: React.FC<Props> = ({
 
   const hitScale = 1 + accentBoost * 0.022;
 
-  const shinePhase = ((frame - entryFrame + 18) % 96) / 96;
-  const shineX = -130 + shinePhase * 260;
+  const shinePhase = ((frame - entryFrame + 24) % 110) / 110;
+  const shineX = -135 + shinePhase * 270;
   const shineOpacity = (() => {
-    if (frame < entryFrame + 18) return 0;
-    if (shinePhase < 0.28) return (shinePhase / 0.28) * 0.72;
-    if (shinePhase < 0.55) return 0.72;
-    return Math.max(0, ((1 - shinePhase) / 0.45) * 0.72);
+    if (frame < entryFrame + 20) return 0;
+    if (shinePhase < 0.24) return (shinePhase / 0.24) * 0.68;
+    if (shinePhase < 0.50) return 0.68;
+    return Math.max(0, ((1 - shinePhase) / 0.50) * 0.68);
   })();
 
   const shadowSquish = Math.abs(Math.cos((motion.rotateY * Math.PI) / 180));
   const shadowWidth = size * 0.82 * (0.58 + shadowSquish * 0.42);
-  const shadowOpacity = (0.28 + shadowSquish * 0.24) * entryOpacity;
+  const shadowOpacity = (0.26 + shadowSquish * 0.23) * entryOpacity;
 
   const vinylOpacity =
-    coverMotion === 'vinyl_spin'
-      ? interpolate(motion.entryProgress, [0, 1], [0, 0.34])
+    coverMotion === 'vinyl_reveal'
+      ? interpolate(motion.entryProgress, [0, 1], [0, 0.38])
       : 0;
 
   const haloOpacity =
-    coverMotion === 'slide_up_glow' ? 0.58 :
-    coverMotion === 'scale_pop' ? 0.40 :
-    coverMotion === 'vinyl_spin' ? 0.46 :
+    coverMotion === 'slide_up_glow' ? 0.60 :
+    coverMotion === 'zoom_bounce' ? 0.46 :
+    coverMotion === 'vinyl_reveal' ? 0.46 :
+    coverMotion === 'slide_left_premium' || coverMotion === 'slide_right_premium' ? 0.38 :
     0.34;
 
   return (
@@ -249,7 +270,7 @@ export const PremiumCover: React.FC<Props> = ({
           willChange: 'transform, filter',
         }}
       >
-        {coverMotion === 'vinyl_spin' ? (
+        {coverMotion === 'vinyl_reveal' ? (
           <VinylBack size={size} opacity={vinylOpacity} frame={frame} />
         ) : null}
 
@@ -291,16 +312,16 @@ const VinylBack: React.FC<{ size: number; opacity: number; frame: number }> = ({
     <div
       style={{
         position: 'absolute',
-        width: size * 1.18,
-        height: size * 1.18,
-        left: -size * 0.09,
-        top: -size * 0.09,
+        width: size * 1.22,
+        height: size * 1.22,
+        left: -size * 0.11,
+        top: -size * 0.11,
         borderRadius: '50%',
         background:
           'repeating-radial-gradient(circle, rgba(255,255,255,0.10) 0 1px, rgba(0,0,0,0.92) 2px 8px), radial-gradient(circle, rgba(255,255,255,0.16) 0 5%, rgba(0,0,0,0.95) 6% 38%, rgba(255,255,255,0.08) 39% 40%, rgba(0,0,0,0.92) 41% 100%)',
         boxShadow: '0 30px 90px rgba(0,0,0,0.78)',
         opacity,
-        transform: `translateZ(-28px) rotate(${frame * 0.9}deg)`,
+        transform: `translateZ(-32px) rotate(${frame * 0.72}deg)`,
         pointerEvents: 'none',
       }}
     />
@@ -347,7 +368,7 @@ const Face: React.FC<{
           inset: 0,
           pointerEvents: 'none',
           background:
-            'linear-gradient(115deg, transparent 39%, rgba(255,255,255,0.32) 47%, rgba(255,255,255,0.82) 50%, rgba(255,255,255,0.32) 53%, transparent 61%)',
+            'linear-gradient(115deg, transparent 39%, rgba(255,255,255,0.30) 47%, rgba(255,255,255,0.78) 50%, rgba(255,255,255,0.30) 53%, transparent 61%)',
           transform: `translateX(${shineX}%)`,
           opacity: shineOpacity,
           mixBlendMode: 'screen',

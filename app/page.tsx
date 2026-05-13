@@ -52,11 +52,12 @@ const GLOW_PRESETS: { label: string; color: string }[] = [
 const BG_COLORS = ['#000000', '#030205', '#0a0a14', '#1a0a2a', '#0a1a14', '#2a0a14', '#1a1a2a'];
 
 const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
-  { value: 'scale_pop', label: 'Scale Pop — Cresce elegante' },
-  { value: 'rotate_y_premium', label: 'Rotate Y Leve — 3D sutil' },
-  { value: 'flip_card', label: 'Flip Card — Vira como card' },
-  { value: 'slide_up_glow', label: 'Slide Up Glow — Sobe com brilho' },
-  { value: 'vinyl_spin', label: 'Vinyl Spin — Disco / Spotify' },
+  { value: 'zoom_bounce', label: 'Zoom Bounce — Intro impacto' },
+  { value: 'slide_up_glow', label: 'Slide Up Glow — Vem de baixo' },
+  { value: 'slide_left_premium', label: 'Slide Left — Entra da esquerda' },
+  { value: 'slide_right_premium', label: 'Slide Right — Entra da direita' },
+  { value: 'flip_card', label: 'Flip Card — Virada premium' },
+  { value: 'vinyl_reveal', label: 'Vinyl Reveal — Disco atrás' },
 ];
 
 // ============================================================
