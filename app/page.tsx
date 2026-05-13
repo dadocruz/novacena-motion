@@ -206,10 +206,49 @@ function isBlobUrl(src?: string): boolean {
   return !!src && src.startsWith('blob:');
 }
 
+
+type StudioToolId =
+  | 'cover'
+  | 'text'
+  | 'motion'
+  | 'video'
+  | 'audio'
+  | 'logos'
+  | 'fonts'
+  | 'colors'
+  | 'effects'
+  | 'render';
+
+const STUDIO_TOOL_DOCK: { id: StudioToolId; label: string; section?: string }[] = [
+  { id: 'cover', label: 'Capa', section: 'Capa' },
+  { id: 'text', label: 'Texto', section: 'Transições de texto' },
+  { id: 'motion', label: 'Motion', section: 'Ritmo CTA (Disponível)' },
+  { id: 'video', label: 'Vídeo BG', section: 'Projeto' },
+  { id: 'audio', label: 'Áudio', section: 'Áudio' },
+  { id: 'logos', label: 'Logos', section: 'Logos das plataformas' },
+  { id: 'fonts', label: 'Fonte', section: 'Fontes' },
+  { id: 'colors', label: 'Cor', section: 'Cor & gradiente' },
+  { id: 'effects', label: 'Efeitos', section: 'Efeitos' },
+  { id: 'render', label: 'Render' },
+];
+
+function scrollToStudioSection(section?: string) {
+  if (!section || typeof window === 'undefined') return;
+
+  window.requestAnimationFrame(() => {
+    const el = document.querySelector(`[data-right-panel-section="${section}"]`);
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+}
+
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
 export default function Home() {
+  const [activeStudioTool, setActiveStudioTool] = useState<StudioToolId>('cover');
   // ─── ARTISTA ──────────────────────────────────────────────
   const [artists, setArtists] = useState<ArtistRecord[]>([]);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -1654,7 +1693,59 @@ export default function Home() {
 
       {/* MODAL NOVO ARTISTA */}
       {showArtistModal && <ArtistModal onCreate={createArtist} onClose={() => setShowArtistModal(false)} />}
-    </main>
+    
+      <div
+        style={{
+          position: 'fixed',
+          left: '50%',
+          bottom: 18,
+          transform: 'translateX(-50%)',
+          zIndex: 60,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '10px 12px',
+          borderRadius: 18,
+          border: '1px solid rgba(255,255,255,0.10)',
+          background: 'rgba(10,10,14,0.86)',
+          backdropFilter: 'blur(18px)',
+          boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
+        }}
+      >
+        {STUDIO_TOOL_DOCK.map((tool) => {
+          const active = activeStudioTool === tool.id;
+
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              onClick={() => {
+                setActiveStudioTool(tool.id);
+                scrollToStudioSection(tool.section);
+              }}
+              style={{
+                border: active ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(255,255,255,0.08)',
+                background: active
+                  ? 'linear-gradient(135deg, rgba(168,85,247,0.95), rgba(249,115,22,0.82))'
+                  : 'rgba(255,255,255,0.045)',
+                color: active ? '#fff' : 'var(--text-muted)',
+                borderRadius: 12,
+                padding: '9px 12px',
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: 0.2,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: active ? '0 10px 26px rgba(168,85,247,0.28)' : 'none',
+              }}
+            >
+              {tool.label}
+            </button>
+          );
+        })}
+      </div>
+
+</main>
   );
 }
 
