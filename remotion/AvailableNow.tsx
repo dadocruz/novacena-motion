@@ -104,6 +104,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   // Só mostra logos que foram enviados/customizados.
   // Evita bolinhas/logos genéricos sem contexto visual no render final.
   const visiblePlatforms = props.platforms.filter((p) => Boolean(motion.customLogos?.[p]));
+  const platformLogoSize = motion.platformLogoSize ?? 54;
+  const platformLogoGap = motion.platformLogoGap ?? 18;
+  const platformLogoScales = motion.platformLogoScales ?? {};
 
   // Renderiza texto com perChar se a transição precisar
   const renderText = (text: string, tx: typeof tH) => {
@@ -141,6 +144,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         intensity={particlesEnabled ? 1 : 0}
         background={motion.background}
       />
+
+      {/* OVERLAYS — textura acima do BG e abaixo de textos/capa/logos */}
+      <OverlayLayer overlays={motion.overlays} />
 
       <AbsoluteFill
         style={{
@@ -192,7 +198,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 marginTop: 4,
                 display: 'inline-block',
                 padding: '9px 24px',
-                borderRadius: 999,
+                
                 background: 'rgba(255,255,255,0.15)',
                 border: '1px solid rgba(255,255,255,0.22)',
                 boxShadow: `0 14px 34px rgba(0,0,0,0.4), 0 0 ${28 + datePulse * 40}px rgba(255,190,90,${0.18 + datePulse * 0.35})`,
@@ -294,21 +300,21 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: 14,
+                gap: platformLogoGap,
                 flexWrap: 'wrap',
                 opacity: showAll ? 1 : logosAppear,
-                padding: '10px 18px',
-                borderRadius: 999,
-                background: 'rgba(0,0,0,0.22)',
-                border: '1px solid rgba(255,255,255,0.10)',
-                boxShadow: '0 12px 32px rgba(0,0,0,0.30)',
+                
+                
+                
+                
+                
               }}
             >
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo
                   key={p}
                   name={p}
-                  size={46}
+                  size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))}
                   delay={logosIn + idx * 7}
                   customSrc={motion.customLogos?.[p]}
                 />
@@ -317,11 +323,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           ) : null}
         </div>
       </AbsoluteFill>
-
-      {/* OVERLAYS — filmburn, light leak, etc */}
-      <OverlayLayer overlays={motion.overlays} />
-
-      {/* FLASH FINAL */}
+{/* FLASH FINAL */}
       <AbsoluteFill
         style={{
           background: '#fff',

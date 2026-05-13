@@ -167,6 +167,11 @@ export type MotionConfig = {
   styleCta?: TextStyle;
   /** Mapa de logos customizados por plataforma (chave = nome) */
   customLogos?: Record<string, string>;
+  platformLogoSize?: number;
+  platformLogoGap?: number;
+  platformLogoScales?: Record<string, number>;
+
+
   /** Overlays na timeline */
   overlays?: OverlayPlacement[];
   /** Timing da primeira CTA (frame de entrada) */

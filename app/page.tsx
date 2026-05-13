@@ -51,6 +51,8 @@ const GLOW_PRESETS: { label: string; color: string }[] = [
 
 const BG_COLORS = ['#000000', '#030205', '#0a0a14', '#1a0a2a', '#0a1a14', '#2a0a14', '#1a1a2a'];
 
+const PLATFORMS = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'] as const;
+
 const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
   { value: 'zoom_bounce', label: 'Zoom Bounce — Intro impacto' },
   { value: 'slide_up_glow', label: 'Slide Up Glow — Vem de baixo' },
@@ -332,6 +334,9 @@ export default function Home() {
 
   // ─── LOGOS CUSTOMIZADOS POR PLATAFORMA ────────────────────
   const [customLogos, setCustomLogos] = useState<Record<string, string>>({});
+  const [platformLogoSize, setPlatformLogoSize] = useState<number>(58);
+  const [platformLogoGap, setPlatformLogoGap] = useState<number>(22);
+  const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>({});
   const platformLogoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Overlays
@@ -475,17 +480,20 @@ export default function Home() {
         useVideoAudio,
       },
       customLogos: normalizeCustomLogos(customLogos),
+      platformLogoSize,
+      platformLogoGap,
+      platformLogoScales,
       overlays,
     }),
     [
-      fontHeadline, fontDate, fontCta, coverSize, coverMotion, spinTurns, wiggleIntensity,
+      fontHeadline, fontDate, fontCta, coverSize, coverMotion, platformLogoSize, platformLogoGap, platformLogoScales, coverMotion, spinTurns, wiggleIntensity,
       wiggleH, wiggleD, wiggleC, particlesEnabled, finalFlash, glowColor,
       durationSeconds, trHeadline, trDate, trCta, styleHeadline, styleDate, styleCta,
       cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame,
       bgVideo, bgVideoStartSec,
       bgVideoOpacity, bgColor, bgVideoBlur, bgVideoSaturation,
       audioSrc, audioStartSec, audioVolume, audioFadeIn, audioFadeOut, useVideoAudio,
-      customLogos, overlays,
+      customLogos, platformLogoSize, platformLogoGap, platformLogoScales, overlays,
     ]
   );
 
@@ -628,6 +636,9 @@ export default function Home() {
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
       setCoverSize(m.coverSize ?? 510);
+      setPlatformLogoSize(m.platformLogoSize ?? 58);
+      setPlatformLogoGap(m.platformLogoGap ?? 22);
+      setPlatformLogoScales(m.platformLogoScales ?? {});
       setCoverMotion(m.coverMotion ?? 'slide_up_glow');
       setSpinTurns(m.spinTurns ?? 2);
       setWiggleIntensity(m.wiggleIntensity ?? 1);
@@ -767,7 +778,7 @@ export default function Home() {
         src: asset.path,
         type: asset.type,
         startSec: 0,
-        durationSec: Math.min(2, durationSeconds),
+        durationSec: durationSeconds,
         opacity: 0.9,
         blendMode: 'normal',
         label: asset.label,
@@ -793,7 +804,7 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAudio(true);
-    // Lê duração do áudio
+    // Lê  do áudio
     const audioUrl = URL.createObjectURL(file);
     const tempAudio = document.createElement('audio');
     tempAudio.preload = 'metadata';
@@ -1308,8 +1319,7 @@ export default function Home() {
 
           {bgVideo && bgVideoDuration > 0 && (
             <>
-              <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0}
-                max={Math.max(0, bgVideoDuration - durationSeconds)} step={0.1}
+              <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={Math.max(0.1, bgVideoDuration)} step={0.1}
                 onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
               <SliderRow label="Opacidade do vídeo" value={bgVideoOpacity} min={0} max={1} step={0.05}
                 onChange={setBgVideoOpacity} format={(v) => `${Math.round(v * 100)}%`} />
@@ -1360,7 +1370,6 @@ export default function Home() {
                 label="Início (refrão)"
                 value={audioStartSec}
                 min={0}
-                max={Math.max(0, audioDuration - durationSeconds)}
                 step={0.1}
                 onChange={setAudioStartSec}
                 format={(v) => `${v.toFixed(1)}s`}
@@ -1458,7 +1467,54 @@ export default function Home() {
         </Section>
 
         {/* TRANSIÇÕES */}
-        <Section title="Transições de texto" draggablePanel>
+        
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 14,
+              borderTop: '1px solid var(--border-1)',
+            }}
+          >
+            <SliderRow
+              label="Tamanho geral dos logos"
+              value={platformLogoSize}
+              min={28}
+              max={110}
+              step={1}
+              onChange={setPlatformLogoSize}
+              format={(v) => `${Math.round(v)}px`}
+            />
+
+            <SliderRow
+              label="Distância lateral dos logos"
+              value={platformLogoGap}
+              min={0}
+              max={54}
+              step={1}
+              onChange={setPlatformLogoGap}
+              format={(v) => `${Math.round(v)}px`}
+            />
+
+            {PLATFORMS.filter((p) => customLogos[p]).map((p) => (
+              <SliderRow
+                key={`logo-scale-${p}`}
+                label={`Escala ${p}`}
+                value={platformLogoScales[p] ?? 1}
+                min={0.45}
+                max={2}
+                step={0.05}
+                onChange={(value) =>
+                  setPlatformLogoScales((prev) => ({
+                    ...prev,
+                    [p]: value,
+                  }))
+                }
+                format={(v) => `${v.toFixed(2)}x`}
+              />
+            ))}
+          </div>
+
+<Section title="Transições de texto" draggablePanel>
           <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
           <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
           <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
@@ -1978,18 +2034,17 @@ function OverlayTimeline({
             {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
           </span>
           <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
-            início
+            
             <input type="number" step="0.1" min={0} max={durationSeconds - 0.1}
               value={ov.startSec.toFixed(1)}
-              onChange={(e) => onUpdate(ov.id, { startSec: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => onUpdate(ov.id, { startSec: 0})}
               style={tinyNumInput} />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
-            duração
+            
             <input type="number" step="0.1" min={0.1}
-              max={durationSeconds - ov.startSec}
               value={ov.durationSec.toFixed(1)}
-              onChange={(e) => onUpdate(ov.id, { durationSec: parseFloat(e.target.value) || 0.5 })}
+              onChange={(e) => onUpdate(ov.id, { durationSec: durationSeconds})}
               style={tinyNumInput} />
           </label>
           <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
@@ -2420,7 +2475,7 @@ function SegmentedControl({ options, value, onChange }: {
 function SliderRow({
   label, value, min, max, step, onChange, format,
 }: {
-  label: string; value: number; min: number; max: number; step: number;
+  label: string; value: number; min: number; max?: number; step: number;
   onChange: (v: number) => void; format?: (v: number) => string;
 }) {
   return (

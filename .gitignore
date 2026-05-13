@@ -36,3 +36,9 @@ public/uploads/covers/*
 # Backups
 _backups-antigos-novacena/
 *.zip
+
+# Local dev backups
+_local-backups/
+*.before-*
+*.backup-*
+*.bak-*
