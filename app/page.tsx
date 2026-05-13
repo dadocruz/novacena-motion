@@ -1238,7 +1238,7 @@ export default function Home() {
         </div>
 
         {/* PROJETO */}
-        <Section title="Projeto">
+        <Section title="Projeto" draggablePanel>
           <div style={{ marginBottom: 12 }}>
             <div style={miniInputLabel}>Duração</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
@@ -1297,7 +1297,7 @@ export default function Home() {
         </Section>
 
         {/* ÁUDIO */}
-        <Section title="Áudio">
+        <Section title="Áudio" draggablePanel>
           <button
             onClick={() => audioInputRef.current?.click()}
             disabled={uploadingAudio}
@@ -1367,7 +1367,7 @@ export default function Home() {
         </Section>
 
         {/* LOGOS DAS PLATAFORMAS */}
-        <Section title="Logos das plataformas">
+        <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
             Substitua o ícone padrão de cada plataforma pelo seu próprio PNG/SVG.
           </div>
@@ -1419,14 +1419,14 @@ export default function Home() {
         </Section>
 
         {/* TRANSIÇÕES */}
-        <Section title="Transições de texto">
+        <Section title="Transições de texto" draggablePanel>
           <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
           <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
           <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
         </Section>
 
         {template === 'available_now' && (
-          <Section title="Ritmo CTA (Disponível)">
+          <Section title="Ritmo CTA (Disponível)" draggablePanel>
             <div style={{ marginBottom: 10 }}>
               <div style={{ ...miniInputLabel, display: 'flex', justifyContent: 'space-between' }}>
                 <span>Presets rápidos</span>
@@ -1509,20 +1509,20 @@ export default function Home() {
         )}
 
         {/* COR E GRADIENTE POR TEXTO */}
-        <Section title="Cor & gradiente">
+        <Section title="Cor & gradiente" draggablePanel>
           <TextColorEditor label="Headline" value={styleHeadline} onChange={setStyleHeadline} />
           <TextColorEditor label="Data" value={styleDate} onChange={setStyleDate} />
           <TextColorEditor label="CTA" value={styleCta} onChange={setStyleCta} />
         </Section>
 
-        <Section title="Tipografia avançada">
+        <Section title="Tipografia avançada" draggablePanel>
           <TextLayoutEditor label="Headline" value={styleHeadline} onChange={setStyleHeadline} />
           <TextLayoutEditor label="Data" value={styleDate} onChange={setStyleDate} />
           <TextLayoutEditor label="CTA" value={styleCta} onChange={setStyleCta} />
         </Section>
 
         {/* FONTES */}
-        <Section title="Fontes">
+        <Section title="Fontes" draggablePanel>
           <FontPicker label="Headline" sampleText={headline || 'LANÇAMENTO'} value={fontHeadline}
             onChange={setFontHeadline} fonts={allFonts} />
           <FontPicker label="Data" sampleText={releaseDate || '07.JANEIRO'} value={fontDate}
@@ -1554,7 +1554,7 @@ export default function Home() {
         </Section>
 
         {/* OVERLAYS */}
-        <Section title="Overlays (filmburn / película)">
+        <Section title="Overlays (filmburn / película)" draggablePanel>
           <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
             + Subir overlay
           </button>
@@ -1579,7 +1579,7 @@ export default function Home() {
         </Section>
 
         {/* CAPA */}
-        <Section title="Capa">
+        <Section title="Capa" draggablePanel>
               <div style={{ marginTop: 12 }}>
                 <div
                   style={{
@@ -1624,7 +1624,7 @@ export default function Home() {
             onChange={setWiggleIntensity} format={(v) => v.toFixed(1)} />
         </Section>
 
-        <Section title="Wiggle por elemento">
+        <Section title="Wiggle por elemento" draggablePanel>
           <SliderRow label="Wiggle headline" value={wiggleH} min={0} max={2} step={0.1}
             onChange={setWiggleH} format={(v) => v.toFixed(1)} />
           <SliderRow label="Wiggle data" value={wiggleD} min={0} max={2} step={0.1}
@@ -1633,7 +1633,7 @@ export default function Home() {
             onChange={setWiggleC} format={(v) => v.toFixed(1)} />
         </Section>
 
-        <Section title="Brilho">
+        <Section title="Brilho" draggablePanel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             {GLOW_PRESETS.map((g) => (
               <button key={g.label} onClick={() => setGlowColor(g.color)} title={g.label}
@@ -1646,7 +1646,7 @@ export default function Home() {
           </div>
         </Section>
 
-        <Section title="Efeitos">
+        <Section title="Efeitos" draggablePanel>
           <ToggleRow label="Partículas bokeh" value={particlesEnabled} onChange={setParticlesEnabled} />
           <ToggleRow label="Flash final" value={finalFlash} onChange={setFinalFlash} />
         </Section>
@@ -2073,12 +2073,197 @@ function TransitionPicker({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+
+const RIGHT_PANEL_SECTION_ORDER_KEY = 'novacena:right-panel-section-order-v1';
+
+const DEFAULT_RIGHT_PANEL_SECTION_ORDER = [
+  'Projeto',
+  'Áudio',
+  'Logos das plataformas',
+  'Transições de texto',
+  'Ritmo CTA (Disponível)',
+  'Cor & gradiente',
+  'Tipografia avançada',
+  'Fontes',
+  'Overlays (filmburn / película)',
+  'Capa',
+  'Wiggle por elemento',
+  'Brilho',
+  'Efeitos',
+];
+
+function getRightPanelSectionOrder(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
+
+  try {
+    const saved = window.localStorage.getItem(RIGHT_PANEL_SECTION_ORDER_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+
+    if (!Array.isArray(parsed)) return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
+
+    return [
+      ...parsed.filter((item) => DEFAULT_RIGHT_PANEL_SECTION_ORDER.includes(item)),
+      ...DEFAULT_RIGHT_PANEL_SECTION_ORDER.filter((item) => !parsed.includes(item)),
+    ];
+  } catch {
+    return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
+  }
+}
+
+function getRightPanelSectionIndex(title: string): number {
+  return getRightPanelSectionOrder().indexOf(title);
+}
+
+function saveRightPanelSectionOrder(order: string[]) {
+  if (typeof window === 'undefined') return;
+
+  window.localStorage.setItem(RIGHT_PANEL_SECTION_ORDER_KEY, JSON.stringify(order));
+  window.dispatchEvent(new CustomEvent('novacena:right-panel-section-order-changed'));
+}
+
+function moveRightPanelSection(sourceTitle: string, targetTitle: string) {
+  if (!sourceTitle || !targetTitle || sourceTitle === targetTitle) return;
+
+  const order = getRightPanelSectionOrder();
+  const from = order.indexOf(sourceTitle);
+  const to = order.indexOf(targetTitle);
+
+  if (from === -1 || to === -1) return;
+
+  const next = [...order];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+
+  saveRightPanelSectionOrder(next);
+}
+
+
+function Section({
+  title,
+  children,
+  draggablePanel = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  draggablePanel?: boolean;
+}) {
+  const sectionRef = React.useRef<HTMLElement | null>(null);
+  const [orderIndex, setOrderIndex] = React.useState(() => getRightPanelSectionIndex(title));
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const canDrag = draggablePanel && DEFAULT_RIGHT_PANEL_SECTION_ORDER.includes(title);
+
+  React.useEffect(() => {
+    if (!canDrag) return;
+
+    const updateOrder = () => {
+      setOrderIndex(getRightPanelSectionIndex(title));
+    };
+
+    updateOrder();
+
+    window.addEventListener('novacena:right-panel-section-order-changed', updateOrder);
+    window.addEventListener('storage', updateOrder);
+
+    return () => {
+      window.removeEventListener('novacena:right-panel-section-order-changed', updateOrder);
+      window.removeEventListener('storage', updateOrder);
+    };
+  }, [canDrag, title]);
+
+  React.useEffect(() => {
+    if (!canDrag) return;
+
+    const parent = sectionRef.current?.parentElement;
+    if (!parent) return;
+
+    parent.style.display = 'flex';
+    parent.style.flexDirection = 'column';
+  }, [canDrag]);
+
   return (
-    <div style={{ padding: '14px 22px 4px', borderTop: '1px solid var(--border-1)' }}>
-      <div style={miniLabel}>{title}</div>
+    <section
+      ref={sectionRef}
+      data-right-panel-section={canDrag ? title : undefined}
+      onDragOver={(event) => {
+        if (!canDrag) return;
+        event.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDragLeave={() => {
+        if (!canDrag) return;
+        setIsDragOver(false);
+      }}
+      onDrop={(event) => {
+        if (!canDrag) return;
+        event.preventDefault();
+        setIsDragOver(false);
+
+        const sourceTitle = event.dataTransfer.getData('text/plain');
+        moveRightPanelSection(sourceTitle, title);
+      }}
+      style={{
+        order: canDrag && orderIndex >= 0 ? orderIndex : undefined,
+        opacity: isDragging ? 0.45 : 1,
+        transform: isDragging ? 'scale(0.985)' : undefined,
+        borderTop: isDragOver ? '1px solid rgba(168, 85, 247, 0.75)' : undefined,
+        transition: 'opacity 160ms ease, transform 160ms ease, border-color 160ms ease',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 12,
+        }}
+      >
+        {canDrag ? (
+          <span
+            draggable
+            title="Arrastar seção"
+            onDragStart={(event) => {
+              setIsDragging(true);
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/plain', title);
+            }}
+            onDragEnd={() => setIsDragging(false)}
+            style={{
+              width: 22,
+              height: 22,
+              borderRadius: 8,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'grab',
+              userSelect: 'none',
+              color: 'var(--text-muted)',
+              border: '1px solid var(--border-1)',
+              background: 'rgba(255,255,255,0.04)',
+              fontSize: 14,
+              lineHeight: 1,
+            }}
+          >
+            ⋮⋮
+          </span>
+        ) : null}
+
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 11,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            color: 'var(--text-muted)',
+            fontWeight: 800,
+          }}
+        >
+          {title}
+        </h3>
+      </div>
+
       {children}
-    </div>
+    </section>
   );
 }
 
