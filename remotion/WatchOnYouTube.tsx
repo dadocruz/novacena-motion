@@ -68,6 +68,9 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         background={M.background}
       />
 
+      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
+      <OverlayLayer overlays={props.motion?.overlays} />
+
       {/* YT ícones decorativos */}
       {floatingYT.map((f, i) => {
         const appear = eased(frame, 28 + i * 4, 28 + i * 4 + 22, easings.outCubic);
@@ -174,10 +177,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               ))}
         </div>
       </AbsoluteFill>
-
-      <OverlayLayer overlays={props.motion?.overlays} />
-
-      <AbsoluteFill
+<AbsoluteFill
         style={{
           background: '#fff',
           opacity: finalFlash,

@@ -145,10 +145,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         background={motion.background}
       />
 
-      {/* OVERLAYS — textura acima do BG e abaixo de textos/capa/logos */}
+      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
       <OverlayLayer overlays={motion.overlays} />
-
-      <AbsoluteFill
+<AbsoluteFill
         style={{
           padding: isStory ? '0 82px' : '0 86px',
           top: isStory ? 245 : 88,

@@ -74,6 +74,9 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
         background={M.background}
       />
 
+      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
+      <OverlayLayer overlays={props.motion?.overlays} />
+
       <AbsoluteFill
         style={{
           padding: '0 60px',
@@ -173,10 +176,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           <PlatformLogo name="Spotify" size={84} customSrc={M.customLogos?.Spotify} />
         </div>
       </AbsoluteFill>
-
-      <OverlayLayer overlays={props.motion?.overlays} />
-
-      <AbsoluteFill
+<AbsoluteFill
         style={{
           background: '#fff',
           opacity: finalFlash,

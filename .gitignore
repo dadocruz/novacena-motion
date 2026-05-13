@@ -42,3 +42,9 @@ _local-backups/
 *.before-*
 *.backup-*
 *.bak-*
+
+# Local backups outside build
+_local-backups/
+*.before-*
+*.backup-*
+*.bak-*

@@ -67,6 +67,9 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         background={M.background}
       />
 
+      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
+      <OverlayLayer overlays={props.motion?.overlays} />
+
       {/* Logos flutuando decorativos */}
       {floatingLogos.map((f, i) => {
         const appear = eased(frame, 30 + i * 4, 30 + i * 4 + 20, easings.outCubic);
@@ -186,10 +189,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
           </div>
         ) : null}
       </AbsoluteFill>
-
-      <OverlayLayer overlays={props.motion?.overlays} />
-
-      <AbsoluteFill
+<AbsoluteFill
         style={{
           background: '#fff',
           opacity: finalFlash,
