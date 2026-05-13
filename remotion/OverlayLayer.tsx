@@ -8,7 +8,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 
-export type OverlayBlendMode = 'screen' | 'overlay' | 'lighten' | 'soft' | 'normal';
+export type OverlayBlendMode = 'screen' | 'overlay' | 'lighten' | 'soft' | 'soft-light' | 'normal';
 
 export type OverlayItem = {
   src: string;
@@ -29,7 +29,7 @@ function isVideoSrc(src: string) {
 
 function normalizeBlendMode(mode?: OverlayBlendMode): React.CSSProperties['mixBlendMode'] {
   if (mode === 'normal') return 'normal';
-  if (mode === 'soft') return 'soft-light';
+  if (mode === 'soft' || mode === 'soft-light') return 'soft-light';
   if (mode === 'lighten') return 'lighten';
   if (mode === 'overlay') return 'overlay';
   return 'screen';
