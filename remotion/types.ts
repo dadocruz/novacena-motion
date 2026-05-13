@@ -143,6 +143,15 @@ export type MotionConfig = {
   fontHeadline?: string;
   fontDate?: string;
   fontCta?: string;
+  customFonts?: {
+    id: string;
+    label: string;
+    file: string;
+    family: string;
+    weight: number;
+    category: 'display' | 'sans' | 'special';
+    vibe: string;
+  }[];
   coverSize?: number;
   coverMotion?: CoverMotionId;
   spinTurns?: number;

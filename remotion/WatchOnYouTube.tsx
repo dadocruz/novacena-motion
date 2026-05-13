@@ -1,4 +1,5 @@
 import React from 'react';
+import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
   charStagger,
@@ -61,6 +62,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -163,7 +165,6 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             fontSize: 32,
             fontWeight: M.fontCta.weight,
             letterSpacing: 2.4,
-            textTransform: 'uppercase',
             textShadow: '0 6px 22px rgba(0,0,0,0.92)',
             ...applyTextStyle(props.motion?.styleCta),
           }}

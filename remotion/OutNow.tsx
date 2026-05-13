@@ -1,4 +1,5 @@
 import React from 'react';
+import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
   charStagger,
@@ -60,6 +61,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -156,7 +158,6 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             fontSize: 38,
             fontWeight: M.fontCta.weight,
             letterSpacing: 2.6,
-            textTransform: 'uppercase',
             textShadow: '0 6px 26px rgba(0,0,0,0.92)',
             ...applyTextStyle(props.motion?.styleCta),
           }}
@@ -180,7 +181,6 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               fontWeight: M.fontDate.weight,
               letterSpacing: 2.4,
               opacity: 0.92,
-              textTransform: 'uppercase',
               ...applyTextStyle(props.motion?.styleDate),
               ...(showAll ? {} : dateAnim),
             }}

@@ -217,9 +217,9 @@ export function userFontToFontDef(uf: {
 
 // Defaults inteligentes pra cada papel no template
 export const DEFAULT_FONTS = {
-  headline: 'tusker-super',
-  date: 'panton',
-  cta: 'interstate-cond',
+  headline: 'font_c929e04f15a8',
+  date: 'font_55629ee80bef',
+  cta: 'font_c929e04f15a8',
 } as const;
 
 // ============================================================
@@ -250,9 +250,9 @@ export function resolveMotion(
   const cfg = m ?? {};
   const durationSeconds = cfg.durationSeconds ?? 8;
   return {
-    fontHeadline: findFont(cfg.fontHeadline ?? DEFAULT_FONTS.headline) ?? FONT_CATALOG[0],
-    fontDate: findFont(cfg.fontDate ?? DEFAULT_FONTS.date) ?? FONT_CATALOG[0],
-    fontCta: findFont(cfg.fontCta ?? DEFAULT_FONTS.cta) ?? FONT_CATALOG[0],
+    fontHeadline: findFont(cfg.fontHeadline ?? DEFAULT_FONTS.headline, cfg.customFonts ?? []) ?? FONT_CATALOG[0],
+    fontDate: findFont(cfg.fontDate ?? DEFAULT_FONTS.date, cfg.customFonts ?? []) ?? FONT_CATALOG[0],
+    fontCta: findFont(cfg.fontCta ?? DEFAULT_FONTS.cta, cfg.customFonts ?? []) ?? FONT_CATALOG[0],
     coverSize: cfg.coverSize ?? 510,
     spinTurns: cfg.spinTurns ?? 2,
     wiggleIntensity: cfg.wiggleIntensity ?? 1,

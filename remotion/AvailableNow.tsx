@@ -1,4 +1,5 @@
 import React from 'react';
+import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
   easings,
@@ -33,9 +34,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const accents = [MID_HIT, FINAL_HIT];
 
-  const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline);
-  const fontDate = findFont(motion.fontDate ?? DEFAULT_FONTS.date);
-  const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta);
+  const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline, motion.customFonts ?? []);
+  const fontDate = findFont(motion.fontDate ?? DEFAULT_FONTS.date, motion.customFonts ?? []);
+  const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
   const coverSize = motion.coverSize ?? 510;
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
@@ -138,6 +139,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
+      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -177,7 +179,6 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 lineHeight: 0.96,
                 fontWeight: fontHeadline?.weight ?? 900,
                 letterSpacing: (props.headline || '').length > 14 ? 1.5 : -1,
-                textTransform: 'uppercase',
                 textShadow:
                   '0 14px 36px rgba(0,0,0,0.92), 0 0 28px rgba(190,90,255,0.28)',
                 overflow: 'visible',
@@ -204,7 +205,6 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 fontSize: 26,
                 fontWeight: fontDate?.weight ?? 700,
                 letterSpacing: 3.5,
-                textTransform: 'uppercase',
                 transform: showAll ? undefined : wigD.transform,
                 ...applyTextStyle(motion.styleDate),
                 ...(showAll ? {} : tD.wrapStyle),
@@ -259,7 +259,6 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               lineHeight: 1.1,
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.2,
-              textTransform: 'uppercase',
               textShadow: '0 4px 22px rgba(0,0,0,0.92)',
               opacity: showAll ? 0 : cta1Opacity,
               transform: showAll ? undefined : wigC.transform,
@@ -280,7 +279,6 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               lineHeight: 1.12,
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.5,
-              textTransform: 'uppercase',
               textShadow: '0 4px 22px rgba(0,0,0,0.92)',
               opacity: showAll ? 1 : cta2Opacity,
               transform: showAll ? undefined : wigC.transform,

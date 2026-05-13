@@ -345,6 +345,8 @@ export default function Home() {
 
   // User fonts
   const [userFonts, setUserFonts] = useState<UserFontRecord[]>([]);
+  const [fontSearch, setFontSearch] = useState('');
+  const [favoriteFontIds, setFavoriteFontIds] = useState<string[]>([]);
 
   // ─── ESTADOS DE UI ───────────────────────────────────────
   const [saving, setSaving] = useState(false);
@@ -365,6 +367,34 @@ export default function Home() {
   const overlayInputRef = useRef<HTMLInputElement | null>(null);
 
   // ─── EFEITOS ─────────────────────────────────────────────
+  // Carregar favoritos de fontes
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('novacena.favoriteFonts');
+      if (raw) setFavoriteFontIds(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('novacena.favoriteFonts', JSON.stringify(favoriteFontIds));
+    } catch {}
+  }, [favoriteFontIds]);
+
+  // Favoritos de fontes
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem('novacena.favoriteFontIds');
+      if (raw) setFavoriteFontIds(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('novacena.favoriteFontIds', JSON.stringify(favoriteFontIds));
+    } catch {}
+  }, [favoriteFontIds]);
+
   // Carregar lista de artistas ao montar
   useEffect(() => {
     fetch('/api/artists')
@@ -435,15 +465,87 @@ export default function Home() {
 
   // ─── COMPUTED ────────────────────────────────────────────
   const allFonts: FontDef[] = useMemo(
-    () => [...FONT_CATALOG, ...userFonts.map(userFontToFontDef)],
+    () => {
+      const user = userFonts.map(userFontToFontDef);
+      const merged = [...user, ...FONT_CATALOG];
+      const seen = new Set<string>();
+      return merged.filter((f) => {
+        if (seen.has(f.id)) return false;
+        seen.add(f.id);
+        return true;
+      });
+    },
     [userFonts]
   );
+
+  const filteredFonts = useMemo(() => {
+    const q = fontSearch.trim().toLowerCase();
+    if (!q) return allFonts;
+    return allFonts.filter((f) =>
+      [f.label, f.family, f.vibe, f.category, f.id].filter(Boolean).join(' ').toLowerCase().includes(q)
+    );
+  }, [allFonts, fontSearch]);
+
+  const favoriteFonts = useMemo(
+    () => allFonts.filter((f) => favoriteFontIds.includes(f.id)),
+    [allFonts, favoriteFontIds]
+  );
+
+  function toggleFavoriteFont(id: string) {
+    setFavoriteFontIds((arr) =>
+      arr.includes(id) ? arr.filter((x) => x !== id) : [id, ...arr]
+    );
+  }
+
+  async function applyFontTo(role: 'headline' | 'date' | 'cta', font: FontDef) {
+    try {
+      await document.fonts.load(`${font.weight || 700} 32px "${font.family}"`);
+    } catch {}
+
+    if (role === 'headline') setFontHeadline(font.id);
+    if (role === 'date') setFontDate(font.id);
+    if (role === 'cta') setFontCta(font.id);
+  }
+
+
+  const fontSearchResults = useMemo(() => {
+    const q = fontSearch.trim().toLowerCase();
+
+    const base = allFonts.filter((font) => {
+      if (!q) return favoriteFontIds.includes(font.id);
+      return [font.label, font.family, font.vibe, font.category, font.id]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q);
+    });
+
+    return base.slice(0, 18);
+  }, [allFonts, fontSearch, favoriteFontIds]);
+
+  const favoriteFonts = useMemo(
+    () => allFonts.filter((font) => favoriteFontIds.includes(font.id)).slice(0, 18),
+    [allFonts, favoriteFontIds]
+  );
+
+  function toggleFavoriteFont(id: string) {
+    setFavoriteFontIds((arr) =>
+      arr.includes(id) ? arr.filter((x) => x !== id) : [id, ...arr]
+    );
+  }
+
+  function applyFontTo(role: 'headline' | 'date' | 'cta', id: string) {
+    if (role === 'headline') setFontHeadline(id);
+    if (role === 'date') setFontDate(id);
+    if (role === 'cta') setFontCta(id);
+  }
 
   const motion: MotionConfig = useMemo(
     () => ({
       fontHeadline,
       fontDate,
       fontCta,
+      customFonts: userFonts.map(userFontToFontDef),
       coverSize,
       coverMotion,
       spinTurns,
@@ -483,10 +585,14 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
-      overlays,
+      overlays: overlays.map((overlay) => ({
+        ...overlay,
+        startSec: 0,
+        durationSec: durationSeconds,
+      })),
     }),
     [
-      fontHeadline, fontDate, fontCta, coverSize, coverMotion, platformLogoSize, platformLogoGap, platformLogoScales, coverMotion, spinTurns, wiggleIntensity,
+      fontHeadline, fontDate, fontCta, userFonts, userFonts, coverSize, coverMotion, platformLogoSize, platformLogoGap, platformLogoScales, coverMotion, spinTurns, wiggleIntensity,
       wiggleH, wiggleD, wiggleC, particlesEnabled, finalFlash, glowColor,
       durationSeconds, trHeadline, trDate, trCta, styleHeadline, styleDate, styleCta,
       cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame,
@@ -779,8 +885,8 @@ export default function Home() {
         type: asset.type,
         startSec: 0,
         durationSec: durationSeconds,
-        opacity: 0.9,
-        blendMode: 'normal',
+        opacity: 0.45,
+        blendMode: 'screen',
         label: asset.label,
       },
     ]);
@@ -1187,7 +1293,7 @@ export default function Home() {
                 style={{ width: '100%', height: '100%' }}
                 controls
                 loop
-                initialFrame={Math.max(0, durationSeconds * 30 - 15)}
+                initialFrame={0}
               />
               {showSafeArea && target === 'story' && (
                 <div
@@ -1665,7 +1771,7 @@ export default function Home() {
                   <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
                   </span>
-                  <button onClick={() => addOverlayInstance(ov)} style={tinyAddBtn}>+ tempo</button>
+                  <button onClick={() => addOverlayInstance(ov)} style={tinyAddBtn}>Aplicar</button>
                   <button onClick={() => deleteOverlayAsset(ov.id)} style={tinyDelBtn} title="Remover da biblioteca">×</button>
                 </div>
               ))}
@@ -2294,7 +2400,7 @@ function Section({
   draggablePanel?: boolean;
 }) {
   const sectionRef = React.useRef<HTMLElement | null>(null);
-  const [orderIndex, setOrderIndex] = React.useState(() => getRightPanelSectionIndex(title));
+  const [orderIndex, setOrderIndex] = React.useState<number | undefined>(undefined);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isDragOver, setIsDragOver] = React.useState(false);
   const canDrag = draggablePanel && DEFAULT_RIGHT_PANEL_SECTION_ORDER.includes(title);
@@ -2349,7 +2455,7 @@ function Section({
         moveRightPanelSection(sourceTitle, title);
       }}
       style={{
-        order: canDrag && orderIndex >= 0 ? orderIndex : undefined,
+        order: canDrag && typeof orderIndex === 'number' && orderIndex >= 0 ? orderIndex : undefined,
         opacity: isDragging ? 0.45 : 1,
         transform: isDragging ? 'scale(0.985)' : undefined,
         borderTop: isDragOver ? '1px solid rgba(168, 85, 247, 0.75)' : undefined,
