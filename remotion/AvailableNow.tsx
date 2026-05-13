@@ -101,6 +101,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const showAll = frame >= FINAL_POSTER;
   const isStory = props.renderTarget === 'story';
 
+  // Só mostra logos que foram enviados/customizados.
+  // Evita bolinhas/logos genéricos sem contexto visual no render final.
+  const visiblePlatforms = props.platforms.filter((p) => Boolean(motion.customLogos?.[p]));
+
   // Renderiza texto com perChar se a transição precisar
   const renderText = (text: string, tx: typeof tH) => {
     if (!tx.perChar) {
@@ -140,12 +144,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
 
       <AbsoluteFill
         style={{
-          padding: isStory ? '18px 72px 26px' : '18px 72px 18px',
-          top: isStory ? 285 : 100,
-          height: isStory ? 1350 : 1150,
+          padding: isStory ? '0 82px' : '0 86px',
+          top: isStory ? 245 : 88,
+          height: isStory ? 1450 : 1220,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
+          gap: isStory ? 42 : 34,
           alignItems: 'center',
           textAlign: 'center',
         }}
@@ -163,10 +168,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             <div
               style={{
                 fontFamily: `'${fontHeadline?.family ?? 'Arial'}', Arial, sans-serif`,
-                fontSize: 100,
-                lineHeight: 1.04,
+                fontSize: (props.headline || '').length > 14 ? 76 : 92,
+                lineHeight: 0.96,
                 fontWeight: fontHeadline?.weight ?? 900,
-                letterSpacing: -2,
+                letterSpacing: (props.headline || '').length > 14 ? 1.5 : -1,
                 textTransform: 'uppercase',
                 textShadow:
                   '0 14px 36px rgba(0,0,0,0.92), 0 0 28px rgba(190,90,255,0.28)',
@@ -184,14 +189,14 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             <div
               style={{
                 fontFamily: `'${fontDate?.family ?? 'Arial'}', Arial, sans-serif`,
-                marginTop: 10,
+                marginTop: 4,
                 display: 'inline-block',
-                padding: '14px 32px',
+                padding: '9px 24px',
                 borderRadius: 999,
                 background: 'rgba(255,255,255,0.15)',
                 border: '1px solid rgba(255,255,255,0.22)',
                 boxShadow: `0 14px 34px rgba(0,0,0,0.4), 0 0 ${28 + datePulse * 40}px rgba(255,190,90,${0.18 + datePulse * 0.35})`,
-                fontSize: 34,
+                fontSize: 26,
                 fontWeight: fontDate?.weight ?? 700,
                 letterSpacing: 3.5,
                 textTransform: 'uppercase',
@@ -206,13 +211,23 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         </div>
 
         {/* CAPA PREMIUM */}
-        <div style={{ marginTop: 16 }}>
+        <div
+          style={{
+            marginTop: 0,
+            marginBottom: 0,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: '100%',
+          }}
+        >
           <PremiumCover
             src={props.coverImage}
             size={coverSize}
             entryFrame={COVER_IN}
             spinStart={COVER_IN + 16}
             spinEnd={FINAL_HIT - 4}
+            coverMotion={motion.coverMotion ?? 'slide_up_glow'}
             spinTurns={spinTurns}
             wiggleIntensity={wiggleIntensity}
             accentFrames={accents}
@@ -223,7 +238,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         <div
           style={{
             width: '100%',
-            marginTop: 12,
+            marginTop: 0,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -235,7 +250,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               fontFamily: `'${fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
               width: '100%',
               minHeight: 44,
-              fontSize: 30,
+              fontSize: 27,
               lineHeight: 1.1,
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.2,
@@ -256,7 +271,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               fontFamily: `'${fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
               width: '100%',
               minHeight: 52,
-              fontSize: 32,
+              fontSize: 29,
               lineHeight: 1.12,
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.5,
@@ -271,28 +286,35 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             {renderTextWithStyle(cta2Text, tC, motion.styleCta)}
           </div>
 
-          {/* LOGOS */}
-          <div
-            style={{
-              marginTop: 18,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 18,
-              flexWrap: 'wrap',
-              opacity: showAll ? 1 : logosAppear,
-            }}
-          >
-            {props.platforms.map((p, idx) => (
-              <PlatformLogo
-                key={p}
-                name={p}
-                size={68}
-                delay={logosIn + idx * 7}
-                customSrc={motion.customLogos?.[p]}
-              />
-            ))}
-          </div>
+          {/* LOGOS — apenas logos customizados enviados pelo usuário */}
+          {visiblePlatforms.length > 0 ? (
+            <div
+              style={{
+                marginTop: 16,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 14,
+                flexWrap: 'wrap',
+                opacity: showAll ? 1 : logosAppear,
+                padding: '10px 18px',
+                borderRadius: 999,
+                background: 'rgba(0,0,0,0.22)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.30)',
+              }}
+            >
+              {visiblePlatforms.map((p, idx) => (
+                <PlatformLogo
+                  key={p}
+                  name={p}
+                  size={46}
+                  delay={logosIn + idx * 7}
+                  customSrc={motion.customLogos?.[p]}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
       </AbsoluteFill>
 

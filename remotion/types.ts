@@ -52,6 +52,13 @@ export type TextTransitionId =
   | 'scale_pop'
   | 'rise_clean';
 
+export type CoverMotionId =
+  | 'scale_pop'
+  | 'rotate_y_premium'
+  | 'flip_card'
+  | 'slide_up_glow'
+  | 'vinyl_spin';
+
 /**
  * Instância de overlay posicionada no tempo (semelhante a clip numa timeline).
  */
@@ -136,6 +143,7 @@ export type MotionConfig = {
   fontDate?: string;
   fontCta?: string;
   coverSize?: number;
+  coverMotion?: CoverMotionId;
   spinTurns?: number;
   wiggleIntensity?: number;
   particlesEnabled?: boolean;

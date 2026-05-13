@@ -16,6 +16,7 @@ import type {
   TextStyle,
   TemplateProps,
   TextTransitionId,
+  CoverMotionId,
 } from '../remotion/types';
 import {
   FONT_CATALOG,
@@ -49,6 +50,14 @@ const GLOW_PRESETS: { label: string; color: string }[] = [
 ];
 
 const BG_COLORS = ['#000000', '#030205', '#0a0a14', '#1a0a2a', '#0a1a14', '#2a0a14', '#1a1a2a'];
+
+const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
+  { value: 'scale_pop', label: 'Scale Pop — Cresce elegante' },
+  { value: 'rotate_y_premium', label: 'Rotate Y Leve — 3D sutil' },
+  { value: 'flip_card', label: 'Flip Card — Vira como card' },
+  { value: 'slide_up_glow', label: 'Slide Up Glow — Sobe com brilho' },
+  { value: 'vinyl_spin', label: 'Vinyl Spin — Disco / Spotify' },
+];
 
 // ============================================================
 // TIPOS LOCAIS DE STATE
@@ -231,6 +240,7 @@ export default function Home() {
   const [fontDate, setFontDate] = useState<string>(DEFAULT_FONTS.date);
   const [fontCta, setFontCta] = useState<string>(DEFAULT_FONTS.cta);
   const [coverSize, setCoverSize] = useState<number>(510);
+  const [coverMotion, setCoverMotion] = useState<CoverMotionId>('slide_up_glow');
   const [spinTurns, setSpinTurns] = useState<number>(2);
   const [wiggleIntensity, setWiggleIntensity] = useState<number>(1);
   const [wiggleH, setWiggleH] = useState<number>(0);
@@ -391,6 +401,7 @@ export default function Home() {
       fontDate,
       fontCta,
       coverSize,
+      coverMotion,
       spinTurns,
       wiggleIntensity,
       wiggleHeadline: wiggleH,
@@ -428,7 +439,7 @@ export default function Home() {
       overlays,
     }),
     [
-      fontHeadline, fontDate, fontCta, coverSize, spinTurns, wiggleIntensity,
+      fontHeadline, fontDate, fontCta, coverSize, coverMotion, spinTurns, wiggleIntensity,
       wiggleH, wiggleD, wiggleC, particlesEnabled, finalFlash, glowColor,
       durationSeconds, trHeadline, trDate, trCta, styleHeadline, styleDate, styleCta,
       cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame,
@@ -578,6 +589,7 @@ export default function Home() {
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
       setCoverSize(m.coverSize ?? 510);
+      setCoverMotion(m.coverMotion ?? 'slide_up_glow');
       setSpinTurns(m.spinTurns ?? 2);
       setWiggleIntensity(m.wiggleIntensity ?? 1);
       setTrHeadline(m.transitionHeadline ?? 'mask_reveal');
@@ -1568,6 +1580,42 @@ export default function Home() {
 
         {/* CAPA */}
         <Section title="Capa">
+              <div style={{ marginTop: 12 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    letterSpacing: 2,
+                    textTransform: 'uppercase',
+                    color: 'var(--text-muted)',
+                    marginBottom: 8,
+                    fontWeight: 700,
+                  }}
+                >
+                  ANIMAÇÃO DA CAPA
+                </div>
+                <select
+                  value={coverMotion}
+                  onChange={(e) => setCoverMotion(e.target.value as CoverMotionId)}
+                  style={{
+                    width: '100%',
+                    height: 42,
+                    borderRadius: 10,
+                    border: '1px solid var(--border-1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-main)',
+                    padding: '0 12px',
+                    outline: 'none',
+                  }}
+                >
+                  {COVER_MOTION_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+
           <SliderRow label="Tamanho" value={coverSize} min={320} max={680} step={10}
             onChange={setCoverSize} format={(v) => `${v}px`} />
           <SliderRow label="Voltas Y" value={spinTurns} min={0} max={4} step={0.5}
