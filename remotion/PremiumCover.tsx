@@ -1,27 +1,18 @@
 import React from 'react';
-import { Img, useCurrentFrame, interpolate } from 'remotion';
+import { Img, useCurrentFrame, interpolate, spring, useVideoConfig } from 'remotion';
 import { easings, eased, elegantWiggle, hitPulse, breathe } from './motionEngine';
 import type { CoverMotionId } from './types';
 
 type Props = {
   src?: string;
-  /** Tamanho do quadrado da capa em pixels. */
   size?: number;
-  /** Frame em que a capa entra. */
   entryFrame?: number;
-  /** Frame onde os hits acontecem. */
   accentFrames?: number[];
-  /** Tipo de animação de entrada/vida da capa. */
   coverMotion?: CoverMotionId;
-  /** Frame em que o giro começa. */
   spinStart?: number;
-  /** Frame em que o giro termina. */
   spinEnd?: number;
-  /** Número de voltas. */
   spinTurns?: number;
-  /** Intensidade do wiggle de posição. */
   wiggleIntensity?: number;
-  /** Cor do glow ao redor da capa. */
   glowColor?: string;
 };
 
@@ -31,6 +22,7 @@ function clamp01(v: number) {
 
 function getCoverMotionTransform(args: {
   frame: number;
+  fps: number;
   entryFrame: number;
   spinStart: number;
   spinEnd: number;
@@ -38,14 +30,31 @@ function getCoverMotionTransform(args: {
   wiggleIntensity: number;
   coverMotion: CoverMotionId;
 }) {
-  const { frame, entryFrame, spinStart, spinEnd, spinTurns, wiggleIntensity, coverMotion } = args;
+  const { frame, fps, entryFrame, spinStart, spinEnd, spinTurns, wiggleIntensity, coverMotion } = args;
 
-  const entryT = eased(frame, entryFrame, entryFrame + 22, easings.outBack);
-  const softT = eased(frame, entryFrame, entryFrame + 28, easings.outCubic);
+  const longT = eased(frame, entryFrame, entryFrame + 48, easings.outCubic);
+  const softT = eased(frame, entryFrame, entryFrame + 62, easings.outCubic);
+  const cardT = eased(frame, entryFrame, entryFrame + 54, easings.outBack);
   const spinT = eased(frame, spinStart, spinEnd, easings.inOutSine);
 
-  const wig = elegantWiggle(frame, { intensity: wiggleIntensity * 1.05, offset: 200 });
-  const breath = breathe(frame, { period: 110, amount: 0.012 });
+  const pop = spring({
+    frame: Math.max(0, frame - entryFrame),
+    fps,
+    config: {
+      damping: 13,
+      stiffness: 95,
+      mass: 0.85,
+    },
+  });
+
+  const wigBase =
+    coverMotion === 'vinyl_spin' ? 0.35 :
+    coverMotion === 'flip_card' ? 0.55 :
+    coverMotion === 'rotate_y_premium' ? 0.65 :
+    0.85;
+
+  const wig = elegantWiggle(frame, { intensity: wiggleIntensity * wigBase, offset: 200 });
+  const breath = breathe(frame, { period: 120, amount: 0.009 });
 
   let x = wig.x;
   let y = wig.y;
@@ -53,61 +62,79 @@ function getCoverMotionTransform(args: {
   let rotateX = 0;
   let rotateY = 0;
   let scale = breath;
-  let perspective = 1400;
+  let perspective = 1500;
+  let blur = 0;
 
   switch (coverMotion) {
     case 'scale_pop': {
-      y += (1 - entryT) * 54;
-      scale *= 0.72 + entryT * 0.28;
-      rotate += (1 - softT) * -4;
-      break;
-    }
-
-    case 'rotate_y_premium': {
-      y += (1 - entryT) * 48;
-      scale *= 0.82 + entryT * 0.18;
-      rotateY = (1 - entryT) * -18 + Math.sin(frame / 28) * 3;
-      perspective = 1500;
-      break;
-    }
-
-    case 'flip_card': {
-      y += (1 - entryT) * 36;
-      scale *= 0.80 + entryT * 0.20;
-      rotateY = (1 - entryT) * -42 + Math.sin(frame / 24) * 5;
-      rotateX = (1 - entryT) * 9;
-      perspective = 1700;
-      break;
-    }
-
-    case 'slide_up_glow': {
-      y += (1 - softT) * 170;
-      scale *= 0.88 + softT * 0.12;
-      rotate += (1 - softT) * 2.5;
-      rotateX = (1 - softT) * 6;
+      const overshoot = 0.68 + pop * 0.34;
+      y += (1 - softT) * 78;
+      scale *= overshoot;
+      rotate += (1 - longT) * -3.5;
+      rotateX = (1 - longT) * 5;
+      blur = (1 - longT) * 10;
       perspective = 1300;
       break;
     }
 
+    case 'rotate_y_premium': {
+      y += (1 - softT) * 54;
+      scale *= 0.82 + longT * 0.18;
+      rotateY = (1 - longT) * -26 + Math.sin(frame / 34) * 4;
+      rotateX = (1 - longT) * 6 + Math.sin(frame / 47) * 1.2;
+      rotate += Math.sin(frame / 60) * 0.6;
+      blur = (1 - longT) * 8;
+      perspective = 1700;
+      break;
+    }
+
+    case 'flip_card': {
+      y += (1 - cardT) * 70;
+      scale *= 0.76 + cardT * 0.24;
+      rotateY = (1 - cardT) * -68 + Math.sin(frame / 28) * 4;
+      rotateX = (1 - cardT) * 11;
+      rotate += (1 - cardT) * -2;
+      blur = (1 - cardT) * 7;
+      perspective = 1850;
+      break;
+    }
+
+    case 'slide_up_glow': {
+      y += (1 - softT) * 210;
+      scale *= 0.84 + softT * 0.16;
+      rotate += (1 - softT) * 1.6;
+      rotateX = (1 - softT) * 7 + Math.sin(frame / 52) * 0.8;
+      rotateY = Math.sin(frame / 38) * 2.4;
+      blur = (1 - softT) * 14;
+      perspective = 1450;
+      break;
+    }
+
     case 'vinyl_spin': {
-      y += (1 - entryT) * 42;
-      scale *= 0.80 + entryT * 0.20;
-      rotate += spinT * 180 * Math.max(1, spinTurns * 0.35);
-      rotateY = Math.sin(frame / 18) * 4;
-      perspective = 1200;
+      y += (1 - longT) * 50;
+      scale *= 0.82 + longT * 0.18;
+      rotate += spinT * 126 * Math.max(1, spinTurns * 0.45);
+      rotateY = Math.sin(frame / 26) * 3.2;
+      rotateX = Math.sin(frame / 42) * 1.4;
+      blur = (1 - longT) * 7;
+      perspective = 1350;
       break;
     }
 
     default: {
-      y += (1 - entryT) * 48;
-      scale *= 0.82 + entryT * 0.18;
-      rotateY = (1 - entryT) * -18 + Math.sin(frame / 28) * 3;
+      y += (1 - softT) * 210;
+      scale *= 0.84 + softT * 0.16;
+      rotateX = (1 - softT) * 7;
+      rotateY = Math.sin(frame / 38) * 2.4;
+      blur = (1 - softT) * 14;
       break;
     }
   }
 
   return {
     perspective,
+    blur,
+    entryProgress: clamp01(softT),
     transform: `translate(${x}px, ${y}px) rotate(${rotate}deg) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(${scale})`,
     rotateY,
   };
@@ -119,18 +146,20 @@ export const PremiumCover: React.FC<Props> = ({
   entryFrame = 40,
   accentFrames = [],
   coverMotion = 'slide_up_glow',
-  spinStart = 54,
-  spinEnd = 218,
+  spinStart = 62,
+  spinEnd = 238,
   spinTurns = 2,
   wiggleIntensity = 1,
   glowColor = 'rgba(190, 90, 255, 0.24)',
 }) => {
   const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
 
-  const entryOpacity = eased(frame, entryFrame, entryFrame + 14, easings.outCubic);
+  const entryOpacity = eased(frame, entryFrame, entryFrame + 28, easings.outCubic);
 
   const motion = getCoverMotionTransform({
     frame,
+    fps,
     entryFrame,
     spinStart,
     spinEnd,
@@ -140,28 +169,35 @@ export const PremiumCover: React.FC<Props> = ({
   });
 
   const accentBoost = accentFrames.reduce(
-    (acc, f) => acc + hitPulse(frame, f, 16),
+    (acc, f) => acc + hitPulse(frame, f, 18),
     0
   );
 
-  const hitScale = 1 + accentBoost * 0.025;
+  const hitScale = 1 + accentBoost * 0.022;
 
-  const shinePhase = ((frame - entryFrame) % 70) / 70;
-  const shineX = -110 + shinePhase * 220;
+  const shinePhase = ((frame - entryFrame + 18) % 96) / 96;
+  const shineX = -130 + shinePhase * 260;
   const shineOpacity = (() => {
-    if (shinePhase < 0.35) return (shinePhase / 0.35) * 0.85;
-    if (shinePhase < 0.65) return 0.85;
-    return ((1 - shinePhase) / 0.35) * 0.85;
+    if (frame < entryFrame + 18) return 0;
+    if (shinePhase < 0.28) return (shinePhase / 0.28) * 0.72;
+    if (shinePhase < 0.55) return 0.72;
+    return Math.max(0, ((1 - shinePhase) / 0.45) * 0.72);
   })();
 
   const shadowSquish = Math.abs(Math.cos((motion.rotateY * Math.PI) / 180));
-  const shadowWidth = size * 0.85 * (0.55 + shadowSquish * 0.45);
-  const shadowOpacity = 0.32 + shadowSquish * 0.22;
+  const shadowWidth = size * 0.82 * (0.58 + shadowSquish * 0.42);
+  const shadowOpacity = (0.28 + shadowSquish * 0.24) * entryOpacity;
 
-  const vinylRingOpacity =
+  const vinylOpacity =
     coverMotion === 'vinyl_spin'
-      ? interpolate(clamp01(eased(frame, entryFrame + 4, entryFrame + 28, easings.outCubic)), [0, 1], [0, 0.26])
+      ? interpolate(motion.entryProgress, [0, 1], [0, 0.34])
       : 0;
+
+  const haloOpacity =
+    coverMotion === 'slide_up_glow' ? 0.58 :
+    coverMotion === 'scale_pop' ? 0.40 :
+    coverMotion === 'vinyl_spin' ? 0.46 :
+    0.34;
 
   return (
     <div
@@ -172,20 +208,33 @@ export const PremiumCover: React.FC<Props> = ({
         opacity: entryOpacity,
         perspective: motion.perspective,
         perspectiveOrigin: 'center center',
+        filter: `blur(${motion.blur}px)`,
       }}
     >
       <div
         style={{
           position: 'absolute',
+          inset: -size * 0.12,
+          borderRadius: size * 0.12,
+          background: `radial-gradient(circle, ${glowColor} 0%, rgba(0,0,0,0) 62%)`,
+          opacity: haloOpacity * entryOpacity,
+          filter: 'blur(28px)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div
+        style={{
+          position: 'absolute',
           left: '50%',
-          bottom: -30,
+          bottom: -32,
           marginLeft: -shadowWidth / 2,
           width: shadowWidth,
-          height: 24,
+          height: 26,
           borderRadius: '50%',
-          background: 'rgba(0, 0, 0, 0.65)',
+          background: 'rgba(0, 0, 0, 0.72)',
           filter: 'blur(22px)',
-          opacity: shadowOpacity * entryOpacity,
+          opacity: shadowOpacity,
           pointerEvents: 'none',
         }}
       />
@@ -197,11 +246,11 @@ export const PremiumCover: React.FC<Props> = ({
           transform: `${motion.transform} scale(${hitScale})`,
           transformStyle: 'preserve-3d',
           transformOrigin: 'center center',
-          willChange: 'transform',
+          willChange: 'transform, filter',
         }}
       >
         {coverMotion === 'vinyl_spin' ? (
-          <VinylBack size={size} opacity={vinylRingOpacity} />
+          <VinylBack size={size} opacity={vinylOpacity} frame={frame} />
         ) : null}
 
         <Face
@@ -237,21 +286,21 @@ export const PremiumCover: React.FC<Props> = ({
   );
 };
 
-const VinylBack: React.FC<{ size: number; opacity: number }> = ({ size, opacity }) => {
+const VinylBack: React.FC<{ size: number; opacity: number; frame: number }> = ({ size, opacity, frame }) => {
   return (
     <div
       style={{
         position: 'absolute',
-        width: size * 1.08,
-        height: size * 1.08,
-        left: -size * 0.04,
-        top: -size * 0.04,
+        width: size * 1.18,
+        height: size * 1.18,
+        left: -size * 0.09,
+        top: -size * 0.09,
         borderRadius: '50%',
         background:
-          'radial-gradient(circle, rgba(255,255,255,0.12) 0 5%, rgba(0,0,0,0.95) 6% 38%, rgba(255,255,255,0.06) 39% 40%, rgba(0,0,0,0.92) 41% 100%)',
-        boxShadow: '0 28px 80px rgba(0,0,0,0.72)',
+          'repeating-radial-gradient(circle, rgba(255,255,255,0.10) 0 1px, rgba(0,0,0,0.92) 2px 8px), radial-gradient(circle, rgba(255,255,255,0.16) 0 5%, rgba(0,0,0,0.95) 6% 38%, rgba(255,255,255,0.08) 39% 40%, rgba(0,0,0,0.92) 41% 100%)',
+        boxShadow: '0 30px 90px rgba(0,0,0,0.78)',
         opacity,
-        transform: 'translateZ(-24px)',
+        transform: `translateZ(-28px) rotate(${frame * 0.9}deg)`,
         pointerEvents: 'none',
       }}
     />
@@ -274,7 +323,7 @@ const Face: React.FC<{
         inset: 0,
         borderRadius: size * 0.06,
         overflow: 'hidden',
-        boxShadow: `0 28px 70px rgba(0,0,0,0.72), 0 0 0 1px rgba(255,255,255,0.14), 0 0 ${40 + glowIntensity * 80}px ${glowColor}`,
+        boxShadow: `0 30px 78px rgba(0,0,0,0.76), 0 0 0 1px rgba(255,255,255,0.15), 0 0 ${44 + glowIntensity * 80}px ${glowColor}`,
         background: '#111',
         backfaceVisibility: 'hidden',
         WebkitBackfaceVisibility: 'hidden',
@@ -298,7 +347,7 @@ const Face: React.FC<{
           inset: 0,
           pointerEvents: 'none',
           background:
-            'linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.50) 48%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.50) 52%, transparent 62%)',
+            'linear-gradient(115deg, transparent 39%, rgba(255,255,255,0.32) 47%, rgba(255,255,255,0.82) 50%, rgba(255,255,255,0.32) 53%, transparent 61%)',
           transform: `translateX(${shineX}%)`,
           opacity: shineOpacity,
           mixBlendMode: 'screen',
@@ -311,7 +360,7 @@ const Face: React.FC<{
           position: 'absolute',
           inset: 0,
           borderRadius: size * 0.06,
-          boxShadow: `inset 0 0 ${30 + glowIntensity * 50}px ${glowColor}`,
+          boxShadow: `inset 0 0 ${28 + glowIntensity * 48}px ${glowColor}`,
           pointerEvents: 'none',
         }}
       />
