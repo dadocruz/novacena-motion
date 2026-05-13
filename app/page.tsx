@@ -57,7 +57,6 @@ const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
   { value: 'slide_left_premium', label: 'Slide Left — Entra da esquerda' },
   { value: 'slide_right_premium', label: 'Slide Right — Entra da direita' },
   { value: 'flip_card', label: 'Flip Card — Virada premium' },
-  { value: 'vinyl_reveal', label: 'Vinyl Reveal — Disco atrás' },
 ];
 
 // ============================================================

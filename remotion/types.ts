@@ -58,7 +58,7 @@ export type CoverMotionId =
   | 'slide_left_premium'
   | 'slide_right_premium'
   | 'flip_card'
-  | 'vinyl_reveal';
+;
 
 /**
  * Instância de overlay posicionada no tempo (semelhante a clip numa timeline).
