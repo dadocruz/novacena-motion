@@ -225,7 +225,8 @@ export const DEFAULT_FONTS = {
 // ============================================================
 // HELPER PRA TEMPLATES
 // ============================================================
-import type { MotionConfig } from '../remotion/types';
+import type { MotionConfig, TextStroke } from '../remotion/types';
+import { DEFAULT_TEXT_STROKE } from '../remotion/types';
 
 export type ResolvedMotion = {
   fontHeadline: FontDef;
@@ -241,6 +242,10 @@ export type ResolvedMotion = {
   durationFrames: number;
   background: NonNullable<MotionConfig['background']>;
   customLogos?: Record<string, string>;
+  strokeHeadline: TextStroke;
+  strokeDate: TextStroke;
+  strokeCta: TextStroke;
+  textOpacity: number;
 };
 
 export function resolveMotion(
@@ -263,6 +268,10 @@ export function resolveMotion(
     durationFrames: durationSeconds * 30,
     background: cfg.background ?? {},
     customLogos: cfg.customLogos,
+    strokeHeadline: cfg.strokeHeadline ?? DEFAULT_TEXT_STROKE,
+    strokeDate: cfg.strokeDate ?? DEFAULT_TEXT_STROKE,
+    strokeCta: cfg.strokeCta ?? DEFAULT_TEXT_STROKE,
+    textOpacity: cfg.textOpacity ?? 1,
   };
 }
 
@@ -279,33 +288,6 @@ import type { TextStyle } from '../remotion/types';
  * Estilo de cor sólida. Use isso ou GradText (não os dois).
  * Pra gradiente, use `applyGradientStyle` no span interno.
  */
-export function applyTextStyle(style?: TextStyle): React.CSSProperties {
-  if (!style) return {};
-
-  const layout: React.CSSProperties = {
-    ...(style.letterSpacing !== undefined ? { letterSpacing: style.letterSpacing } : {}),
-    ...(style.textAlign ? { textAlign: style.textAlign } : {}),
-    ...(style.paddingTop !== undefined ? { paddingTop: style.paddingTop } : {}),
-    ...(style.paddingRight !== undefined ? { paddingRight: style.paddingRight } : {}),
-    ...(style.paddingBottom !== undefined ? { paddingBottom: style.paddingBottom } : {}),
-    ...(style.paddingLeft !== undefined ? { paddingLeft: style.paddingLeft } : {}),
-    ...(style.marginTop !== undefined ? { marginTop: style.marginTop } : {}),
-    ...(style.marginRight !== undefined ? { marginRight: style.marginRight } : {}),
-    ...(style.marginBottom !== undefined ? { marginBottom: style.marginBottom } : {}),
-    ...(style.marginLeft !== undefined ? { marginLeft: style.marginLeft } : {}),
-  };
-
-  if (style.useGradient) {
-    // Para gradiente, omitimos apenas a cor do container.
-    return layout;
-  }
-
-  if (style.color) {
-    return { ...layout, color: style.color };
-  }
-
-  return layout;
-}
 
 /**
  * Aplica gradiente. Use num SPAN que envolve só o texto (não no container com padding).
@@ -332,3 +314,122 @@ export function applyGradientStyle(style?: TextStyle): React.CSSProperties {
 export function hasGradient(style?: TextStyle): boolean {
   return !!(style?.useGradient && style.gradientColor1 && style.gradientColor2);
 }
+
+
+
+export const userTextTransform = (style?: any, animStyle?: any) => {
+  const x = Number(style?.offsetX ?? 0);
+  const y = Number(style?.offsetY ?? 0);
+  const s = Number(style?.scale ?? 1);
+
+  const animTransform =
+    typeof animStyle?.transform === 'string'
+      ? animStyle.transform
+      : '';
+
+  if (x === 0 && y === 0 && s === 1) {
+    return animTransform
+      ? { transform: animTransform, transformOrigin: 'center center' }
+      : {};
+  }
+
+  return {
+    transform: `${animTransform} translate(${x}px, ${y}px) scale(${s})`.trim(),
+    transformOrigin: 'center center',
+  };
+};
+
+export const applyTextStyle = (style?: any) => {
+  if (!style) return {};
+
+  const out: Record<string, any> = {};
+
+  if (style.color) out.color = style.color;
+  if (style.opacity !== undefined) out.opacity = style.opacity;
+
+  if (style.letterSpacing !== undefined) {
+    out.letterSpacing =
+      typeof style.letterSpacing === 'number'
+        ? `${style.letterSpacing}px`
+        : style.letterSpacing;
+  }
+
+  if (style.lineHeight !== undefined) {
+    out.lineHeight = style.lineHeight;
+  }
+
+  if (style.fontFamily) {
+    out.fontFamily = `'${style.fontFamily}', Arial, sans-serif`;
+  }
+
+  // BRILHO / SOMBRA EXTERNA
+  const glowColor =
+    style.glowColor ||
+    style.shadowColor ||
+    style.outerGlowColor ||
+    style.textShadowColor ||
+    style.brightnessColor ||
+    style.neonColor;
+
+  const glow =
+    style.glow ??
+    style.shadow ??
+    style.outerGlow ??
+    style.textGlow ??
+    style.brightness ??
+    style.neon ??
+    0;
+
+  const glowOpacity =
+    style.glowOpacity ??
+    style.shadowOpacity ??
+    style.outerGlowOpacity ??
+    1;
+
+  if (glowColor && Number(glow) > 0) {
+    const g = Number(glow);
+    out.textShadow = [
+      `0 0 ${Math.max(2, g * 0.45)}px ${glowColor}`,
+      `0 0 ${Math.max(6, g * 0.9)}px ${glowColor}`,
+      `0 0 ${Math.max(12, g * 1.6)}px ${glowColor}`,
+    ].join(', ');
+    out.filter = `drop-shadow(0 0 ${Math.max(2, g * 0.7)}px ${glowColor})`;
+    out.opacity = out.opacity ?? glowOpacity;
+  }
+
+  // BRILHO / CONTORNO INTERNO OU BORDA DE TEXTO
+  const strokeColor =
+    style.strokeColor ||
+    style.innerGlowColor ||
+    style.innerColor ||
+    style.contourColor ||
+    style.outlineColor;
+
+  const strokeWidth =
+    style.strokeWidth ??
+    style.innerGlow ??
+    style.innerGlowWidth ??
+    style.contourWidth ??
+    style.outlineWidth ??
+    0;
+
+  if (strokeColor && Number(strokeWidth) > 0) {
+    const w = Number(strokeWidth);
+    out.WebkitTextStroke = `${w}px ${strokeColor}`;
+    out.textShadow = out.textShadow
+      ? `${out.textShadow}, 0 0 ${Math.max(2, w * 2)}px ${strokeColor}`
+      : `0 0 ${Math.max(2, w * 2)}px ${strokeColor}`;
+  }
+
+  // Se o painel salvar shadow diretamente, respeita também.
+  if (style.textShadow) {
+    out.textShadow = style.textShadow;
+  }
+
+  if (style.filter) {
+    out.filter = style.filter;
+  }
+
+  return out;
+};
+

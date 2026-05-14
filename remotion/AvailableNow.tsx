@@ -11,7 +11,7 @@ import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { DEFAULT_FONTS, findFont, applyTextStyle, applyGradientStyle, hasGradient } from '../lib/fontCatalog';
+import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform, applyGradientStyle, hasGradient } from '../lib/fontCatalog';
 import type { TemplateProps, TextTransitionId } from './types';
 
 const HEADLINE_IN = 18;
@@ -72,8 +72,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
 
-  const cta1Text = props.cta || 'FAÇA O PRÉ-SAVE';
-  const cta2Text = props.cta2 || props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+  const cta1Text = props.cta ?? 'FAÇA O PRÉ-SAVE';
+  const cta2Text = props.cta2 ?? props.cta ?? 'EM TODAS AS PLATAFORMAS DIGITAIS';
 
   const cta1Opacity = interpolate(
     frame,
@@ -184,6 +184,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 overflow: 'visible',
                 ...applyTextStyle(motion.styleHeadline),
                 ...(showAll ? {} : tH.wrapStyle),
+              ...userTextTransform(motion.styleHeadline, tH.wrapStyle),
               }}
             >
               {renderTextWithStyle(props.headline || 'LANÇAMENTO', tH, motion.styleHeadline)}
@@ -197,17 +198,14 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 fontFamily: `'${fontDate?.family ?? 'Arial'}', Arial, sans-serif`,
                 marginTop: 4,
                 display: 'inline-block',
-                padding: '9px 24px',
                 
-                background: 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.22)',
-                boxShadow: `0 14px 34px rgba(0,0,0,0.4), 0 0 ${28 + datePulse * 40}px rgba(255,190,90,${0.18 + datePulse * 0.35})`,
                 fontSize: 26,
                 fontWeight: fontDate?.weight ?? 700,
                 letterSpacing: 3.5,
                 transform: showAll ? undefined : wigD.transform,
                 ...applyTextStyle(motion.styleDate),
                 ...(showAll ? {} : tD.wrapStyle),
+              ...userTextTransform(motion.styleDate, tD.wrapStyle),
               }}
             >
               {renderTextWithStyle(props.releaseDate, tD, motion.styleDate)}
@@ -230,9 +228,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             src={props.coverImage}
             size={coverSize}
             entryFrame={COVER_IN}
-            spinStart={COVER_IN + 16}
+            spinStart={COVER_IN + 70}
             spinEnd={FINAL_HIT - 4}
-            coverMotion={motion.coverMotion ?? 'slide_up_glow'}
+            motionId={motion.coverMotion ?? 'slide_up_glow'}
             spinTurns={spinTurns}
             wiggleIntensity={wiggleIntensity}
             accentFrames={accents}
@@ -260,10 +258,11 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.2,
               textShadow: '0 4px 22px rgba(0,0,0,0.92)',
-              opacity: showAll ? 0 : cta1Opacity,
+              opacity: cta1Text.trim() ? (showAll ? 0 : cta1Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
               ...applyTextStyle(motion.styleCta),
               ...(showAll ? {} : tC1.wrapStyle),
+              ...userTextTransform(motion.styleCta, tC1.wrapStyle),
             }}
           >
             {renderTextWithStyle(cta1Text, tC1, motion.styleCta)}
@@ -280,10 +279,11 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               fontWeight: fontCta?.weight ?? 900,
               letterSpacing: 2.5,
               textShadow: '0 4px 22px rgba(0,0,0,0.92)',
-              opacity: showAll ? 1 : cta2Opacity,
+              opacity: cta2Text.trim() ? (showAll ? 1 : cta2Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
               ...applyTextStyle(motion.styleCta),
               ...(showAll ? {} : tC.wrapStyle),
+              ...userTextTransform(motion.styleCta, tC.wrapStyle),
             }}
           >
             {renderTextWithStyle(cta2Text, tC, motion.styleCta)}

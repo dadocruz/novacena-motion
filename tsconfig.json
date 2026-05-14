@@ -22,11 +22,7 @@
         "name": "next"
       }
     ],
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+    "baseUrl": "."
   },
   "include": [
     "next-env.d.ts",
@@ -46,6 +42,15 @@
     "_local-backups/**/*",
     "**/*.before-*",
     "**/*.backup-*",
-    "**/*.bak-*"
+    "**/*.bak-*",
+    "ROLLBACK-*",
+    "ROLLBACK-*/**",
+    "_safe-*",
+    "_safe-*/**",
+    "**/*.broken.*",
+    "**/*.before_reformulate",
+    "remotion/**/*.bak.*",
+    "remotion/**/*.backup-*",
+    "lib/**/*.backup-*"
   ]
 }

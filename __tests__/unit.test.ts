@@ -16,7 +16,7 @@ import {
   validateProjectSafe,
   PresetSchema,
 } from '../lib/validation';
-import { renderOptimizer } from '../lib/renderOptimizer';
+import * as renderOptimizer from '../lib/renderOptimizer';
 
 // ============================================================
 // TESTS: Validation Schemas

@@ -1,0 +1,244 @@
+import React from 'react';
+import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { FontFaces } from './FontFaces';
+import { textStrokeStyle, textFillStyle } from './textStroke';
+import {
+  easings,
+  eased,
+  getTextTransition,
+} from './motionEngine';
+import { CinematicBackground } from './CinematicBackground';
+import { OverlayLayer } from './OverlayLayer';
+import { PremiumCover } from './PremiumCover';
+import { PlatformLogo } from './PlatformLogo';
+import {
+  DEFAULT_FONTS,
+  findFont,
+  applyTextStyle,
+  userTextTransform,
+} from '../lib/fontCatalog';
+import { Watermark } from './Watermark';
+import type { TemplateProps, TextTransitionId } from './types';
+
+const HEADLINE_IN = 12;
+const COVER_IN = 36;
+const TITLE_IN = 78;
+const SUBTITLE_IN = 110;
+const PLATFORMS_IN = 138;
+
+export const OutNow: React.FC<TemplateProps> = (props) => {
+  const frame = useCurrentFrame();
+  const motion: any = props.motion ?? {};
+
+  const fontHeadline = findFont(
+    motion.fontHeadline ?? 'TuskerGrotesk-8800Super',
+    motion.customFonts ?? [],
+  );
+  const fontDate = findFont(
+    motion.fontDate ?? 'TuskerGrotesk-5500Medium',
+    motion.customFonts ?? [],
+  );
+  const fontCta = findFont(
+    motion.fontCta ?? 'BebasNeue-Regular',
+    motion.customFonts ?? [],
+  );
+
+  const ff = (family?: string) =>
+    family ? `'${family}', Arial, sans-serif` : 'Arial, sans-serif';
+
+  const txHeadline: TextTransitionId =
+    motion.transitionHeadline ?? 'mask_reveal';
+  const txCta: TextTransitionId = motion.transitionCta ?? 'blur_focus';
+  const txDate: TextTransitionId = motion.transitionDate ?? 'scale_pop';
+
+  const tH = getTextTransition(txHeadline)(frame, HEADLINE_IN);
+  const tC = getTextTransition(txCta)(frame, SUBTITLE_IN);
+  const tD = getTextTransition(txDate)(frame, TITLE_IN);
+
+  const coverScale = interpolate(
+    frame,
+    [COVER_IN, COVER_IN + 26],
+    [0.7, 1],
+    { extrapolateRight: 'clamp', easing: easings.easeOutCubic },
+  );
+  const coverOpacity = eased(frame, COVER_IN, 22);
+
+  const titleOpacity = eased(frame, TITLE_IN, 18);
+  const titleY = interpolate(frame, [TITLE_IN, TITLE_IN + 18], [16, 0], {
+    extrapolateRight: 'clamp',
+    easing: easings.easeOutCubic,
+  });
+
+  const platformsAnim = eased(frame, PLATFORMS_IN, 18);
+
+  const headlineText = (props.headline || 'DISPONÍVEL').toUpperCase();
+  const cta = (props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS').toUpperCase();
+  const showAll = false;
+  const visiblePlatforms = props.platforms ?? [];
+
+  const textColor = motion.styleHeadline?.color || '#FFFFFF';
+
+  return (
+    <AbsoluteFill
+      style={{
+        background: motion.bgColor || '#0a0a0a',
+        fontFamily: 'Inter, Arial, sans-serif',
+        color: '#fff',
+        overflow: 'hidden',
+      }}
+    >
+      <FontFaces
+        fonts={motion.customFonts}
+        activeFontIds={[
+          motion.fontHeadline ?? '',
+          motion.fontDate ?? '',
+          motion.fontCta ?? '',
+        ]}
+      />
+
+      <CinematicBackground frame={frame} motion={motion} media={props.media} />
+      <OverlayLayer frame={frame} motion={motion} />
+
+      <AbsoluteFill
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '120px 60px',
+          textAlign: 'center',
+          gap: 26,
+        }}
+      >
+        {/* ----- HEADLINE: "DISPONÍVEL" ----- */}
+        <div
+          style={{
+            fontFamily: ff(fontHeadline?.family),
+            fontWeight: fontHeadline?.weight ?? 900,
+            fontSize: 110,
+            lineHeight: 0.94,
+            letterSpacing: 2,
+            color: textColor,
+            textShadow:
+              '0 14px 42px rgba(0,0,0,0.92), 0 0 30px rgba(255,255,255,0.06)',
+            overflow: 'visible',
+            marginBottom: 8,
+            ...applyTextStyle(motion.styleHeadline),
+            ...textStrokeStyle(motion.strokeHeadline),
+            ...(showAll ? {} : tH.wrapStyle),
+            ...userTextTransform(motion.styleHeadline, tH.wrapStyle),
+          }}
+        >
+          {headlineText}
+        </div>
+
+        {/* ----- CAPA ----- */}
+        {props.coverImage ? (
+          <div
+            style={{
+              opacity: coverOpacity,
+              transform: `scale(${coverScale})`,
+              filter: 'drop-shadow(0 30px 60px rgba(0,0,0,0.55))',
+              marginBottom: 12,
+            }}
+          >
+            <PremiumCover src={props.coverImage} size={520} />
+          </div>
+        ) : null}
+
+        {/* ----- TÍTULO + ARTISTA ----- */}
+        {props.songTitle || props.artistName ? (
+          <div
+            style={{
+              opacity: titleOpacity,
+              transform: `translateY(${titleY}px)`,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: -4,
+              ...applyTextStyle(motion.styleDate),
+              ...userTextTransform(motion.styleDate, tD.wrapStyle),
+            }}
+          >
+            {props.songTitle ? (
+              <div
+                style={{
+                  fontFamily: ff(fontHeadline?.family),
+                  fontWeight: 800,
+                  fontSize: 56,
+                  letterSpacing: 1,
+                  color: '#fff',
+                  textShadow: '0 6px 20px rgba(0,0,0,0.7)',
+                }}
+              >
+                {props.songTitle.toUpperCase()}
+              </div>
+            ) : null}
+            {props.artistName ? (
+              <div
+                style={{
+                  fontFamily: ff(fontDate?.family),
+                  fontWeight: 600,
+                  fontSize: 30,
+                  letterSpacing: 1.4,
+                  color: 'rgba(255,255,255,0.85)',
+                }}
+              >
+                {props.artistName}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* ----- CTA / SUBTITLE: "EM TODAS AS PLATAFORMAS DIGITAIS" ----- */}
+        <div
+          style={{
+            fontFamily: ff(fontCta?.family),
+            fontWeight: fontCta?.weight ?? 700,
+            fontSize: 30,
+            letterSpacing: 3.2,
+            color: 'rgba(255,255,255,0.9)',
+            marginTop: 18,
+            textShadow: '0 4px 18px rgba(0,0,0,0.7)',
+            ...applyTextStyle(motion.styleCta),
+            ...textStrokeStyle(motion.strokeCta),
+            ...(showAll ? {} : tC.wrapStyle),
+            ...userTextTransform(motion.styleCta, tC.wrapStyle),
+          }}
+        >
+          {cta}
+        </div>
+
+        {/* ----- LOGOS DAS PLATAFORMAS ----- */}
+        {visiblePlatforms.length > 0 ? (
+          <div
+            style={{
+              display: 'flex',
+              gap: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 8,
+              opacity: platformsAnim,
+            }}
+          >
+            {visiblePlatforms.map((p, i) => (
+              <PlatformLogo
+                key={`pl-${p}`}
+                name={p}
+                delay={PLATFORMS_IN + i * 4}
+                frame={frame}
+                customLogos={motion.platformLogos}
+                scaleOverride={motion.platformLogoScales?.[p]}
+              />
+            ))}
+          </div>
+        ) : null}
+      </AbsoluteFill>
+
+      <Watermark {...(motion.watermark ?? {})} />
+    </AbsoluteFill>
+  );
+};
+
+export default OutNow;

@@ -6,7 +6,20 @@ import { Milestone } from './Milestone';
 import { OutNow } from './OutNow';
 import { getProject } from './project';
 
+
 const FPS = 30;
+
+const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
+  const seconds = Number(props?.durationSeconds ?? 8);
+  const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 8;
+
+  return {
+    durationInFrames: Math.round(safeSeconds * FPS),
+  };
+};
+
+
+
 const DURATION_FRAMES = 240;
 
 // ============================================================
@@ -102,6 +115,7 @@ export const RemotionRoot: React.FC = () => {
       {templates.map((template) => (
         <React.Fragment key={template.id}>
           <Composition
+        calculateMetadata={resolveDurationInFramesFromProps}
             id={template.id}
             component={template.component}
             width={1080}
@@ -111,6 +125,7 @@ export const RemotionRoot: React.FC = () => {
             defaultProps={{ ...template.project, renderTarget: 'story' as const }}
           />
           <Composition
+        calculateMetadata={resolveDurationInFramesFromProps}
             id={`${template.id}Feed`}
             component={template.component}
             width={1080}

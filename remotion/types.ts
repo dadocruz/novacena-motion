@@ -1,3 +1,31 @@
+
+export type TextStrokeMode = 'none' | 'outer' | 'inner';
+export type TextStrokeFillKind = 'solid' | 'gradient';
+
+export type TextStroke = {
+  mode: TextStrokeMode;       // none | outer | inner
+  width: number;              // 0–10 px
+  fillKind: TextStrokeFillKind;
+  color: string;              // hex quando solid
+  gradientFrom?: string;      // hex
+  gradientTo?: string;        // hex
+  gradientAngle?: number;
+  opacity?: number;
+  /** Opacidade apenas do preenchimento da letra. Não afeta contorno. */
+  fillOpacity?: number;     // graus
+};
+
+export const DEFAULT_TEXT_STROKE: TextStroke = {
+  mode: 'none',
+  width: 2,
+  fillKind: 'solid',
+  color: '#ffc857',
+  gradientFrom: '#ffc857',
+  gradientTo: '#ff4d6d',
+  gradientAngle: 90,
+  opacity: 1,
+};
+
 export type RenderTarget = 'story' | 'feed';
 
 export type TemplateId =
@@ -54,11 +82,16 @@ export type TextTransitionId =
 
 export type CoverMotionId =
   | 'zoom_bounce'
+  | 'slide_up'
+  | 'slide_left'
+  | 'slide_right'
+  | 'flip_card'
+  | 'vinyl_reveal'
   | 'slide_up_glow'
   | 'slide_left_premium'
   | 'slide_right_premium'
-  | 'flip_card'
-;
+  | 'flip_card_premium'
+  | 'zoom_bounce_intro';
 
 /**
  * Instância de overlay posicionada no tempo (semelhante a clip numa timeline).
@@ -120,6 +153,9 @@ export type TextStyle = {
   gradientColor2?: string;
   /** Ângulo do gradiente em graus (0 = horizontal, 90 = vertical) */
   gradientAngle?: number;
+  opacity?: number;
+  /** Opacidade apenas do preenchimento da letra. Não afeta contorno. */
+  fillOpacity?: number;
   /** Espaçamento entre letras em px */
   letterSpacing?: number;
   /** Alinhamento de texto */
@@ -141,6 +177,13 @@ export type TextStyle = {
  */
 export type MotionConfig = {
   fontHeadline?: string;
+  strokeHeadline?: TextStroke;
+  strokeDate?: TextStroke;
+  strokeCta?: TextStroke;
+  /** Opacidade global da camada de texto 0..1 */
+  textOpacity?: number;
+  /** Força atualização visual do Player sem resetar frame */
+  previewNonce?: number;
   fontDate?: string;
   fontCta?: string;
   customFonts?: {
@@ -153,6 +196,7 @@ export type MotionConfig = {
     vibe: string;
   }[];
   coverSize?: number;
+  /** Animação de entrada da capa */
   coverMotion?: CoverMotionId;
   spinTurns?: number;
   wiggleIntensity?: number;

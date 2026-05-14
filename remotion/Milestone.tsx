@@ -13,7 +13,7 @@ import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { resolveMotion, ff, applyTextStyle } from '../lib/fontCatalog';
+import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 
 const PREFIX_IN = 14;
@@ -99,6 +99,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             textShadow: '0 8px 28px rgba(0,0,0,0.85)',
             ...applyTextStyle(props.motion?.styleDate),
             ...(showAll ? {} : prefixMask),
+              ...userTextTransform(props.motion?.styleDate, prefixMask),
           }}
         >
           {prefixText}

@@ -1,14 +1,26 @@
 [
   {
+    "platform": "Spotify",
+    "path": "/api/uploads/platform-logos/1778659490084-spotify.png",
+    "filename": "1778659490084-spotify.png",
+    "uploadedAt": "2026-05-13T08:04:50.088Z"
+  },
+  {
+    "platform": "YouTube Music",
+    "path": "/api/uploads/platform-logos/1778656870378-618-6184129_music-vector-png.png",
+    "filename": "1778656870378-618-6184129_music-vector-png.png",
+    "uploadedAt": "2026-05-13T07:21:10.381Z"
+  },
+  {
+    "platform": "Apple Music",
+    "path": "/api/uploads/platform-logos/1778656847077-itunes-png-file-itunes-12-2-logo-png-600.png",
+    "filename": "1778656847077-itunes-png-file-itunes-12-2-logo-png-600.png",
+    "uploadedAt": "2026-05-13T07:20:47.081Z"
+  },
+  {
     "platform": "Deezer",
     "path": "/api/uploads/platform-logos/1778643071212-deezer.png",
     "filename": "1778643071212-deezer.png",
     "uploadedAt": "2026-05-13T03:31:11.216Z"
-  },
-  {
-    "platform": "Spotify",
-    "path": "/api/uploads/platform-logos/1778642940162-spotify.png",
-    "filename": "1778642940162-spotify.png",
-    "uploadedAt": "2026-05-13T03:29:00.167Z"
   }
 ]

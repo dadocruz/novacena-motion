@@ -1,0 +1,237 @@
+import React from 'react';
+import { textStrokeStyle } from './textStroke';
+import { FontFaces } from './FontFaces';
+import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import {
+  charStagger,
+  easings,
+  eased,
+  maskReveal,
+  scaleInBack,
+  loopFloat } from './motionEngine';
+import { CinematicBackground } from './CinematicBackground';
+import { OverlayLayer } from './OverlayLayer';
+import { PremiumCover } from './PremiumCover';
+import { PlatformLogo } from './PlatformLogo';
+import { resolveMotion, ff, applyTextStyle, userTextTransform} from "../lib/fontCatalog";
+import type { TemplateProps } from './types';
+
+const textStyleFix = (style: any = {}) => {
+  const out: Record<string, string | number | undefined> = {};
+
+  if (style.fontFamily) {
+    out.fontFamily = `'${style.fontFamily}', Arial, sans-serif`;
+  }
+
+  if (style.letterSpacing !== undefined) {
+    out.letterSpacing =
+      typeof style.letterSpacing === 'number'
+        ? `${style.letterSpacing}px`
+        : style.letterSpacing;
+  }
+
+  if (style.lineHeight !== undefined) {
+    out.lineHeight = style.lineHeight;
+  }
+
+  if (style.opacity !== undefined) {
+    out.opacity = style.opacity;
+  }
+
+  return out;
+};
+
+const combineTextTransform = (animatedTransform: any, style: any = {}) => {
+  const base = typeof animatedTransform === 'string' ? animatedTransform : '';
+  const x = Number(style.offsetX ?? 0);
+  const y = Number(style.offsetY ?? 0);
+  const s = Number(style.scale ?? 1);
+
+  return `${base} translate(${x}px, ${y}px) scale(${s})`.trim();
+};
+
+
+const HEADLINE_IN = 14;
+const COVER_IN = 46;
+const CTA_IN = 88;
+const MID_HIT = 122;
+const DATE_IN = 130;
+const FINAL_HIT = 208;
+const FINAL_POSTER = 222;
+
+export const OutNow: React.FC<TemplateProps> = (props) => {
+  const frame = useCurrentFrame();
+  const accents = [MID_HIT, FINAL_HIT];
+  const M = resolveMotion(props.motion, 'rgba(255, 140, 60, 0.32)');
+
+  const headlineMask = maskReveal(frame, HEADLINE_IN, 28);
+  const ctaChar = charStagger(frame, CTA_IN, 1.0);
+  const dateAnim = scaleInBack(frame, DATE_IN, 18);
+
+  const finalFlash = M.finalFlash
+    ? interpolate(
+        frame,
+        [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14],
+        [0, 0.4, 0],
+        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+      )
+    : 0;
+
+  const showAll = frame >= FINAL_POSTER;
+  const cta = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+
+  // Logos flutuando nos cantos (decorativo)
+  const floatingLogos = [
+    { p: props.platforms[0] || 'Spotify', left: 60, top: 280, off: 0 },
+    { p: props.platforms[1] || 'Deezer', left: 880, top: 320, off: 42 },
+    { p: props.platforms[2] || 'Apple Music', left: 80, top: 1480, off: 90 },
+    { p: props.platforms[3] || 'YouTube Music', left: 860, top: 1520, off: 140 },
+  ] as const;
+
+  return (
+    <AbsoluteFill
+      style={{
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        color: '#fff',
+        overflow: 'hidden' }}
+    >
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
+      <CinematicBackground
+        coverImage={props.coverImage}
+        accentFrames={accents}
+        intensity={M.particlesEnabled ? 1 : 0}
+        background={M.background}
+      />
+
+      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
+      <OverlayLayer overlays={props.motion?.overlays} />
+
+      {/* Logos flutuando decorativos */}
+      {floatingLogos.map((f, i) => {
+        const appear = eased(frame, 30 + i * 4, 30 + i * 4 + 20, easings.outCubic);
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: f.left,
+              top: f.top,
+              opacity: appear * 0.92,
+              transform: loopFloat(frame, f.off, 1.1) }}
+          >
+            <div
+              style={{
+                width: 110,
+                height: 110,
+                borderRadius: 999,
+                background: 'rgba(255,255,255,0.92)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 22px 60px rgba(0,0,0,0.42)' }}
+            >
+              <PlatformLogo name={f.p} size={78} variant="icon" customSrc={M.customLogos?.[f.p]} />
+            </div>
+          </div>
+        );
+      })}
+
+      {/* CONTEÚDO PRINCIPAL */}
+      <AbsoluteFill
+        style={{
+          padding: '0 72px',
+          paddingTop: 200,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center' }}
+      >
+        {/* HEADLINE GIGANTE */}
+        <div style={{ width: '100%', paddingBottom: 20, overflow: 'visible' }}>
+          <div
+            style={{
+              fontFamily: ff(M.fontHeadline.family),
+              ...textStrokeStyle(M.strokeHeadline),
+              opacity: (M.textOpacity ?? 1),
+              fontSize: 148,
+              lineHeight: 0.94,
+              fontWeight: M.fontHeadline.weight,
+              letterSpacing: -4,
+              textShadow:
+                '0 14px 42px rgba(0,0,0,0.92), 0 0 30px rgba(255,162,64,0.32)',
+              overflow: 'visible',
+              ...applyTextStyle(props.motion?.styleHeadline),
+              ...(showAll ? {} : headlineMask),
+              ...userTextTransform(props.motion?.styleHeadline, headlineMask),?.transform, props.motion?.styleHeadline) }}
+          >
+            OUÇA<br />AGORA
+          </div>
+        </div>
+
+        {/* CAPA */}
+        <div style={{ marginTop: 70 }}>
+          <PremiumCover
+            src={props.coverImage}
+            size={M.coverSize + 40}
+            entryFrame={COVER_IN}
+            spinStart={COVER_IN + 14}
+            spinEnd={FINAL_HIT - 4}
+            spinTurns={M.spinTurns}
+            wiggleIntensity={M.wiggleIntensity}
+            accentFrames={accents}
+            glowColor={M.glowColor}
+          />
+        </div>
+
+        {/* CTA char stagger */}
+        <div
+          style={{
+            fontFamily: ff(M.fontCta.family),
+            ...textStrokeStyle(M.strokeCta),
+            opacity: M.textOpacity,
+            marginTop: 80,
+            fontSize: 38,
+            fontWeight: M.fontCta.weight,
+            letterSpacing: 2.6,
+            textShadow: '0 6px 26px rgba(0,0,0,0.92)',
+            ...applyTextStyle(props.motion?.styleCta),
+            ...userTextTransform(props.motion?.styleCta),
+            }}
+        >
+          {showAll
+            ? cta
+            : cta.split('').map((char, i) => (
+                <span key={i} style={ctaChar(i)}>
+                  {char === ' ' ? '\u00A0' : char}
+                </span>
+              ))}
+        </div>
+
+        {/* DATA */}
+        {props.releaseDate ? (
+          <div
+            style={{
+              fontFamily: ff(M.fontDate.family),
+              ...textStrokeStyle(M.strokeDate),
+              marginTop: 26,
+              fontSize: 28,
+              fontWeight: M.fontDate.weight,
+              letterSpacing: 2.4,
+              opacity: (0.92) * (M.textOpacity ?? 1),
+              ...applyTextStyle(props.motion?.styleDate),
+              ...(showAll ? {} : dateAnim),
+              ...userTextTransform(props.motion?.styleDate, dateAnim),?.transform, props.motion?.styleDate) }}
+          >
+            DESDE {props.releaseDate}
+          </div>
+        ) : null}
+      </AbsoluteFill>
+<AbsoluteFill
+        style={{
+          background: '#fff',
+          opacity: finalFlash,
+          pointerEvents: 'none' }}
+      />
+    </AbsoluteFill>
+  );
+};

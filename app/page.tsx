@@ -1,31 +1,38 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Player } from '@remotion/player';
+import {
+  RIGHT_PANEL_PRESET_ORDER,
+  SIMPLE_MODE_SECTIONS,
+  STUDIO_TOOL_DOCK,
+  QUICK_ACTIONS,
+  type StudioMode,
+} from '../lib/studioWorkflow';
+import FontsPanel, { type FontRole } from '../components/FontsPanel';
+
 import { AvailableNow } from '../remotion/AvailableNow';
 import { WatchOnYouTube } from '../remotion/WatchOnYouTube';
 import { Milestone } from '../remotion/Milestone';
 import { OutNow } from '../remotion/OutNow';
-import { getProject, templateLabels, templateOrder } from '../remotion/project';
-import type {
-  MotionConfig,
-  OverlayPlacement,
-  PlatformName,
-  RenderTarget,
-  TemplateId,
-  TextStyle,
-  TemplateProps,
-  TextTransitionId,
-  CoverMotionId,
-} from '../remotion/types';
+import { Player } from '@remotion/player';
 import {
-  FONT_CATALOG,
-  DEFAULT_FONTS,
-  userFontToFontDef,
-  type FontDef,
-} from '../lib/fontCatalog';
+  type PlatformName,
+  type OverlayPlacement,
+  type TextStyle,
+  type CoverMotionId,
+  type TemplateId,
+  type RenderTarget,
+  type TextTransitionId,
+  type MotionConfig,
+  type TemplateProps,
+} from '../remotion/types'
 import { TEXT_TRANSITIONS } from '../remotion/motionEngine';
-
+import {
+  templateOrder,
+  templateLabels,
+  getProject,
+} from '../remotion/project';
+import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../lib/fontCatalog';
 // ============================================================
 // CONSTANTES
 // ============================================================
@@ -55,10 +62,11 @@ const PLATFORMS = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'] as const
 
 const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
   { value: 'zoom_bounce', label: 'Zoom Bounce — Intro impacto' },
-  { value: 'slide_up_glow', label: 'Slide Up Glow — Vem de baixo' },
-  { value: 'slide_left_premium', label: 'Slide Left — Entra da esquerda' },
-  { value: 'slide_right_premium', label: 'Slide Right — Entra da direita' },
+  { value: 'slide_up', label: 'Slide Up — Vem de baixo' },
+  { value: 'slide_left', label: 'Slide Left — Entra da esquerda' },
+  { value: 'slide_right', label: 'Slide Right — Entra da direita' },
   { value: 'flip_card', label: 'Flip Card — Virada premium' },
+  { value: 'vinyl_reveal', label: 'Vinyl Reveal — Giro lateral' },
 ];
 
 // ============================================================
@@ -213,26 +221,11 @@ type StudioToolId =
   | 'cover'
   | 'text'
   | 'motion'
-  | 'video'
-  | 'audio'
+  | 'cta'
   | 'logos'
-  | 'fonts'
-  | 'colors'
-  | 'effects'
+  | 'overlay'
   | 'render';
 
-const STUDIO_TOOL_DOCK: { id: StudioToolId; label: string; section?: string }[] = [
-  { id: 'cover', label: 'Capa', section: 'Capa' },
-  { id: 'text', label: 'Texto', section: 'Transições de texto' },
-  { id: 'motion', label: 'Motion', section: 'Ritmo CTA (Disponível)' },
-  { id: 'video', label: 'Vídeo BG', section: 'Projeto' },
-  { id: 'audio', label: 'Áudio', section: 'Áudio' },
-  { id: 'logos', label: 'Logos', section: 'Logos das plataformas' },
-  { id: 'fonts', label: 'Fonte', section: 'Fontes' },
-  { id: 'colors', label: 'Cor', section: 'Cor & gradiente' },
-  { id: 'effects', label: 'Efeitos', section: 'Efeitos' },
-  { id: 'render', label: 'Render' },
-];
 
 function scrollToStudioSection(section?: string) {
   if (!section || typeof window === 'undefined') return;
@@ -270,6 +263,9 @@ export default function Home() {
   const [headline, setHeadline] = useState(getProject('available_now').headline);
   const [cta, setCta] = useState(getProject('available_now').cta);
   const [cta2, setCta2] = useState(getProject('available_now').cta2 ?? getProject('available_now').cta);
+  const [showCta1, setShowCta1] = useState(true);
+  const [showCta2, setShowCta2] = useState(true);
+
   const [channelName, setChannelName] = useState(getProject('available_now').channelName ?? '');
   const [metricPrefix, setMetricPrefix] = useState(getProject('available_now').metricPrefix ?? 'ULTRAPASSAMOS');
   const [metricNumber, setMetricNumber] = useState(getProject('available_now').metricNumber ?? '100.000');
@@ -281,7 +277,7 @@ export default function Home() {
   const [fontDate, setFontDate] = useState<string>(DEFAULT_FONTS.date);
   const [fontCta, setFontCta] = useState<string>(DEFAULT_FONTS.cta);
   const [coverSize, setCoverSize] = useState<number>(510);
-  const [coverMotion, setCoverMotion] = useState<CoverMotionId>('slide_up_glow');
+  const [coverMotion, setCoverMotion] = useState<CoverMotionId>('zoom_bounce');
   const [spinTurns, setSpinTurns] = useState<number>(2);
   const [wiggleIntensity, setWiggleIntensity] = useState<number>(1);
   const [wiggleH, setWiggleH] = useState<number>(0);
@@ -358,7 +354,104 @@ export default function Home() {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery'>('studio');
+  const [studioMode, setStudioMode] = useState<StudioMode>('simple');
+  const [typoSubTab, setTypoSubTab] = React.useState<'char'|'layout'>('char');
+  const [textPanelTab, setTextPanelTab] = useState<'fontes' | 'entrada' | 'cor' | 'layout'>('fontes');
   const [showArtistModal, setShowArtistModal] = useState(false);
+
+  const playerRef = useRef<any>(null);
+  const [txScale, setTxScale] = React.useState<Record<string,number>>({ headline:1, date:1, cta:1 });
+  const [txLS, setTxLS] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
+  const [txLH, setTxLH] = React.useState<Record<string,number>>({ headline:1.2, date:1.2, cta:1.3 });
+  const [txOX, setTxOX] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
+  const [txOY, setTxOY] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
+  const [txAlign, setTxAlign] = React.useState<Record<string,string>>({ headline:'center', date:'center', cta:'center' } as Record<string,string>);
+  function updTxN(setter: React.Dispatch<React.SetStateAction<Record<string,number>>>, key: string, val: number) {
+    setter(prev => ({ ...prev, [key]: val }));
+  }
+  function updTxS(setter: React.Dispatch<React.SetStateAction<Record<string,string>>>, key: string, val: string) {
+    setter(prev => ({ ...prev, [key]: val }));
+  }
+
+  // ── Tipografia avançada ────────────────────────────────────
+  const [textTarget, setTextTarget] = React.useState<'headline'|'date'|'cta'>('headline');
+  const [headlineLS,     setHeadlineLS]     = React.useState(0);   // letter-spacing em
+  const [headlineLH,     setHeadlineLH]     = React.useState(1.1);  // line-height
+  const [headlineX,      setHeadlineX]      = React.useState(0);   // offset X %
+  const [headlineY,      setHeadlineY]      = React.useState(0);   // offset Y %
+
+
+  // Progresso do render
+  const [renderJobId, setRenderJobId] = React.useState<string | null>(null);
+  const [renderProgress, setRenderProgress] = React.useState(0);
+  const [renderStatus, setRenderStatus] = React.useState<'idle'|'rendering'|'done'|'error'>('idle');
+
+  React.useEffect(() => {
+    if (!renderJobId) return;
+    setRenderProgress(0);
+    setRenderStatus('rendering');
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/render?jobId=${renderJobId}`);
+        const data = await res.json();
+        if (data.progress != null) setRenderProgress(Math.round(data.progress * 100));
+        if (data.status === 'completed') { setRenderStatus('done'); setRenderProgress(100); clearInterval(interval); }
+        else if (data.status === 'error') { setRenderStatus('error'); clearInterval(interval); }
+      } catch { clearInterval(interval); }
+    }, 800);
+    return () => clearInterval(interval);
+  }, [renderJobId]);
+
+
+  // ── Drag & drop na capa ────────────────────────────────────
+  const [isCoverDragging, setIsCoverDragging] = React.useState(false);
+  React.useEffect(() => {
+    function onDragOver(e: DragEvent) { e.preventDefault(); setIsCoverDragging(true); }
+    function onDragLeave() { setIsCoverDragging(false); }
+    function onDrop(e: DragEvent) {
+      e.preventDefault();
+      setIsCoverDragging(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (file && /\.(png|jpe?g|webp)$/i.test(file.name)) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        const input = document.getElementById('cover-upload-input') as HTMLInputElement | null;
+        if (input) {
+          Object.defineProperty(input, 'files', { value: dt.files, writable: true });
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
+
+  // ── Atalho Space: play/pause ──────────────────────────────
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        const player = playerRef.current as any;
+        if (!player) return;
+        if (player.isPlaying?.()) {
+          player.pause?.();
+        } else {
+          player.play?.();
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -486,26 +579,6 @@ export default function Home() {
     );
   }, [allFonts, fontSearch]);
 
-  const favoriteFonts = useMemo(
-    () => allFonts.filter((f) => favoriteFontIds.includes(f.id)),
-    [allFonts, favoriteFontIds]
-  );
-
-  function toggleFavoriteFont(id: string) {
-    setFavoriteFontIds((arr) =>
-      arr.includes(id) ? arr.filter((x) => x !== id) : [id, ...arr]
-    );
-  }
-
-  async function applyFontTo(role: 'headline' | 'date' | 'cta', font: FontDef) {
-    try {
-      await document.fonts.load(`${font.weight || 700} 32px "${font.family}"`);
-    } catch {}
-
-    if (role === 'headline') setFontHeadline(font.id);
-    if (role === 'date') setFontDate(font.id);
-    if (role === 'cta') setFontCta(font.id);
-  }
 
 
   const fontSearchResults = useMemo(() => {
@@ -523,8 +596,19 @@ export default function Home() {
     return base.slice(0, 18);
   }, [allFonts, fontSearch, favoriteFontIds]);
 
+
+
+
+  // ── FONTES: helpers únicos ─────────────────────────────
+  const findFont = (id: string) =>
+    allFonts.find((f) => f.id === id) ?? allFonts[0];
+
+  const currentFontHeadline = useMemo(() => findFont(fontHeadline), [allFonts, fontHeadline]);
+  const currentFontDate = useMemo(() => findFont(fontDate), [allFonts, fontDate]);
+  const currentFontCta = useMemo(() => findFont(fontCta), [allFonts, fontCta]);
+
   const favoriteFonts = useMemo(
-    () => allFonts.filter((font) => favoriteFontIds.includes(font.id)).slice(0, 18),
+    () => allFonts.filter((f) => favoriteFontIds.includes(f.id)).slice(0, 24),
     [allFonts, favoriteFontIds]
   );
 
@@ -534,10 +618,82 @@ export default function Home() {
     );
   }
 
-  function applyFontTo(role: 'headline' | 'date' | 'cta', id: string) {
+  async function applyFontTo(role: 'headline' | 'date' | 'cta', id: string) {
+    const font = findFont(id);
+    try {
+      await document.fonts.load(`${font.weight || 700} 32px "${font.family}"`);
+    } catch {}
     if (role === 'headline') setFontHeadline(id);
     if (role === 'date') setFontDate(id);
     if (role === 'cta') setFontCta(id);
+  }
+
+  // Estilos locais do painel de fontes
+  const fontInputStyle: React.CSSProperties = {
+    width: '100%',
+    height: 38,
+    borderRadius: 10,
+    border: '1px solid var(--border-1)',
+    background: 'rgba(255,255,255,0.06)',
+    color: 'var(--text)',
+    padding: '0 12px',
+    outline: 'none',
+    fontSize: 13,
+  };
+  const smallBtn: React.CSSProperties = {
+    height: 28,
+    padding: '0 8px',
+    borderRadius: 8,
+    border: '1px solid var(--border-1)',
+    background: 'rgba(255,255,255,0.04)',
+    color: 'var(--text)',
+    fontSize: 11,
+    cursor: 'pointer',
+  };
+
+
+  const defaultTextStroke = {
+    mode: 'none' as const,
+    width: 0,
+    fillKind: 'solid' as const,
+    color: '#f5c451',
+    gradientFrom: '#f5c451',
+    gradientTo: '#ffffff',
+    gradientAngle: 90,
+    opacity: 1,
+    fillOpacity: 1,
+  };
+
+  const [strokeHeadline, setStrokeHeadline] = useState(defaultTextStroke);
+  const [strokeDate, setStrokeDate] = useState(defaultTextStroke);
+  const [strokeCta, setStrokeCta] = useState(defaultTextStroke);
+  const [textOpacity, setTextOpacity] = useState(1);
+  const [previewNonce, setPreviewNonce] = useState(0);
+
+
+  function setTextOpacityLive(value: number) {
+    setTextOpacity(value);
+    setPreviewNonce((n) => n + 1);
+  }
+
+  function changeTextStroke(role: 'headline' | 'date' | 'cta', stroke: any) {
+    const nextStroke = {
+      mode: stroke?.mode ?? stroke?.type ?? 'none',
+      width: Number(stroke?.width ?? 0),
+      fillKind: stroke?.fillKind ?? 'solid',
+      color: stroke?.color ?? '#f5c451',
+      gradientFrom: stroke?.gradientFrom ?? stroke?.color ?? '#f5c451',
+      gradientTo: stroke?.gradientTo ?? stroke?.color2 ?? '#ffffff',
+      gradientAngle: stroke?.gradientAngle ?? 90,
+      opacity: stroke?.opacity ?? 1,
+      fillOpacity: stroke?.fillOpacity ?? stroke?.opacity ?? 1,
+    };
+
+    if (role === 'headline') setStrokeHeadline(nextStroke);
+    if (role === 'date') setStrokeDate(nextStroke);
+    if (role === 'cta') setStrokeCta(nextStroke);
+
+    setPreviewNonce((n) => n + 1);
   }
 
   const motion: MotionConfig = useMemo(
@@ -546,8 +702,13 @@ export default function Home() {
       fontDate,
       fontCta,
       customFonts: userFonts.map(userFontToFontDef),
-      coverSize,
+      strokeHeadline: { ...strokeHeadline },
+      strokeDate: { ...strokeDate },
+      strokeCta: { ...strokeCta },
+      textOpacity,
+      previewNonce,
       coverMotion,
+      coverSize,
       spinTurns,
       wiggleIntensity,
       wiggleHeadline: wiggleH,
@@ -592,14 +753,53 @@ export default function Home() {
       })),
     }),
     [
-      fontHeadline, fontDate, fontCta, userFonts, userFonts, coverSize, coverMotion, platformLogoSize, platformLogoGap, platformLogoScales, coverMotion, spinTurns, wiggleIntensity,
-      wiggleH, wiggleD, wiggleC, particlesEnabled, finalFlash, glowColor,
-      durationSeconds, trHeadline, trDate, trCta, styleHeadline, styleDate, styleCta,
-      cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame,
-      bgVideo, bgVideoStartSec,
-      bgVideoOpacity, bgColor, bgVideoBlur, bgVideoSaturation,
-      audioSrc, audioStartSec, audioVolume, audioFadeIn, audioFadeOut, useVideoAudio,
-      customLogos, platformLogoSize, platformLogoGap, platformLogoScales, overlays,
+      fontHeadline,
+      fontDate,
+      fontCta,
+      userFonts,
+      strokeHeadline,
+      strokeDate,
+      strokeCta,
+      textOpacity,
+      previewNonce,
+      coverMotion,
+      coverSize,
+      spinTurns,
+      wiggleIntensity,
+      wiggleH,
+      wiggleD,
+      wiggleC,
+      particlesEnabled,
+      finalFlash,
+      glowColor,
+      durationSeconds,
+      trHeadline,
+      trDate,
+      trCta,
+      styleHeadline,
+      styleDate,
+      styleCta,
+      cta1InFrame,
+      ctaSwapFrame,
+      cta2InFrame,
+      logosInFrame,
+      bgVideo,
+      bgVideoStartSec,
+      bgVideoOpacity,
+      bgColor,
+      bgVideoBlur,
+      bgVideoSaturation,
+      audioSrc,
+      audioStartSec,
+      audioVolume,
+      audioFadeIn,
+      audioFadeOut,
+      useVideoAudio,
+      customLogos,
+      platformLogoScales,
+      platformLogoGap,
+      platformLogoSize,
+      overlays,
     ]
   );
 
@@ -614,7 +814,89 @@ export default function Home() {
       return 'musical';
     }
     return 'custom';
-  }, [cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame]);
+  }, [
+      fontHeadline,
+      fontDate,
+      fontCta,
+      userFonts,
+      strokeHeadline,
+      strokeDate,
+      strokeCta,
+      textOpacity,
+      previewNonce,
+      coverMotion,
+      coverSize,
+      spinTurns,
+      wiggleIntensity,
+      wiggleH,
+      wiggleD,
+      wiggleC,
+      particlesEnabled,
+      finalFlash,
+      glowColor,
+      durationSeconds,
+      trHeadline,
+      trDate,
+      trCta,
+      styleHeadline,
+      styleDate,
+      styleCta,
+      cta1InFrame,
+      ctaSwapFrame,
+      cta2InFrame,
+      logosInFrame,
+      bgVideo,
+      bgVideoStartSec,
+      bgVideoOpacity,
+      bgColor,
+      bgVideoBlur,
+      bgVideoSaturation,
+      audioSrc,
+      audioStartSec,
+      audioVolume,
+      audioFadeIn,
+      audioFadeOut,
+      useVideoAudio,
+      customLogos,
+      overlays,
+    ]);
+
+  const motionWithStyles = React.useMemo(() => {
+    const h: any = styleHeadline;
+    const d: any = styleDate;
+    const c: any = styleCta;
+
+    return {
+      ...motion,
+      strokeHeadline: strokeHeadline,
+      strokeDate: strokeDate,
+      strokeCta: strokeCta,
+      styleHeadline: {
+        ...styleHeadline,
+        scale: h.scale ?? txScale.headline ?? 1,
+        letterSpacing: txLS.headline ?? h.letterSpacing ?? 0,
+        lineHeight: h.lineHeight ?? txLH.headline ?? 1.2,
+        offsetX: h.offsetX ?? txOX.headline ?? 0,
+        offsetY: h.offsetY ?? txOY.headline ?? 0,
+      },
+      styleDate: {
+        ...styleDate,
+        scale: d.scale ?? txScale.date ?? 1,
+        letterSpacing: txLS.date ?? d.letterSpacing ?? 0,
+        lineHeight: d.lineHeight ?? txLH.date ?? 1.2,
+        offsetX: d.offsetX ?? txOX.date ?? 0,
+        offsetY: d.offsetY ?? txOY.date ?? 0,
+      },
+      styleCta: {
+        ...styleCta,
+        scale: c.scale ?? txScale.cta ?? 1,
+        letterSpacing: txLS.cta ?? c.letterSpacing ?? 0,
+        lineHeight: c.lineHeight ?? txLH.cta ?? 1.3,
+        offsetX: c.offsetX ?? txOX.cta ?? 0,
+        offsetY: c.offsetY ?? txOY.cta ?? 0,
+      },
+    };
+  }, [motion, styleHeadline, styleDate, styleCta, strokeHeadline, strokeDate, strokeCta, txScale, txLS, txLH, txOX, txOY]);
 
   const project = useMemo(() => {
     const base = getProject(template);
@@ -622,15 +904,15 @@ export default function Home() {
       ...base,
       releaseDate,
       headline,
-      cta,
-      cta2,
+      cta: showCta1 ? cta : '',
+      cta2: showCta2 ? cta2 : '',
       channelName,
       metricPrefix,
       metricNumber,
       metricLabel,
       platforms: platformsSel,
       coverImage: normalizeAssetUrl(coverImage) ?? coverImage,
-      motion,
+      motion: motionWithStyles,
       media: {
         type: 'image' as const,
         file: normalizeAssetUrl(coverImage) ?? coverImage,
@@ -640,14 +922,98 @@ export default function Home() {
       renderTarget: target,
     } satisfies TemplateProps;
   }, [
-    template, releaseDate, headline, cta, cta2, channelName, metricPrefix,
-    metricNumber, metricLabel, platformsSel, coverImage, motion, target,
+    template, releaseDate, headline, cta, cta2, showCta1, showCta2, channelName, metricPrefix,
+    metricNumber, metricLabel, platformsSel, coverImage, motionWithStyles, target,
   ]);
 
   const Component = componentByTemplate[template];
+
   const compositionHeight = target === 'story' ? 1920 : 1350;
 
   // ─── HANDLERS ────────────────────────────────────────────
+  function setPlatformScale(platform: string, value: number) {
+    setPlatformLogoScales((prev) => ({ ...prev, [platform]: value }));
+    setPreviewNonce((n) => n + 1);
+  }
+
+
+
+
+  function previewCoverMotionChange(value: unknown) {
+    const next = normalizeCoverMotionId(value);
+    setCoverMotion(next);
+
+    // Só a troca da animação da capa volta para o início,
+    // porque a diferença está exatamente na entrada.
+    requestAnimationFrame(() => {
+      try {
+        playerRef.current?.seekTo?.(0);
+        playerRef.current?.play?.();
+      } catch {
+        // fallback silencioso
+      }
+    });
+  }
+
+  function normalizeCoverMotionId(value: unknown): CoverMotionId {
+    const raw = String(value || 'zoom_bounce');
+
+    if (raw === 'slide_up_glow') return 'slide_up';
+    if (raw === 'zoom_bounce_intro') return 'zoom_bounce';
+    if (raw === 'flip_card_premium') return 'flip_card';
+    if (raw === 'slide_left_in') return 'slide_left';
+    if (raw === 'slide_right_in') return 'slide_right';
+
+    if (
+      raw === 'zoom_bounce' ||
+      raw === 'slide_up' ||
+      raw === 'slide_left' ||
+      raw === 'slide_right' ||
+      raw === 'flip_card' ||
+      raw === 'vinyl_reveal'
+    ) {
+      return raw as CoverMotionId;
+    }
+
+    return 'zoom_bounce';
+  }
+
+  function runQuickAction(id: string) {
+    if (id === 'safe') {
+      setShowSafeArea(true);
+      setCoverSize((v) => Math.min(v, 560));
+    }
+
+    if (id === 'impact') {
+      setParticlesEnabled(true);
+      setFinalFlash(true);
+      setWiggleIntensity(1.25);
+      setCoverSize((v) => Math.min(680, v + 36));
+    }
+
+    if (id === 'clean') {
+      setParticlesEnabled(false);
+      setFinalFlash(false);
+      setWiggleIntensity(0.35);
+      setGlowColor('rgba(255, 255, 255, 0.20)');
+    }
+
+    if (id === 'premium') {
+      setParticlesEnabled(true);
+      setFinalFlash(true);
+      setGlowColor('rgba(255, 205, 100, 0.35)');
+      setTrHeadline('mask_reveal');
+      setTrCta('split_letters');
+      setCoverMotion('flip_card' as CoverMotionId);
+    }
+
+    if (id === 'readable') {
+      setShowSafeArea(true);
+      setStyleHeadline((s) => ({ ...s, color: '#ffffff', useGradient: false, letterSpacing: -1 }));
+      setStyleCta((s) => ({ ...s, color: '#ffffff', useGradient: false, letterSpacing: 2 }));
+    }
+  }
+
   function togglePlatform(p: PlatformName) {
     setPlatformsSel((c) => (c.includes(p) ? c.filter((x) => x !== p) : [...c, p]));
   }
@@ -745,7 +1111,7 @@ export default function Home() {
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 22);
       setPlatformLogoScales(m.platformLogoScales ?? {});
-      setCoverMotion(m.coverMotion ?? 'slide_up_glow');
+      setCoverMotion(normalizeCoverMotionId(m.coverMotion));
       setSpinTurns(m.spinTurns ?? 2);
       setWiggleIntensity(m.wiggleIntensity ?? 1);
       setTrHeadline(m.transitionHeadline ?? 'mask_reveal');
@@ -1003,10 +1369,17 @@ export default function Home() {
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
+    const renderPropsForServer = {
+      ...project,
+      durationSeconds,
+      motion: motionWithStyles,
+      renderTarget: target,
+    };
+
     const response = await fetch('/api/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script, props: project }),
+      body: JSON.stringify({ script, props: renderPropsForServer }),
     });
     const result = await response.json();
     setRendering(false);
@@ -1154,7 +1527,7 @@ export default function Home() {
             ref={fileInputRef}
             type="file"
             accept="image/png,image/jpeg"
-            onChange={async (e) => {
+            id="cover-upload-input" onChange={async (e) => {
               const f = e.target.files?.[0];
               if (!f) return;
 
@@ -1268,6 +1641,19 @@ export default function Home() {
                 value={target}
                 onChange={(v) => setTarget(v as RenderTarget)}
               />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action.id}
+                    type="button"
+                    onClick={() => runQuickAction(action.id)}
+                    style={chip}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+
               <button onClick={() => setShowSafeArea((s) => !s)} style={showSafeArea ? chipActive : chip}>
                 {showSafeArea ? '✓ ' : ''}Safe area
               </button>
@@ -1284,8 +1670,9 @@ export default function Home() {
               }}
             >
               <Player
+                ref={playerRef}
                 component={Component}
-                inputProps={project}
+                inputProps={{ ...project, motion: motionWithStyles }}
                 durationInFrames={durationSeconds * 30}
                 compositionWidth={1080}
                 compositionHeight={compositionHeight}
@@ -1328,6 +1715,20 @@ export default function Home() {
               >
                 {rendering ? 'Renderizando…' : `Renderizar ${target}`}
               </button>
+              {renderStatus !== 'idle' && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
+                    <span>{renderStatus === 'done' ? '✓ Concluído' : renderStatus === 'error' ? '✗ Erro' : `Renderizando… ${renderProgress}%`}</span>
+                    <span>{renderProgress}%</span>
+                  </div>
+                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${renderProgress}%`, borderRadius: 2,
+                      background: renderStatus === 'done' ? '#22c55e' : renderStatus === 'error' ? '#ef4444' : 'linear-gradient(90deg,rgba(168,85,247,0.9),rgba(249,115,22,0.8))',
+                      transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              )}
+
               <button disabled={rendering} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
                 Gerar todos
               </button>
@@ -1388,7 +1789,23 @@ export default function Home() {
         <div style={{ padding: '18px 22px 6px', display: 'flex', justifyContent: 'space-between' }}>
           <div>
             <div style={miniLabel}>Studio</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>Motion controls</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>Motion Studio</div>
+            <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => setStudioMode('simple')}
+                style={studioMode === 'simple' ? segBtnActive : segBtn}
+              >
+                Modo simples
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudioMode('advanced')}
+                style={studioMode === 'advanced' ? segBtnActive : segBtn}
+              >
+                Avançado
+              </button>
+            </div>
           </div>
           <button onClick={resetMotion} style={resetBtnStyle} title="Resetar tudo">↺</button>
         </div>
@@ -1570,60 +1987,164 @@ export default function Home() {
               </div>
             );
           })}
+        
+            <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
+              <div style={miniLabel}>AJUSTES DOS LOGOS</div>
+              <SliderRow
+                label="Tamanho geral dos logos"
+                value={platformLogoSize}
+                min={16}
+                max={120}
+                step={1}
+                onChange={setPlatformLogoSize}
+                format={(v) => `${Math.round(v)}px`}
+              />
+              <SliderRow
+                label="Distância lateral dos logos"
+                value={platformLogoGap}
+                min={0}
+                max={80}
+                step={1}
+                onChange={setPlatformLogoGap}
+                format={(v) => `${Math.round(v)}px`}
+              />
+              {allPlatforms.map((p) => (
+                <SliderRow
+                  key={`platform-scale-${p}`}
+                  label={`Escala ${p}`}
+                  value={platformLogoScales[p] ?? 1}
+                  min={0.3}
+                  max={3}
+                  step={0.05}
+                  onChange={(v) => setPlatformScale(p, v)}
+                  format={(v) => `${v.toFixed(2)}x`}
+                />
+              ))}
+            </div>
+
         </Section>
 
-        {/* TRANSIÇÕES */}
-        
-          <div
-            style={{
-              marginTop: 14,
-              paddingTop: 14,
-              borderTop: '1px solid var(--border-1)',
-            }}
-          >
-            <SliderRow
-              label="Tamanho geral dos logos"
-              value={platformLogoSize}
-              min={28}
-              max={110}
-              step={1}
-              onChange={setPlatformLogoSize}
-              format={(v) => `${Math.round(v)}px`}
-            />
+                                        <Section title="Texto">
+          
+          <div style={{
+            marginBottom: 14,
+            padding: '10px 12px',
+            background: 'var(--surface-1)',
+            border: '1px solid var(--border-1)',
+            borderRadius: 10,
+          }}>
+            <div style={{
+              fontSize: 11,
+              letterSpacing: 1.8,
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              fontWeight: 800,
+              marginBottom: 10,
+            }}>
+              Transições de texto
+            </div>
 
-            <SliderRow
-              label="Distância lateral dos logos"
-              value={platformLogoGap}
-              min={0}
-              max={54}
-              step={1}
-              onChange={setPlatformLogoGap}
-              format={(v) => `${Math.round(v)}px`}
-            />
-
-            {PLATFORMS.filter((p) => customLogos[p]).map((p) => (
-              <SliderRow
-                key={`logo-scale-${p}`}
-                label={`Escala ${p}`}
-                value={platformLogoScales[p] ?? 1}
-                min={0.45}
-                max={2}
-                step={0.05}
-                onChange={(value) =>
-                  setPlatformLogoScales((prev) => ({
-                    ...prev,
-                    [p]: value,
-                  }))
-                }
-                format={(v) => `${v.toFixed(2)}x`}
-              />
-            ))}
+            <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
+            <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
+            <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
           </div>
 
-<Section title="Transições de texto" draggablePanel>
-          <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
-          <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
-          <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
+          <FontsPanel
+            allFonts={allFonts}
+            fontHeadline={fontHeadline} fontDate={fontDate} fontCta={fontCta}
+            onChangeFont={applyFontTo}
+            favoriteIds={favoriteFontIds} onToggleFavorite={toggleFavoriteFont}
+            strokeHeadline={strokeHeadline} strokeDate={strokeDate} strokeCta={strokeCta}
+            onChangeStroke={changeTextStroke}
+            styleHeadline={styleHeadline}
+            styleDate={styleDate}
+            styleCta={styleCta}
+            onChangeTextStyle={(role, next) => {
+              if (role === 'headline') setStyleHeadline(next);
+              if (role === 'date') setStyleDate(next);
+              if (role === 'cta') setStyleCta(next);
+            }}
+            textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
+            uploadInputRef={fontInputRef} uploadFont={uploadFont}
+            sampleHeadline={headline} sampleDate={releaseDate} sampleCta={cta}
+            txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}
+            onTxScale={(r,v) => updTxN(setTxScale,r,v)}
+            onTxLS={(r,v)    => updTxN(setTxLS,r,v)}
+            onTxLH={(r,v)    => updTxN(setTxLH,r,v)}
+            onTxOX={(r,v)    => updTxN(setTxOX,r,v)}
+            onTxOY={(r,v)    => updTxN(setTxOY,r,v)}
+          />
+
+          <div style={{
+            marginTop: 14,
+            paddingTop: 14,
+            borderTop: '1px solid var(--border-1)',
+          }}>
+            <div style={{
+              fontSize: 11,
+              letterSpacing: 1.8,
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              fontWeight: 800,
+              marginBottom: 10,
+            }}>
+              Cor real do texto
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+              marginBottom: 12,
+            }}>
+              <button
+                type="button"
+                onClick={() => setTextTarget('headline')}
+                style={textTarget === 'headline' ? segBtnActive : segBtn}
+              >
+                Headline
+              </button>
+              <button
+                type="button"
+                onClick={() => setTextTarget('date')}
+                style={textTarget === 'date' ? segBtnActive : segBtn}
+              >
+                Data
+              </button>
+              <button
+                type="button"
+                onClick={() => setTextTarget('cta')}
+                style={textTarget === 'cta' ? segBtnActive : segBtn}
+              >
+                CTA
+              </button>
+            </div>
+
+            {textTarget === 'headline' && (
+              <TextColorEditor
+                label="Cor / degradê do Headline"
+                value={styleHeadline}
+                onChange={setStyleHeadline}
+              />
+            )}
+
+            {textTarget === 'date' && (
+              <TextColorEditor
+                label="Cor / degradê da Data"
+                value={styleDate}
+                onChange={setStyleDate}
+              />
+            )}
+
+            {textTarget === 'cta' && (
+              <TextColorEditor
+                label="Cor / degradê do CTA"
+                value={styleCta}
+                onChange={setStyleCta}
+              />
+            )}
+          </div>
+
         </Section>
 
         {template === 'available_now' && (
@@ -1709,51 +2230,6 @@ export default function Home() {
           </Section>
         )}
 
-        {/* COR E GRADIENTE POR TEXTO */}
-        <Section title="Cor & gradiente" draggablePanel>
-          <TextColorEditor label="Headline" value={styleHeadline} onChange={setStyleHeadline} />
-          <TextColorEditor label="Data" value={styleDate} onChange={setStyleDate} />
-          <TextColorEditor label="CTA" value={styleCta} onChange={setStyleCta} />
-        </Section>
-
-        <Section title="Tipografia avançada" draggablePanel>
-          <TextLayoutEditor label="Headline" value={styleHeadline} onChange={setStyleHeadline} />
-          <TextLayoutEditor label="Data" value={styleDate} onChange={setStyleDate} />
-          <TextLayoutEditor label="CTA" value={styleCta} onChange={setStyleCta} />
-        </Section>
-
-        {/* FONTES */}
-        <Section title="Fontes" draggablePanel>
-          <FontPicker label="Headline" sampleText={headline || 'LANÇAMENTO'} value={fontHeadline}
-            onChange={setFontHeadline} fonts={allFonts} />
-          <FontPicker label="Data" sampleText={releaseDate || '07.JANEIRO'} value={fontDate}
-            onChange={setFontDate} fonts={allFonts} />
-          <FontPicker label="CTA" sampleText="OUÇA AGORA" value={fontCta}
-            onChange={setFontCta} fonts={allFonts} />
-          <button onClick={() => fontInputRef.current?.click()} style={dashedUpload}>
-            + Subir fonte (TTF/OTF/WOFF)
-          </button>
-          <input ref={fontInputRef} type="file" accept=".ttf,.otf,.woff,.woff2"
-            onChange={uploadFont} style={{ display: 'none' }} />
-          {userFonts.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <div style={miniLabel}>Suas fontes</div>
-              {userFonts.map((f) => (
-                <div key={f.id} style={userFontRow}>
-                  <span style={{
-                    fontFamily: `'${f.family}', sans-serif`,
-                    fontSize: 14,
-                    fontWeight: f.weight,
-                  }}>
-                    {f.label}
-                  </span>
-                  <button onClick={() => deleteUserFont(f.id)} style={linkBtnDanger}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
         {/* OVERLAYS */}
         <Section title="Overlays (filmburn / película)" draggablePanel>
           <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
@@ -1834,7 +2310,98 @@ export default function Home() {
             onChange={setWiggleC} format={(v) => v.toFixed(1)} />
         </Section>
 
-        <Section title="Brilho" draggablePanel>
+        
+        <Section title="Transições de Texto" draggablePanel>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <label style={miniLabel}>Headline</label>
+            <select
+              value={trHeadline}
+              onChange={(e) => setTrHeadline(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <label style={miniLabel}>Data</label>
+            <select
+              value={trDate}
+              onChange={(e) => setTrDate(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <label style={miniLabel}>Chamadas / CTA</label>
+            <select
+              value={trCta}
+              onChange={(e) => setTrCta(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => setShowCta1((v) => !v)}
+                style={showCta1 ? segBtnActive : segBtn}
+              >
+                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCta2((v) => !v)}
+                style={showCta2 ? segBtnActive : segBtn}
+              >
+                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
+              </button>
+            </div>
+          </div>
+        </Section>
+
+<Section title="Brilho" draggablePanel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             {GLOW_PRESETS.map((g) => (
               <button key={g.label} onClick={() => setGlowColor(g.color)} title={g.label}
@@ -1914,6 +2481,73 @@ export default function Home() {
 // ============================================================
 // COMPONENTES AUXILIARES
 // ============================================================
+
+
+// ── DragSlider: slider de arrastar (sem input numérico) ─────
+function DragSlider({
+  label, value, min, max, step, onChange, format, accent
+}: {
+  label: string; value: number; min: number; max: number;
+  step: number; onChange: (v: number) => void;
+  format?: (v: number) => string; accent?: string;
+}) {
+  const trackRef = React.useRef<HTMLDivElement>(null);
+  const dragging = React.useRef(false);
+  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  const accentColor = accent ?? 'rgba(168,85,247,0.9)';
+
+  function calcValue(clientX: number) {
+    const rect = trackRef.current!.getBoundingClientRect();
+    const raw = (clientX - rect.left) / rect.width;
+    const clamped = Math.max(0, Math.min(1, raw));
+    const raw_val = min + clamped * (max - min);
+    const snapped = Math.round(raw_val / step) * step;
+    return Math.max(min, Math.min(max, snapped));
+  }
+
+  function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    dragging.current = true;
+    onChange(calcValue(e.clientX));
+    function onMove(ev: MouseEvent) { if (dragging.current) onChange(calcValue(ev.clientX)); }
+    function onUp() { dragging.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  return (
+    <div style={{ userSelect: 'none' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
+        <span style={{ fontSize:11, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:0.5 }}>{label}</span>
+        <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.75)', fontVariantNumeric:'tabular-nums', minWidth:38, textAlign:'right' }}>
+          {format ? format(value) : String(value)}
+        </span>
+      </div>
+      <div
+        ref={trackRef}
+        onMouseDown={onMouseDown}
+        style={{
+          position:'relative', height:20, cursor:'ew-resize',
+          display:'flex', alignItems:'center',
+        }}
+      >
+        {/* Track fundo */}
+        <div style={{ position:'absolute', left:0, right:0, height:3, borderRadius:2, background:'rgba(255,255,255,0.08)' }} />
+        {/* Track preenchido */}
+        <div style={{ position:'absolute', left:0, width:`${pct*100}%`, height:3, borderRadius:2, background: accentColor, transition:'width 0ms' }} />
+        {/* Thumb */}
+        <div style={{
+          position:'absolute', left:`calc(${pct*100}% - 8px)`,
+          width:16, height:16, borderRadius:'50%',
+          background: '#fff',
+          boxShadow:`0 0 0 3px ${accentColor}, 0 2px 8px rgba(0,0,0,0.5)`,
+          cursor:'grab', transition:'box-shadow 120ms ease',
+          zIndex:2,
+        }} />
+      </div>
+    </div>
+  );
+}
 
 function BrandSmall() {
   return (
@@ -2332,11 +2966,8 @@ const DEFAULT_RIGHT_PANEL_SECTION_ORDER = [
   'Projeto',
   'Áudio',
   'Logos das plataformas',
-  'Transições de texto',
+  'Texto',
   'Ritmo CTA (Disponível)',
-  'Cor & gradiente',
-  'Tipografia avançada',
-  'Fontes',
   'Overlays (filmburn / película)',
   'Capa',
   'Wiggle por elemento',
@@ -2399,6 +3030,9 @@ function Section({
   children: React.ReactNode;
   draggablePanel?: boolean;
 }) {
+  const fixedPanelOrder = draggablePanel ? RIGHT_PANEL_PRESET_ORDER[title] ?? 999 : undefined;
+  const hiddenByMode = false;
+
   const sectionRef = React.useRef<HTMLElement | null>(null);
   const [orderIndex, setOrderIndex] = React.useState<number | undefined>(undefined);
   const [isDragging, setIsDragging] = React.useState(false);
@@ -2455,7 +3089,7 @@ function Section({
         moveRightPanelSection(sourceTitle, title);
       }}
       style={{
-        order: canDrag && typeof orderIndex === 'number' && orderIndex >= 0 ? orderIndex : undefined,
+        order: canDrag && typeof orderIndex === 'number' && orderIndex >= 0 ? orderIndex : fixedPanelOrder,
         opacity: isDragging ? 0.45 : 1,
         transform: isDragging ? 'scale(0.985)' : undefined,
         borderTop: isDragOver ? '1px solid rgba(168, 85, 247, 0.75)' : undefined,

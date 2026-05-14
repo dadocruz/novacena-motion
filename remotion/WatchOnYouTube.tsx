@@ -13,7 +13,7 @@ import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { resolveMotion, ff, applyTextStyle } from '../lib/fontCatalog';
+import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 
 const HEADLINE_IN = 14;
@@ -116,6 +116,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               overflow: 'visible',
               ...applyTextStyle(props.motion?.styleHeadline),
               ...(showAll ? {} : headlineMask),
+              ...userTextTransform(props.motion?.styleHeadline, headlineMask),
             }}
           >
             ASSISTA<br />NO YOUTUBE

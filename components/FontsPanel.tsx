@@ -1,0 +1,756 @@
+'use client';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { TextStroke, TextStrokeMode } from '../remotion/types';
+
+export type FontDef = {
+  id: string;
+  label: string;
+  family: string;
+  weight?: number;
+  category?: string;
+  vibe?: string;
+};
+
+export type FontRole = 'headline' | 'date' | 'cta';
+
+type Props = {
+  styleHeadline?: any;
+  styleDate?: any;
+  styleCta?: any;
+  onChangeTextStyle?: (role: FontRole, next: any) => void;
+  allFonts: FontDef[];
+  fontHeadline: string;
+  fontDate: string;
+  fontCta: string;
+  onChangeFont: (role: FontRole, id: string) => void;
+
+  favoriteIds: string[];
+  onToggleFavorite: (id: string) => void;
+
+  strokeHeadline: TextStroke;
+  strokeDate: TextStroke;
+  strokeCta: TextStroke;
+  onChangeStroke: (role: FontRole, stroke: TextStroke) => void;
+
+  uploadInputRef: React.RefObject<HTMLInputElement | null>;
+  uploadFont: (event: React.ChangeEvent<HTMLInputElement>) => void;
+
+  textOpacity: number;
+  onChangeTextOpacity: (v: number) => void;
+  sampleHeadline: string;
+  sampleDate: string;
+  sampleCta: string;
+
+  // controles de escala/posição por role
+  txScale: Record<string,number>;
+  txLS:    Record<string,number>;
+  txLH:    Record<string,number>;
+  txOX:    Record<string,number>;
+  txOY:    Record<string,number>;
+  onTxScale: (role: string, v: number) => void;
+  onTxLS:    (role: string, v: number) => void;
+  onTxLH:    (role: string, v: number) => void;
+  onTxOX:    (role: string, v: number) => void;
+  onTxOY:    (role: string, v: number) => void;
+};
+
+const SWATCHES = ['#ffc857', '#ff4d6d', '#4ecdc4', '#845ef7', '#ffffff', '#000000', '#ff8c42', '#3a86ff'];
+
+const panel: React.CSSProperties = {
+  background: '#0e0d12',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 14,
+  padding: 14,
+  color: '#f5f5f5',
+  display: 'grid',
+  gap: 12,
+};
+
+const tiny: React.CSSProperties = {
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: 1.5,
+  color: '#686873',
+  textTransform: 'uppercase',
+};
+
+const tab = (active: boolean): React.CSSProperties => ({
+  background: active ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.02)',
+  border: active ? '1px solid rgba(255,200,80,0.45)' : '1px solid rgba(255,255,255,0.08)',
+  color: active ? '#ffc857' : '#888',
+  fontSize: 10,
+  fontWeight: 700,
+  padding: '5px 10px',
+  borderRadius: 7,
+  cursor: 'pointer',
+});
+
+const seg = (active: boolean): React.CSSProperties => ({
+  background: active ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.025)',
+  border: active ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(255,255,255,0.08)',
+  color: active ? '#f4f4f5' : '#777',
+  fontSize: 10,
+  padding: '5px 9px',
+  borderRadius: 6,
+  cursor: 'pointer',
+});
+
+function getSample(role: FontRole, headline: string, date: string, cta: string) {
+  if (role === 'date') return date || '07/06';
+  if (role === 'cta') return cta || 'OUÇA AGORA';
+  return headline || 'LANÇAMENTO';
+}
+
+function strokeStyle(s: TextStroke): React.CSSProperties {
+  if (!s || s.mode === 'none' || s.width <= 0) return {};
+  const color = s.fillKind === 'solid' ? s.color : (s.gradientFrom || s.color);
+  if (s.mode === 'outer') {
+    return { WebkitTextStroke: `${s.width}px ${color}` };
+  }
+  return {
+    textShadow: `
+      ${s.width}px 0 0 ${color},
+      -${s.width}px 0 0 ${color},
+      0 ${s.width}px 0 ${color},
+      0 -${s.width}px 0 ${color},
+      0 0 ${Math.max(2, s.width * 2)}px ${color}
+    `,
+  };
+}
+
+
+const TEXT_FILL_COLORS = [
+  '#ffffff', '#000000', '#ffcf5a', '#ff5a7a',
+  '#33d17a', '#8b5cf6', '#ff7a38', '#3f7cff',
+  '#ff914d', '#00d6ff', '#f43f5e', '#facc15',
+];
+
+
+const fpSegBtn: React.CSSProperties = {
+  padding: '7px 9px',
+  background: 'var(--surface-1)',
+  color: 'var(--text-2)',
+  border: '1px solid var(--border-1)',
+  borderRadius: 8,
+  fontSize: 11,
+  fontWeight: 700,
+  cursor: 'pointer',
+};
+
+const fpSegBtnActive: React.CSSProperties = {
+  ...fpSegBtn,
+  background: 'var(--surface-active)',
+  color: 'var(--text-1)',
+  border: '1px solid var(--border-3)',
+};
+
+const fpInputStyle: React.CSSProperties = {
+  width: '100%',
+  minWidth: 0,
+  height: 32,
+  padding: '0 10px',
+  background: 'var(--surface-1)',
+  color: 'var(--text-1)',
+  border: '1px solid var(--border-1)',
+  borderRadius: 8,
+  outline: 'none',
+  fontSize: 12,
+};
+
+function FillSliderRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+  format,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+  format?: (v: number) => string;
+}) {
+  return (
+    <div style={{ marginTop: 10, marginBottom: 8 }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: 10,
+        marginBottom: 5,
+        color: 'var(--text-3)',
+      }}>
+        <span>{label}</span>
+        <span style={{ color: 'var(--text-1)', fontWeight: 700 }}>
+          {format ? format(value) : value}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ width: '100%' }}
+      />
+    </div>
+  );
+}
+
+function normalizeTextColor(raw: string) {
+  const value = raw.trim();
+
+  if (!value) return '#ffffff';
+
+  if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+    return '#' + value.slice(1).split('').map((c) => c + c).join('');
+  }
+
+  if (/^#[0-9a-fA-F]{6}$/.test(value)) return value;
+
+  const rgb = value.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgb) {
+    const parts = rgb[1].split(',').map((p) => Number.parseFloat(p.trim()));
+    if (parts.length >= 3 && parts.every((n) => Number.isFinite(n))) {
+      return '#' + parts.slice(0, 3).map((n) => {
+        const v = Math.max(0, Math.min(255, Math.round(n)));
+        return v.toString(16).padStart(2, '0');
+      }).join('');
+    }
+  }
+
+  return value;
+}
+
+function FillColorEditor({
+  role,
+  value,
+  onChange,
+}: {
+  role: FontRole;
+  value?: any;
+  onChange?: (role: FontRole, next: any) => void;
+}) {
+  const style = value ?? {};
+  const current = style.color ?? '#ffffff';
+  const gradientColor1 = style.gradientColor1 ?? style.gradientFrom ?? current;
+  const gradientColor2 = style.gradientColor2 ?? style.gradientTo ?? '#ffcf5a';
+  const useGradient = !!style.useGradient;
+
+  const update = (patch: any) => {
+    if (!onChange) return;
+    onChange(role, { ...style, ...patch });
+  };
+
+  const pickFromScreen = async () => {
+    try {
+      const EyeDropperCtor = (window as any).EyeDropper;
+      if (!EyeDropperCtor) {
+        alert('A lupa de captura de cor não está disponível neste navegador. Use HEX/RGB.');
+        return;
+      }
+
+      const result = await new EyeDropperCtor().open();
+
+      if (result?.sRGBHex) {
+        update({
+          color: result.sRGBHex,
+          gradientColor1: result.sRGBHex,
+          gradientFrom: result.sRGBHex,
+          useGradient: false,
+        });
+      }
+    } catch {
+      // usuário cancelou
+    }
+  };
+
+  return (
+    <div style={{ borderTop: '1px solid var(--border-1)', paddingTop: 12, marginTop: 12, marginBottom: 12 }}>
+      <div style={{
+        fontSize: 10,
+        letterSpacing: 1.6,
+        color: 'var(--text-3)',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        marginBottom: 8,
+      }}>
+        Cor do texto
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 44px', gap: 6, marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => update({ useGradient: false })}
+          style={useGradient ? fpSegBtn : fpSegBtnActive}
+        >
+          Cor sólida
+        </button>
+        <button
+          type="button"
+          onClick={() => update({ useGradient: true })}
+          style={useGradient ? fpSegBtnActive : fpSegBtn}
+        >
+          Degradê
+        </button>
+        <button
+          type="button"
+          onClick={pickFromScreen}
+          style={fpSegBtn}
+          title="Capturar cor da tela"
+        >
+          🔍
+        </button>
+      </div>
+
+      {!useGradient ? (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 5, marginBottom: 8 }}>
+            {TEXT_FILL_COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                title={c}
+                onClick={() => update({ color: c, useGradient: false })}
+                style={{
+                  height: 24,
+                  borderRadius: 999,
+                  cursor: 'pointer',
+                  background: c,
+                  border: current.toLowerCase() === c.toLowerCase()
+                    ? '2px solid var(--text-1)'
+                    : '1px solid var(--border-1)',
+                }}
+              />
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '42px 1fr', gap: 8, alignItems: 'center' }}>
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(current) ? current : '#ffffff'}
+              onChange={(e) => update({ color: e.target.value, useGradient: false })}
+              style={{ width: 42, height: 32, padding: 0, border: '1px solid var(--border-1)', borderRadius: 8 }}
+            />
+            <input
+              value={current}
+              placeholder="#FFFFFF ou rgb(255,255,255)"
+              onChange={(e) => update({ color: normalizeTextColor(e.target.value), useGradient: false })}
+              style={fpInputStyle}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '42px 1fr', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(gradientColor1) ? gradientColor1 : '#ffffff'}
+              onChange={(e) => update({
+                gradientColor1: e.target.value,
+                gradientFrom: e.target.value,
+                color: e.target.value,
+                useGradient: true,
+              })}
+              style={{ width: 42, height: 32, padding: 0, border: '1px solid var(--border-1)', borderRadius: 8 }}
+            />
+            <input
+              value={gradientColor1}
+              placeholder="Cor inicial"
+              onChange={(e) => update({
+                gradientColor1: normalizeTextColor(e.target.value),
+                gradientFrom: normalizeTextColor(e.target.value),
+                useGradient: true,
+              })}
+              style={fpInputStyle}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '42px 1fr', gap: 8, alignItems: 'center' }}>
+            <input
+              type="color"
+              value={/^#[0-9a-fA-F]{6}$/.test(gradientColor2) ? gradientColor2 : '#ffcf5a'}
+              onChange={(e) => update({
+                gradientColor2: e.target.value,
+                gradientTo: e.target.value,
+                useGradient: true,
+              })}
+              style={{ width: 42, height: 32, padding: 0, border: '1px solid var(--border-1)', borderRadius: 8 }}
+            />
+            <input
+              value={gradientColor2}
+              placeholder="Cor final"
+              onChange={(e) => update({
+                gradientColor2: normalizeTextColor(e.target.value),
+                gradientTo: normalizeTextColor(e.target.value),
+                useGradient: true,
+              })}
+              style={fpInputStyle}
+            />
+          </div>
+
+          <FillSliderRow
+            label="Ângulo do degradê"
+            value={style.gradientAngle ?? 90}
+            min={0}
+            max={360}
+            step={1}
+            onChange={(v) => update({ gradientAngle: v, useGradient: true })}
+            format={(v) => `${Math.round(v)}°`}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function FontsPanel({
+  allFonts,
+  fontHeadline,
+  fontDate,
+  fontCta,
+  onChangeFont,
+  favoriteIds,
+  onToggleFavorite,
+  strokeHeadline,
+  strokeDate,
+  strokeCta,
+  onChangeStroke,
+  styleHeadline,
+  styleDate,
+  styleCta,
+  onChangeTextStyle,
+  uploadInputRef,
+  uploadFont,
+  sampleHeadline,
+  sampleDate,
+  sampleCta,
+  textOpacity,
+  onChangeTextOpacity,
+  txScale, txLS, txLH, txOX, txOY,
+  onTxScale, onTxLS, onTxLH, onTxOX, onTxOY,
+}: Props) {
+  const [role, setRole] = useState<FontRole>('headline');
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (!/^[a-zA-Z0-9]$/.test(e.key)) return;
+      setQuery(e.key);
+      searchRef.current?.focus();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const selectedId = role === 'headline' ? fontHeadline : role === 'date' ? fontDate : fontCta;
+  const currentStroke = role === 'headline' ? strokeHeadline : role === 'date' ? strokeDate : strokeCta;
+  const sample = getSample(role, sampleHeadline, sampleDate, sampleCta);
+  const selectedFont = allFonts.find((f) => f.id === selectedId) ?? allFonts[0];
+
+  const favoriteFonts = useMemo(
+    () => allFonts.filter((f) => favoriteIds.includes(f.id)),
+    [allFonts, favoriteIds]
+  );
+
+  const resultFonts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    const base = q
+      ? allFonts.filter((f) => {
+          const hay = [f.label, f.family, f.category, f.vibe, f.id].filter(Boolean).join(' ').toLowerCase();
+          if (q.length === 1) return f.label.toLowerCase().startsWith(q) || f.family.toLowerCase().startsWith(q);
+          return hay.includes(q);
+        })
+      : allFonts.filter((f) => !favoriteIds.includes(f.id));
+
+    return base.slice(0, 160);
+  }, [allFonts, favoriteIds, query]);
+
+  function patchStroke(patch: Partial<TextStroke>) {
+    onChangeStroke(role, { ...currentStroke, ...patch });
+  }
+
+  function FontRow({ font, favorite }: { font: FontDef; favorite: boolean }) {
+    const selected = font.id === selectedId;
+    return (
+      <div
+        onClick={() => onChangeFont(role, font.id)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 12px',
+          background: selected ? 'rgba(255,200,80,0.11)' : favorite ? 'rgba(255,200,80,0.07)' : 'rgba(255,255,255,0.025)',
+          border: selected ? '1px solid rgba(255,200,80,0.5)' : favorite ? '1px solid rgba(255,200,80,0.22)' : '1px solid rgba(255,255,255,0.065)',
+          borderRadius: 9,
+          cursor: 'pointer',
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: `'${font.family}', sans-serif`,
+              fontWeight: font.weight || 700,
+              fontSize: 21,
+              lineHeight: 1,
+              color: '#fff',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: 210,
+            }}
+          >
+            {sample}
+          </div>
+          <div style={{ fontSize: 9, color: '#777', marginTop: 4 }}>
+            {font.label} · {font.category || font.vibe || 'Fonte'}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(font.id);
+          }}
+          style={{
+            background: 'transparent',
+            border: 0,
+            color: favorite ? '#ffc857' : '#444',
+            fontSize: 17,
+            cursor: 'pointer',
+          }}
+        >
+          ★
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={panel}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: '#555', fontSize: 13 }}>⁝⁝</span>
+          <span style={tiny}>Fontes</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 5 }}>
+          <button type="button" onClick={() => setRole('headline')} style={tab(role === 'headline')}>Headline</button>
+          <button type="button" onClick={() => setRole('date')} style={tab(role === 'date')}>Data</button>
+          <button type="button" onClick={() => setRole('cta')} style={tab(role === 'cta')}>CTA</button>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#666' }}>⌕</span>
+        <input
+          ref={searchRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Digite ou aperte uma letra..."
+          style={{
+            width: '100%',
+            height: 34,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#ddd',
+            padding: '0 34px 0 32px',
+            borderRadius: 8,
+            fontSize: 12,
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#555', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: 4 }}>
+          {query ? query[0]?.toUpperCase() : 'B'}
+        </span>
+      </div>
+
+      {favoriteFonts.length > 0 && !query && (
+        <>
+          <div style={tiny}>⭐ Favoritas</div>
+          <div style={{ display: 'grid', gap: 5 }}>
+            {favoriteFonts.slice(0, 12).map((font) => (
+              <FontRow key={font.id} font={font} favorite />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={tiny}>{query ? `Resultados · ${resultFonts.length}` : `Todas · ${allFonts.length}`}</span>
+        <span style={{ color: '#555', fontSize: 9 }}>scroll ↓</span>
+      </div>
+
+      <div style={{ display: 'grid', gap: 5, maxHeight: 250, overflowY: 'auto', paddingRight: 4, maskImage: 'linear-gradient(to bottom, black 86%, transparent)' }}>
+        {resultFonts.map((font) => (
+          <FontRow key={font.id} font={font} favorite={favoriteIds.includes(font.id)} />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => uploadInputRef.current?.click()}
+        style={{
+          height: 34,
+          borderRadius: 9,
+          border: '1px dashed rgba(255,255,255,0.15)',
+          background: 'rgba(255,255,255,0.025)',
+          color: '#aaa',
+          fontSize: 11,
+          cursor: 'pointer',
+        }}
+      >
+        + Subir fonte (TTF/OTF/WOFF)
+      </button>
+      <input ref={uploadInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={uploadFont} style={{ display: 'none' }} />
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, display: 'grid', gap: 10 }}>
+        <div style={tiny}>Contorno</div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: '#aaa', fontSize: 11 }}>Tipo</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {(['none', 'outer', 'inner'] as TextStrokeMode[]).map((mode) => (
+              <button type="button" key={mode} onClick={() => patchStroke({ mode })} style={seg(currentStroke.mode === mode)}>
+                {mode === 'none' ? 'Nenhum' : mode === 'outer' ? 'Externo' : 'Interno'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {currentStroke.mode !== 'none' && (
+          <>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span style={{ color: '#aaa', fontSize: 11 }}>Espessura</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{currentStroke.width}px</span>
+              </div>
+              <input type="range" min={0} max={10} step={1} value={currentStroke.width} onChange={(e) => patchStroke({ width: Number(e.target.value) })} style={{ width: '100%', accentColor: '#ffc857' }} />
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, marginTop: 8 }}>
+                <span style={{ color: '#aaa', fontSize: 11 }}>Opacidade do preenchimento</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{Math.round(((currentStroke as any).fillOpacity ?? textOpacity) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={(currentStroke as any).fillOpacity ?? textOpacity}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  patchStroke({ fillOpacity: value });
+                  onChangeTextOpacity(value);
+                }}
+                style={{ width: '100%', accentColor: '#ffc857' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <button type="button" onClick={() => patchStroke({ fillKind: 'solid' })} style={seg(currentStroke.fillKind === 'solid')}>Cor sólida</button>
+              <button type="button" onClick={() => patchStroke({ fillKind: 'gradient' })} style={seg(currentStroke.fillKind === 'gradient')}>Degradê</button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {SWATCHES.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => patchStroke({ color, gradientFrom: color })}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 999,
+                    border: currentStroke.color === color ? '2px solid #fff' : '1px solid rgba(255,255,255,0.15)',
+                    background: color,
+                    cursor: 'pointer',
+                  }}
+                />
+              ))}
+              <input type="color" value={currentStroke.color} onChange={(e) => patchStroke({ color: e.target.value })} style={{ width: 26, height: 26, padding: 0, border: 0, background: 'transparent' }} />
+            </div>
+
+            {currentStroke.fillKind === 'gradient' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <input type="color" value={currentStroke.gradientFrom || '#ffc857'} onChange={(e) => patchStroke({ gradientFrom: e.target.value })} />
+                <input type="color" value={currentStroke.gradientTo || '#ff4d6d'} onChange={(e) => patchStroke({ gradientTo: e.target.value })} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+          {/* ── Controles de tipografia por elemento ── */}
+          <div style={{ display:'grid', gap:8, marginTop:4 }}>
+            <div style={tiny}>ESCALA</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={0.3} max={3} step={0.01}
+                value={txScale[role] ?? 1}
+                onChange={e => onTxScale(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(168,85,247,0.9)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txScale[role] ?? 1).toFixed(2)}×
+              </span>
+            </div>
+
+            <div style={tiny}>ESPAÇ. LETRA</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={-5} max={30} step={0.1}
+                value={txLS[role] ?? 0}
+                onChange={e => onTxLS(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(249,115,22,0.85)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txLS[role] ?? 0).toFixed(1)}px
+              </span>
+            </div>
+
+            <div style={tiny}>ALTURA LINHA</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={0.7} max={3} step={0.05}
+                value={txLH[role] ?? 1.2}
+                onChange={e => onTxLH(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txLH[role] ?? 1.2).toFixed(2)}
+              </span>
+            </div>
+
+            <div style={tiny}>POSIÇÃO X</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={-50} max={50} step={0.5}
+                value={txOX[role] ?? 0}
+                onChange={e => onTxOX(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txOX[role] ?? 0) > 0 ? '+' : ''}{(txOX[role] ?? 0).toFixed(1)}%
+              </span>
+            </div>
+
+            <div style={tiny}>POSIÇÃO Y</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={-50} max={50} step={0.5}
+                value={txOY[role] ?? 0}
+                onChange={e => onTxOY(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txOY[role] ?? 0) > 0 ? '+' : ''}{(txOY[role] ?? 0).toFixed(1)}%
+              </span>
+            </div>
+          </div>
+    </div>
+  );
+}

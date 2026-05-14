@@ -162,7 +162,8 @@ export async function POST(request: NextRequest) {
         const tmpFile = join(tmpdir(), `novacena-render-${randomBytes(8).toString('hex')}.json`);
         await writeFile(tmpFile, JSON.stringify(renderProps), 'utf-8');
 
-        const cmd = `npx remotion render remotion/index.ts ${comp.id} ${comp.out} --props=${tmpFile}`;
+        const outputFileForRender = comp.out.replace(/\.mp4$/, `-${Date.now()}.mp4`);
+        const cmd = `npx remotion render remotion-entry/index.ts ${comp.id} ${outputFileForRender} --props=${tmpFile}`;
 
         try {
           const { stdout, stderr } = await execAsync(cmd, {
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
           });
           const output = [stdout, stderr].filter(Boolean).join('\n');
           await unlink(tmpFile).catch(() => {});
-          return NextResponse.json({ ok: true, output, outputFile: comp.out });
+          return NextResponse.json({ ok: true, output, outputFile: outputFileForRender });
         } catch (err: any) {
           await unlink(tmpFile).catch(() => {});
           const output = [err?.stdout, err?.stderr].filter(Boolean).join('\n');
