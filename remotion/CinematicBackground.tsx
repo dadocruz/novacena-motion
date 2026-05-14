@@ -136,26 +136,28 @@ export const CinematicBackground: React.FC<Props> = ({
   const audioVolumeBase = bg.audioVolume ?? 0.8;
   const audioFadeInFrames = Math.floor((bg.audioFadeInSec ?? 0.5) * 30);
   const audioFadeOutFrames = Math.floor((bg.audioFadeOutSec ?? 1) * 30);
-  const useVideoAudio = bg.audioSrc ? false : (bg.useVideoAudio ?? false);
+  // Audio do BG vem LIGADO por padrao. Toggle na UI = mute (useVideoAudio=false).
+  const useVideoAudio = bg.audioSrc ? false : (bg.useVideoAudio ?? true);
   const { durationInFrames } = useVideoConfig();
 
-  // Cálculo do volume com fade in/out
-  const audioVolume = (() => {
+  // Calculo do volume com fade in/out (callback p/ Audio/Video evitar warning)
+  const calcVolume = (f: number) => {
     const fadeIn = audioFadeInFrames > 0
-      ? interpolate(frame, [0, audioFadeInFrames], [0, 1], {
+      ? interpolate(f, [0, audioFadeInFrames], [0, 1], {
           extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
         })
       : 1;
     const fadeOut = audioFadeOutFrames > 0
       ? interpolate(
-          frame,
+          f,
           [durationInFrames - audioFadeOutFrames, durationInFrames],
           [1, 0],
           { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
         )
       : 1;
     return audioVolumeBase * fadeIn * fadeOut;
-  })();
+  };
+  const audioVolume = calcVolume(frame);
 
   // Ken Burns
   const kbProgress = eased(frame, 0, 240, easings.inOutCubic);
@@ -182,7 +184,7 @@ export const CinematicBackground: React.FC<Props> = ({
         <Audio
           src={audioSrc}
           startFrom={audioStartFrame}
-          volume={audioVolume}
+          volume={(f) => calcVolume(f)}
         />
       ) : null}
 
@@ -193,7 +195,7 @@ export const CinematicBackground: React.FC<Props> = ({
             src={videoSrc}
             startFrom={videoStartFrame}
             muted={!useVideoAudio}
-            volume={useVideoAudio ? audioVolume : 0}
+            volume={useVideoAudio ? (f) => calcVolume(f) : 0}
             style={{
               width: '100%',
               height: '100%',

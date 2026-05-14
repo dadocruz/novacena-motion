@@ -48,3 +48,18 @@ _local-backups/
 *.before-*
 *.backup-*
 *.bak-*
+
+# Backups locais (arquivados em _archive/)
+**/_archive/
+_archive/
+*.bak.*
+*.broken.*
+*.backup-*
+*.before_reformulate
+*.safe-before-*
+
+# TS incremental cache
+tsconfig.tsbuildinfo
+
+# Pasta _safe-* (snapshots manuais)
+_safe-*/

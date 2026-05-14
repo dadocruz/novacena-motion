@@ -18,10 +18,6 @@ const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
   };
 };
 
-
-
-const DURATION_FRAMES = 240;
-
 // ============================================================
 // CARREGAMENTO DE FONTES PARA O RENDER
 // ============================================================
@@ -115,23 +111,21 @@ export const RemotionRoot: React.FC = () => {
       {templates.map((template) => (
         <React.Fragment key={template.id}>
           <Composition
-        calculateMetadata={resolveDurationInFramesFromProps}
+            calculateMetadata={resolveDurationInFramesFromProps}
             id={template.id}
             component={template.component}
             width={1080}
             height={1920}
             fps={FPS}
-            durationInFrames={DURATION_FRAMES}
             defaultProps={{ ...template.project, renderTarget: 'story' as const }}
           />
           <Composition
-        calculateMetadata={resolveDurationInFramesFromProps}
+            calculateMetadata={resolveDurationInFramesFromProps}
             id={`${template.id}Feed`}
             component={template.component}
             width={1080}
             height={1350}
             fps={FPS}
-            durationInFrames={DURATION_FRAMES}
             defaultProps={{ ...template.project, renderTarget: 'feed' as const }}
           />
         </React.Fragment>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readdir, readFile, stat } from 'fs/promises';
+import { readdir, readFile, stat, unlink } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 
@@ -40,4 +40,39 @@ export async function GET(request: NextRequest) {
   );
   files.sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime());
   return NextResponse.json({ files });
+}
+
+
+export async function DELETE(request: NextRequest) {
+  const file = request.nextUrl.searchParams.get('file');
+  const all = request.nextUrl.searchParams.get('all');
+
+  if (!existsSync(OUT_DIR)) {
+    return NextResponse.json({ error: 'OUT_DIR nao existe' }, { status: 404 });
+  }
+
+  try {
+    if (all === 'true') {
+      const entries = await readdir(OUT_DIR);
+      const videos = entries.filter(f => f.endsWith('.mp4'));
+      await Promise.all(
+        videos.map(f => unlink(path.join(OUT_DIR, f)))
+      );
+      return NextResponse.json({ deleted: videos.length });
+    }
+
+    if (!file) {
+      return NextResponse.json({ error: 'parametro file obrigatorio' }, { status: 400 });
+    }
+
+    const safeName = path.basename(file);
+    const filePath = path.join(OUT_DIR, safeName);
+    if (!filePath.startsWith(OUT_DIR) || !existsSync(filePath)) {
+      return NextResponse.json({ error: 'arquivo nao encontrado' }, { status: 404 });
+    }
+    await unlink(filePath);
+    return NextResponse.json({ deleted: safeName });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }

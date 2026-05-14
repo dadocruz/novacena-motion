@@ -51,6 +51,11 @@
     "**/*.before_reformulate",
     "remotion/**/*.bak.*",
     "remotion/**/*.backup-*",
-    "lib/**/*.backup-*"
+    "lib/**/*.backup-*",
+    "_archive",
+    "**/_archive/**",
+    "**/_backup-*/**",
+    "**/_safe-*/**",
+    "**/__tests__/**"
   ]
 }

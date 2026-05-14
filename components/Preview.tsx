@@ -114,6 +114,7 @@ export const Preview: React.FC<PreviewProps> = ({ className = '' }) => {
         }
       >
         <Player
+      acknowledgeRemotionLicense
           component={Component}
           durationInFrames={240}
           compositionWidth={project.format.primary.width}

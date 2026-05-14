@@ -135,7 +135,7 @@ export type BackgroundConfig = {
   audioFadeInSec?: number;
   /** Fade-out em segundos */
   audioFadeOutSec?: number;
-  /** Se true, usa o áudio do próprio vídeo BG */
+  /** Default true (audio do video BG ligado). Setar false = mute. Ignorado se audioSrc presente. */
   useVideoAudio?: boolean;
 };
 

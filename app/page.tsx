@@ -323,7 +323,8 @@ export default function Home() {
   const [audioVolume, setAudioVolume] = useState<number>(0.8);
   const [audioFadeIn, setAudioFadeIn] = useState<number>(0.5);
   const [audioFadeOut, setAudioFadeOut] = useState<number>(1);
-  const [useVideoAudio, setUseVideoAudio] = useState<boolean>(false);
+  // Audio do BG ligado por padrao. Toggle vira mute.
+  const [useVideoAudio, setUseVideoAudio] = useState<boolean>(true);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
@@ -1146,6 +1147,28 @@ export default function Home() {
     setGallery((g) => g.filter((x) => x.id !== id));
   }
 
+
+  async function deleteRender(name: string) {
+    if (!confirm(`Excluir ${name}?`)) return;
+    const r = await fetch(`/api/render-files?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (r.ok) {
+      const d = await fetch('/api/render-files').then(x => x.json());
+      setRenderFiles(d.files ?? []);
+    } else {
+      alert('Erro ao excluir');
+    }
+  }
+
+  async function deleteAllRenders() {
+    if (!confirm('Excluir TODOS os videos renderizados? Esta acao nao pode ser desfeita.')) return;
+    const r = await fetch('/api/render-files?all=true', { method: 'DELETE' });
+    if (r.ok) {
+      setRenderFiles([]);
+    } else {
+      alert('Erro ao excluir');
+    }
+  }
+
   async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1670,6 +1693,7 @@ export default function Home() {
               }}
             >
               <Player
+      acknowledgeRemotionLicense
                 ref={playerRef}
                 component={Component}
                 inputProps={{ ...project, motion: motionWithStyles }}
@@ -1929,9 +1953,9 @@ export default function Home() {
           {bgVideo && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-1)' }}>
               <ToggleRow
-                label="Usar áudio do vídeo BG"
-                value={useVideoAudio}
-                onChange={setUseVideoAudio}
+                label="🔇 Mutar áudio do vídeo BG"
+                value={!useVideoAudio}
+                onChange={(v) => setUseVideoAudio(!v)}
               />
             </div>
           )}
