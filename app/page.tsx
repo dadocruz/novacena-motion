@@ -1627,98 +1627,6 @@ export default function Home() {
           {template === 'available_now' ? (
             <>
               <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder="FAÇA O PRÉ-SAVE" />
-            <div
-              style={{
-                marginTop: 10,
-                padding: 12,
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--bg-2)',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Capa do vídeo / primeiro frame
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={{ ...ghostBtnStyle, fontSize: 11, padding: '8px 10px' }}>
-                  Usar frame atual como capa
-                </button>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterFrameEnabled}
-                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
-                  />
-                  Renderizar capa no início
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterOutroEnabled}
-                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
-                  />
-                  Repetir no final
-                </label>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Segundo da capa
-                  <input
-                    type="number"
-                    min={0}
-                    max={durationSeconds}
-                    step={0.01}
-                    value={posterFrameSec}
-                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Duração da capa
-                  <input
-                    type="number"
-                    min={0.1}
-                    max={5}
-                    step={0.1}
-                    value={posterHoldSec}
-                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
-                O PNG da capa será salvo junto com os vídeos prontos.
-              </div>
-            </div>
-
-
               <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
             </>
           ) : (
@@ -1936,6 +1844,97 @@ export default function Home() {
               onUpdate={updateOverlay}
               onRemove={removeOverlay}
             />
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-2)',
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Capa do vídeo / primeiro frame
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
+                  Usar frame atual como capa
+                </button>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterFrameEnabled}
+                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
+                  />
+                  Renderizar capa no início
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterOutroEnabled}
+                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
+                  />
+                  Repetir no final
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Segundo da capa
+                  <input
+                    type="number"
+                    min={0}
+                    max={durationSeconds}
+                    step={0.01}
+                    value={posterFrameSec}
+                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Duração da capa
+                  <input
+                    type="number"
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    value={posterHoldSec}
+                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
+                O PNG da capa será salvo junto com os vídeos prontos.
+              </div>
+            </div>
 
             <div style={renderBarStyle}>
               <button
