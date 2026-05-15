@@ -15,6 +15,7 @@ import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
+import { textStrokeStyle, textFillStyle } from './textStroke';
 
 const HEADLINE_IN = 14;
 const COVER_IN = 50;
@@ -111,6 +112,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               lineHeight: 1,
               fontWeight: M.fontHeadline.weight,
               letterSpacing: -3.5,
+              ...textStrokeStyle(M.strokeHeadline),
+              ...textFillStyle(M.strokeHeadline),
               textShadow:
                 '0 14px 38px rgba(0,0,0,0.92), 0 0 30px rgba(255,30,30,0.32)',
               overflow: 'visible',

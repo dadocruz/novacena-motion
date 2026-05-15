@@ -13,6 +13,7 @@ import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform, applyGradientStyle, hasGradient } from '../lib/fontCatalog';
 import type { TemplateProps, TextTransitionId } from './types';
+import { textStrokeStyle, textFillStyle } from './textStroke';
 
 const HEADLINE_IN = 18;
 const DATE_IN = 38;
@@ -179,7 +180,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 lineHeight: 0.96,
                 fontWeight: fontHeadline?.weight ?? 900,
                 letterSpacing: (props.headline || '').length > 14 ? 1.5 : -1,
-                textShadow:
+                ...textStrokeStyle(motion.strokeHeadline),
+              ...textFillStyle(motion.strokeHeadline),
+              textShadow:
                   '0 14px 36px rgba(0,0,0,0.92), 0 0 28px rgba(190,90,255,0.28)',
                 overflow: 'visible',
                 ...applyTextStyle(motion.styleHeadline),

@@ -15,6 +15,7 @@ import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
+import { textStrokeStyle, textFillStyle } from './textStroke';
 
 const PREFIX_IN = 14;
 const COVER_IN = 40;
@@ -96,7 +97,9 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             fontSize: 50,
             fontWeight: M.fontDate.weight,
             letterSpacing: 2.5,
-            textShadow: '0 8px 28px rgba(0,0,0,0.85)',
+            ...textStrokeStyle(M.strokeHeadline),
+              ...textFillStyle(M.strokeHeadline),
+              textShadow: '0 8px 28px rgba(0,0,0,0.85)',
             ...applyTextStyle(props.motion?.styleDate),
             ...(showAll ? {} : prefixMask),
               ...userTextTransform(props.motion?.styleDate, prefixMask),

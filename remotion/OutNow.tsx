@@ -15,6 +15,7 @@ import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
+import { textStrokeStyle, textFillStyle } from './textStroke';
 
 const HEADLINE_IN = 14;
 const COVER_IN = 46;
@@ -124,6 +125,8 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               lineHeight: 0.94,
               fontWeight: M.fontHeadline.weight,
               letterSpacing: -4,
+              ...textStrokeStyle(M.strokeHeadline),
+              ...textFillStyle(M.strokeHeadline),
               textShadow:
                 '0 14px 42px rgba(0,0,0,0.92), 0 0 30px rgba(255,162,64,0.32)',
               overflow: 'visible',
