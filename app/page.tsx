@@ -2123,6 +2123,7 @@ export default function Home() {
         </div>
 
         {/* PROJETO */}
+        <div data-studio-section="motion" />
         <Section title="Projeto" draggablePanel>
           <div style={{ marginBottom: 12 }}>
             <div style={miniInputLabel}>Duração</div>
@@ -2249,6 +2250,7 @@ export default function Home() {
           )}
         </Section>
         {/* LOGOS DAS PLATAFORMAS */}
+        <div data-studio-section="logos" />
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
             Substitua o ícone padrão de cada plataforma pelo seu próprio PNG/SVG.
@@ -2335,6 +2337,7 @@ export default function Home() {
 
         </Section>
 
+        <div data-studio-section="text" />
                                         <Section title="Texto">
           
           <div style={{
@@ -2358,6 +2361,23 @@ export default function Home() {
             <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
             <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
             <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowCta1((v) => !v)}
+                style={showCta1 ? segBtnActive : segBtn}
+              >
+                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCta2((v) => !v)}
+                style={showCta2 ? segBtnActive : segBtn}
+              >
+                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
+              </button>
+            </div>
           </div>
 
           <FontsPanel
@@ -2458,6 +2478,7 @@ export default function Home() {
 
         </Section>
 
+        <div data-studio-section="cta" />
         {template === 'available_now' && (
           <Section title="Ritmo CTA (Disponível)" draggablePanel>
             <div style={{ marginBottom: 10 }}>
@@ -2541,6 +2562,7 @@ export default function Home() {
           </Section>
         )}
 
+        <div data-studio-section="overlay" />
         {/* OVERLAYS */}
         <Section title="Overlays (filmburn / película)" draggablePanel>
           <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
@@ -2566,6 +2588,7 @@ export default function Home() {
           )}
         </Section>
         {/* CAPA */}
+        <div data-studio-section="cover" />
         <Section title="Capa" draggablePanel>
               <div style={{ marginTop: 12 }}>
                 <div
@@ -2618,97 +2641,6 @@ export default function Home() {
             onChange={setWiggleD} format={(v) => v.toFixed(1)} />
           <SliderRow label="Wiggle CTA" value={wiggleC} min={0} max={2} step={0.1}
             onChange={setWiggleC} format={(v) => v.toFixed(1)} />
-        </Section>
-
-        
-        <Section title="Transições de Texto" draggablePanel>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <label style={miniLabel}>Headline</label>
-            <select
-              value={trHeadline}
-              onChange={(e) => setTrHeadline(e.target.value as TextTransitionId)}
-              style={{
-                width: '100%',
-                height: 38,
-                borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.14)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#fff',
-                padding: '0 12px',
-                fontSize: 12,
-                outline: 'none',
-              }}
-            >
-              {TEXT_TRANSITIONS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} — {t.description}
-                </option>
-              ))}
-            </select>
-
-            <label style={miniLabel}>Data</label>
-            <select
-              value={trDate}
-              onChange={(e) => setTrDate(e.target.value as TextTransitionId)}
-              style={{
-                width: '100%',
-                height: 38,
-                borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.14)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#fff',
-                padding: '0 12px',
-                fontSize: 12,
-                outline: 'none',
-              }}
-            >
-              {TEXT_TRANSITIONS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} — {t.description}
-                </option>
-              ))}
-            </select>
-
-            <label style={miniLabel}>Chamadas / CTA</label>
-            <select
-              value={trCta}
-              onChange={(e) => setTrCta(e.target.value as TextTransitionId)}
-              style={{
-                width: '100%',
-                height: 38,
-                borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.14)',
-                background: 'rgba(255,255,255,0.06)',
-                color: '#fff',
-                padding: '0 12px',
-                fontSize: 12,
-                outline: 'none',
-              }}
-            >
-              {TEXT_TRANSITIONS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} — {t.description}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-              <button
-                type="button"
-                onClick={() => setShowCta1((v) => !v)}
-                style={showCta1 ? segBtnActive : segBtn}
-              >
-                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCta2((v) => !v)}
-                style={showCta2 ? segBtnActive : segBtn}
-              >
-                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
-              </button>
-            </div>
-          </div>
         </Section>
 
 <Section title="Brilho" draggablePanel>
