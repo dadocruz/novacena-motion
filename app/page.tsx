@@ -1031,6 +1031,15 @@ export default function Home() {
     metricNumber, metricLabel, platformsSel, coverImage, motionWithStyles, target,
   ]);
 
+  const liveProject = React.useMemo(() => {
+    return {
+      ...project,
+      durationSeconds,
+      motion: motionWithStyles,
+      renderTarget: target,
+    };
+  }, [project, durationSeconds, motionWithStyles, target]);
+
   const Component = componentByTemplate[template];
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
@@ -1535,10 +1544,7 @@ export default function Home() {
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
     const renderPropsForServer = {
-      ...project,
-      durationSeconds,
-      motion: motionWithStyles,
-      renderTarget: target,
+      ...liveProject,
       posterFrame: {
         enabled: posterFrameEnabled,
         frameSec: posterFrameSec,
@@ -1941,7 +1947,7 @@ export default function Home() {
       acknowledgeRemotionLicense
                 ref={playerRef}
                 component={Component}
-                inputProps={{ ...project, motion: motionWithStyles }}
+                inputProps={liveProject}
                 durationInFrames={durationSeconds * 30}
                 compositionWidth={1080}
                 compositionHeight={compositionHeight}
