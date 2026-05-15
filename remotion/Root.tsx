@@ -26,6 +26,24 @@ const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
 // Aqui injetamos as 18 fontes via @font-face antes de qualquer composition renderizar.
 
 const FONT_DEFINITIONS: Array<{ family: string; file: string; format: string }> = [
+  // PREMIUM IMPORTADAS
+  { family: 'Akira Expanded E BOLD', file: 'premium/akiraexpandedebold.otf', format: 'opentype' },
+  { family: 'Panton ExtraBlack', file: 'premium/pantonextrablack.otf', format: 'opentype' },
+  { family: 'Akira Expanded', file: 'premium/akiraexpanded.otf', format: 'opentype' },
+  { family: 'Gramatika Black', file: 'premium/gramatikablack.ttf', format: 'truetype' },
+  { family: 'Heavitas', file: 'premium/heavitas.ttf', format: 'truetype' },
+  { family: 'LEMON MILK', file: 'premium/lemonmilk.otf', format: 'opentype' },
+  { family: '1797 Compressed', file: 'premium/1797compressed.otf', format: 'opentype' },
+  { family: 'Aldivaro ExtraBold', file: 'premium/aldivaroextrabold.otf', format: 'opentype' },
+  { family: 'Bebas Neue', file: 'premium/bebasneue.otf', format: 'opentype' },
+  { family: 'Kenyan Coffee', file: 'premium/kenyancoffee.otf', format: 'opentype' },
+  { family: 'BigNoodleTitling Oblique', file: 'premium/bignoodletitlingoblique.ttf', format: 'truetype' },
+  { family: 'Nexa', file: 'premium/nexa.otf', format: 'opentype' },
+  { family: 'Fair Prosper', file: 'premium/fairprosper.ttf', format: 'truetype' },
+  { family: 'Casanova Scotia', file: 'premium/casanovascotia.otf', format: 'opentype' },
+  { family: 'Candrika', file: 'premium/candrika.ttf', format: 'truetype' },
+  { family: 'Varane', file: 'premium/varane.otf', format: 'opentype' },
+
   // DISPLAY
   { family: 'TuskerGrotesk Super',   file: 'TuskerGrotesk-8800Super.otf',    format: 'opentype' },
   { family: 'TuskerGrotesk Medium',  file: 'TuskerGrotesk-6500Medium.otf',   format: 'opentype' },
