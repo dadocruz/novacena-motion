@@ -1498,6 +1498,15 @@ export default function Home() {
     setSaveMessage(`Frame ${frame} (${seconds}s) salvo como capa do vídeo.`);
   }
 
+  function selectStudioTool(tool: StudioToolId) {
+    setActiveStudioTool(tool);
+
+    window.setTimeout(() => {
+      const rightPanel = document.querySelector('[data-novacena-right-panel="true"]') as HTMLElement | null;
+      rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 60);
+  }
+
   async function renderScript(script: string, label: string) {
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
@@ -1621,30 +1630,8 @@ export default function Home() {
           </div>
         </Section>
 
-        <Section title="Conteúdo">
-          <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
-          <Field label="Headline" value={headline} onChange={setHeadline} placeholder="LANÇAMENTO" />
-          {template === 'available_now' ? (
-            <>
-              <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder="FAÇA O PRÉ-SAVE" />
-              <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
-            </>
-          ) : (
-            <Field label="Chamada / CTA" value={cta} onChange={setCta} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
-          )}
-          {template === 'watch_youtube' && (
-            <Field label="Canal" value={channelName} onChange={setChannelName} />
-          )}
-          {template === 'milestone' && (
-            <>
-              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} />
-              <div style={gridTwoCols}>
-                <Field label="Número" value={metricNumber} onChange={setMetricNumber} />
-                <Field label="Métrica" value={metricLabel} onChange={setMetricLabel} />
-              </div>
-            </>
-          )}
-        </Section>
+
+
 
         <Section title="Capa principal">
           <button
@@ -1742,6 +1729,32 @@ export default function Home() {
           </Section>
         )}
 
+
+        <Section title="Conteúdo">
+          <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
+          <Field label="Headline" value={headline} onChange={setHeadline} placeholder="LANÇAMENTO" />
+          {template === 'available_now' ? (
+            <>
+              <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder="FAÇA O PRÉ-SAVE" />
+              <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+            </>
+          ) : (
+            <Field label="Chamada / CTA" value={cta} onChange={setCta} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+          )}
+          {template === 'watch_youtube' && (
+            <Field label="Canal" value={channelName} onChange={setChannelName} />
+          )}
+          {template === 'milestone' && (
+            <>
+              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} />
+              <div style={gridTwoCols}>
+                <Field label="Número" value={metricNumber} onChange={setMetricNumber} />
+                <Field label="Métrica" value={metricLabel} onChange={setMetricLabel} />
+              </div>
+            </>
+          )}
+        </Section>
+
         <Section title="Plataformas">
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {allPlatforms.map((p) => (
@@ -1751,6 +1764,99 @@ export default function Home() {
             ))}
           </div>
         </Section>
+
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-2)',
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Capa do vídeo / primeiro frame
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
+                  Usar frame atual como capa
+                </button>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterFrameEnabled}
+                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
+                  />
+                  Renderizar capa no início
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterOutroEnabled}
+                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
+                  />
+                  Repetir no final
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Segundo da capa
+                  <input
+                    type="number"
+                    min={0}
+                    max={durationSeconds}
+                    step={0.01}
+                    value={posterFrameSec}
+                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Duração da capa
+                  <input
+                    type="number"
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    value={posterHoldSec}
+                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
+                O PNG da capa será salvo junto com os vídeos prontos.
+              </div>
+            </div>
+
 
         <div style={{ marginTop: 'auto', padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={saveToGallery} style={primaryBtn} disabled={!activeSlug}>
@@ -1844,97 +1950,6 @@ export default function Home() {
               onUpdate={updateOverlay}
               onRemove={removeOverlay}
             />
-
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--bg-2)',
-                display: 'grid',
-                gap: 10,
-              }}
-            >
-              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Capa do vídeo / primeiro frame
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
-                  Usar frame atual como capa
-                </button>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterFrameEnabled}
-                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
-                  />
-                  Renderizar capa no início
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterOutroEnabled}
-                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
-                  />
-                  Repetir no final
-                </label>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Segundo da capa
-                  <input
-                    type="number"
-                    min={0}
-                    max={durationSeconds}
-                    step={0.01}
-                    value={posterFrameSec}
-                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Duração da capa
-                  <input
-                    type="number"
-                    min={0.1}
-                    max={5}
-                    step={0.1}
-                    value={posterHoldSec}
-                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
-                O PNG da capa será salvo junto com os vídeos prontos.
-              </div>
-            </div>
 
             <div style={renderBarStyle}>
               <button
@@ -2087,27 +2102,11 @@ export default function Home() {
       </section>
 
       {/* ─── SIDEBAR DIREITA ─── */}
-      <aside style={rightSidebar}>
+      <aside style={rightSidebar} data-novacena-right-panel="true">
         <div style={{ padding: '18px 22px 6px', display: 'flex', justifyContent: 'space-between' }}>
           <div>
             <div style={miniLabel}>Studio</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginTop: 2 }}>Motion Studio</div>
-            <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setStudioMode('simple')}
-                style={studioMode === 'simple' ? segBtnActive : segBtn}
-              >
-                Modo simples
-              </button>
-              <button
-                type="button"
-                onClick={() => setStudioMode('advanced')}
-                style={studioMode === 'advanced' ? segBtnActive : segBtn}
-              >
-                Avançado
-              </button>
-            </div>
           </div>
           <button onClick={resetMotion} style={resetBtnStyle} title="Resetar tudo">↺</button>
         </div>
@@ -2751,7 +2750,7 @@ export default function Home() {
               key={tool.id}
               type="button"
               onClick={() => {
-                setActiveStudioTool(tool.id);
+                selectStudioTool(tool.id);
                 scrollToStudioSection(tool.section);
               }}
               style={{
