@@ -113,9 +113,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               fontWeight: M.fontHeadline.weight,
               letterSpacing: -3.5,
               ...textStrokeStyle(M.strokeHeadline),
-              ...textFillStyle(M.strokeHeadline),
-              textShadow:
-                '0 14px 38px rgba(0,0,0,0.92), 0 0 30px rgba(255,30,30,0.32)',
+              ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
+              textShadow: 'none',
               overflow: 'visible',
               ...applyTextStyle(props.motion?.styleHeadline),
               ...(showAll ? {} : headlineMask),
@@ -169,7 +168,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             fontSize: 32,
             fontWeight: M.fontCta.weight,
             letterSpacing: 2.4,
-            textShadow: '0 6px 22px rgba(0,0,0,0.92)',
+            textShadow: 'none',
             ...applyTextStyle(props.motion?.styleCta),
           }}
         >
