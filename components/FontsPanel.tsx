@@ -454,6 +454,8 @@ export default function FontsPanel({
 
   const selectedId = role === 'headline' ? fontHeadline : role === 'date' ? fontDate : fontCta;
   const currentStroke = role === 'headline' ? strokeHeadline : role === 'date' ? strokeDate : strokeCta;
+  const currentTextStyle = role === 'headline' ? styleHeadline : role === 'date' ? styleDate : styleCta;
+  const patchTextStyle = (patch: any) => onChangeTextStyle?.(role, { ...(currentTextStyle || {}), ...patch });
   const sample = getSample(role, sampleHeadline, sampleDate, sampleCta);
   const selectedFont = allFonts.find((f) => f.id === selectedId) ?? allFonts[0];
 
@@ -615,6 +617,97 @@ export default function FontsPanel({
         + Subir fonte (TTF/OTF/WOFF)
       </button>
       <input ref={uploadInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={uploadFont} style={{ display: 'none' }} />
+
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, display: 'grid', gap: 10 }}>
+        <div style={tiny}>Cor real / degradê</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => patchTextStyle({ useGradient: false })}
+            style={seg(!currentTextStyle?.useGradient)}
+          >
+            Cor sólida
+          </button>
+          <button
+            type="button"
+            onClick={() => patchTextStyle({ useGradient: true })}
+            style={seg(!!currentTextStyle?.useGradient)}
+          >
+            Degradê
+          </button>
+        </div>
+
+        {!currentTextStyle?.useGradient && (
+          <>
+            <input
+              type="color"
+              value={currentTextStyle?.color || '#ffffff'}
+              onChange={(e) => patchTextStyle({ color: e.target.value })}
+              style={{ width: '100%', height: 34, padding: 0, border: 0, background: 'transparent' }}
+            />
+
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {TEXT_FILL_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => patchTextStyle({ color })}
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 999,
+                    border: (currentTextStyle?.color || '#ffffff') === color ? '2px solid #fff' : '1px solid rgba(255,255,255,0.15)',
+                    background: color,
+                    cursor: 'pointer',
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {currentTextStyle?.useGradient && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <div style={{ ...tiny, marginBottom: 5 }}>Cor 1</div>
+                <input
+                  type="color"
+                  value={currentTextStyle?.gradientFrom || '#ffffff'}
+                  onChange={(e) => patchTextStyle({ gradientFrom: e.target.value })}
+                  style={{ width: '100%', height: 34, padding: 0, border: 0, background: 'transparent' }}
+                />
+              </div>
+              <div>
+                <div style={{ ...tiny, marginBottom: 5 }}>Cor 2</div>
+                <input
+                  type="color"
+                  value={currentTextStyle?.gradientTo || '#ff914d'}
+                  onChange={(e) => patchTextStyle({ gradientTo: e.target.value })}
+                  style={{ width: '100%', height: 34, padding: 0, border: 0, background: 'transparent' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                <span style={{ color: '#aaa', fontSize: 11 }}>Ângulo</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{Math.round(currentTextStyle?.gradientAngle ?? 90)}°</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={360}
+                step={1}
+                value={currentTextStyle?.gradientAngle ?? 90}
+                onChange={(e) => patchTextStyle({ gradientAngle: Number(e.target.value) })}
+                style={{ width: '100%', accentColor: '#ffc857' }}
+              />
+            </div>
+          </>
+        )}
+      </div>
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, display: 'grid', gap: 10 }}>
         <div style={tiny}>Contorno</div>
