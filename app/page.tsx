@@ -1771,26 +1771,97 @@ export default function Home() {
             )}
             {renderFiles.length > 0 && (
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
-                  Vídeos prontos
-                </div>
-                {renderFiles.map(f => (
-                  <a
-                    key={f.name}
-                    href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
-                    download={f.name}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    Vídeos prontos ({renderFiles.length})
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={deleteAllRenders}
                     style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '7px 10px', borderRadius: 8, fontSize: 12,
-                      background: 'var(--bg-2)', border: '1px solid var(--border)',
-                      color: 'var(--text-1)', textDecoration: 'none', gap: 8,
+                      background: 'transparent',
+                      border: '1px solid rgba(239,68,68,0.35)',
+                      color: 'rgba(239,68,68,0.85)',
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      fontSize: 10,
+                      cursor: 'pointer',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                    }}
+                    title="Excluir todos os vídeos renderizados"
+                  >
+                    Limpar todos
+                  </button>
+                </div>
+
+                {renderFiles.map(f => (
+                  <div
+                    key={f.name}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '7px 10px',
+                      borderRadius: 8,
+                      fontSize: 12,
+                      background: 'var(--bg-2)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-1)',
+                      gap: 8,
                     }}
                   >
-                    <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{f.name}</span>
-                    <span style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
-                      {(f.size / 1024 / 1024).toFixed(1)} MB ↓
-                    </span>
-                  </a>
+                    <a
+                      href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
+                      download={f.name}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flex: 1,
+                        gap: 8,
+                        color: 'var(--text-1)',
+                        textDecoration: 'none',
+                        minWidth: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {f.name}
+                      </span>
+
+                      <span style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                        {(f.size / 1024 / 1024).toFixed(1)} MB ↓
+                      </span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => deleteRender(f.name)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'rgba(239,68,68,0.75)',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        fontSize: 18,
+                        cursor: 'pointer',
+                        lineHeight: 1,
+                        fontWeight: 300,
+                      }}
+                      title={`Excluir ${f.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
