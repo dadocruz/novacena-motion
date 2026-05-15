@@ -729,17 +729,6 @@ export default function FontsPanel({
               </span>
             </div>
 
-            <div style={tiny}>POSIÇÃO X</div>
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <input type="range" min={-50} max={50} step={0.5}
-                value={txOX[role] ?? 0}
-                onChange={e => onTxOX(role, parseFloat(e.target.value))}
-                style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
-              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
-                {(txOX[role] ?? 0) > 0 ? '+' : ''}{(txOX[role] ?? 0).toFixed(1)}%
-              </span>
-            </div>
-
             <div style={tiny}>POSIÇÃO Y</div>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <input type="range" min={-50} max={50} step={0.5}
@@ -748,6 +737,17 @@ export default function FontsPanel({
                 style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
               <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
                 {(txOY[role] ?? 0) > 0 ? '+' : ''}{(txOY[role] ?? 0).toFixed(1)}%
+              </span>
+            </div>
+
+            <div style={tiny}>POSIÇÃO X</div>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <input type="range" min={-50} max={50} step={0.5}
+                value={txOX[role] ?? 0}
+                onChange={e => onTxOX(role, parseFloat(e.target.value))}
+                style={{ flex:1, accentColor:'rgba(99,200,255,0.85)' }} />
+              <span style={{ fontSize:10, color:'#aaa', minWidth:34, textAlign:'right' }}>
+                {(txOX[role] ?? 0) > 0 ? '+' : ''}{(txOX[role] ?? 0).toFixed(1)}%
               </span>
             </div>
           </div>
