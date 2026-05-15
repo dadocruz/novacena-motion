@@ -22,7 +22,30 @@ export type FontDef = {
   preview?: string;
 };
 
+export const PREMIUM_FONT_CATALOG: FontDef[] = [
+  { id: 'premium-akira-expanded-e-bold', label: '⭐ Akira Expanded E BOLD', family: 'Akira Expanded E BOLD', file: '/fonts/premium/akiraexpandedebold.otf', weight: 900, category: 'display', vibe: 'premium impacto / título gigante' },
+  { id: 'premium-panton-extrablack', label: '⭐ Panton ExtraBlack', family: 'Panton ExtraBlack', file: '/fonts/premium/pantonextrablack.otf', weight: 900, category: 'display', vibe: 'premium número / milestone / capa forte' },
+  { id: 'premium-akira-expanded', label: '⭐ Akira Expanded', family: 'Akira Expanded', file: '/fonts/premium/akiraexpanded.otf', weight: 800, category: 'display', vibe: 'premium impacto / moderno' },
+  { id: 'premium-gramatika-black', label: '⭐ Gramatika Black', family: 'Gramatika Black', file: '/fonts/premium/gramatikablack.ttf', weight: 900, category: 'display', vibe: 'premium impacto / display' },
+  { id: 'premium-heavitas', label: '⭐ Heavitas', family: 'Heavitas', file: '/fonts/premium/heavitas.ttf', weight: 900, category: 'display', vibe: 'premium pesado / headline' },
+  { id: 'premium-lemon-milk', label: '⭐ LEMON MILK', family: 'LEMON MILK', file: '/fonts/premium/lemonmilk.otf', weight: 800, category: 'display', vibe: 'premium clean / forte' },
+  { id: 'premium-1797-compressed', label: '⭐ 1797 Compressed', family: '1797 Compressed', file: '/fonts/premium/1797compressed.otf', weight: 900, category: 'display', vibe: 'premium condensada / cartaz' },
+  { id: 'premium-aldivaro-extrabold', label: '⭐ Aldivaro ExtraBold', family: 'Aldivaro ExtraBold', file: '/fonts/premium/aldivaroextrabold.otf', weight: 900, category: 'display', vibe: 'premium impacto / elegante' },
+
+  { id: 'premium-bebas-neue', label: '⭐ Bebas Neue', family: 'Bebas Neue', file: '/fonts/premium/bebasneue.otf', weight: 700, category: 'display', vibe: 'sertanejo / show / YouTube' },
+  { id: 'premium-kenyan-coffee', label: '⭐ Kenyan Coffee', family: 'Kenyan Coffee', file: '/fonts/premium/kenyancoffee.otf', weight: 700, category: 'display', vibe: 'sertanejo / divulgação' },
+  { id: 'premium-big-noodle-oblique', label: '⭐ BigNoodleTitling Oblique', family: 'BigNoodleTitling Oblique', file: '/fonts/premium/bignoodletitlingoblique.ttf', weight: 700, category: 'display', vibe: 'show / inclinado / impacto' },
+
+  { id: 'premium-nexa', label: '⭐ Nexa', family: 'Nexa', file: '/fonts/premium/nexa.otf', weight: 700, category: 'display', vibe: 'CTA / limpo / legível' },
+
+  { id: 'premium-fair-prosper', label: '⭐ Fair Prosper', family: 'Fair Prosper', file: '/fonts/premium/fairprosper.ttf', weight: 400, category: 'display', vibe: 'premium / gospel / elegante' },
+  { id: 'premium-casanova-scotia', label: '⭐ Casanova Scotia', family: 'Casanova Scotia', file: '/fonts/premium/casanovascotia.otf', weight: 400, category: 'display', vibe: 'premium / clássico' },
+  { id: 'premium-candrika', label: '⭐ Candrika', family: 'Candrika', file: '/fonts/premium/candrika.ttf', weight: 400, category: 'display', vibe: 'elegante / texto' },
+  { id: 'premium-varane', label: '⭐ Varane', family: 'Varane', file: '/fonts/premium/varane.otf', weight: 400, category: 'display', vibe: 'editorial / premium' },
+];
+
 export const FONT_CATALOG: FontDef[] = [
+  ...PREMIUM_FONT_CATALOG,
   // ─── DISPLAY (HEADLINES GIGANTES) ───────────────────────────────
   {
     id: 'tusker-super',
