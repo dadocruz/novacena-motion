@@ -57,7 +57,14 @@ export const PremiumCover: React.FC<Props> = ({
   const entryEnd = entryFrame + 60;
   const t = eased(frame, entryFrame, entryEnd, easings.outBack);
   const softT = eased(frame, entryFrame, entryEnd, easings.outCubic);
-  const opacity = 1;
+  // A capa fica invisível antes do frame de entrada.
+  // Assim o frame 0 não mostra a capa antes da animação.
+  const opacity = interpolate(
+    frame,
+    [entryFrame - 1, entryFrame + 10],
+    [0, 1],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+  );
 
   let x = 0;
   let y = 0;
