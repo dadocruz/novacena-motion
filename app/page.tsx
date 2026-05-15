@@ -540,6 +540,72 @@ export default function Home() {
       .then((d) => d.ok && setDriveFolderPath(d.artist.driveFolderPath ?? ''));
   }, [activeSlug]);
 
+  // Aplica plano vindo do AI Lab (via /?aiPlan=1 + localStorage.novacena.ai.lastPlan)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('aiPlan') !== '1') return;
+
+    let saved: any = null;
+    try {
+      const raw = window.localStorage.getItem('novacena.ai.lastPlan');
+      if (!raw) return;
+      saved = JSON.parse(raw);
+    } catch {
+      return;
+    }
+
+    const plan = saved?.plan;
+    if (!plan || typeof plan !== 'object') return;
+
+    if (typeof plan.template === 'string') {
+      const validTemplates = (templateOrder as readonly string[]) ?? Object.keys(templateLabels ?? {});
+      if (validTemplates.includes(plan.template)) {
+        setTemplate(plan.template as TemplateId);
+      }
+    }
+
+    if (plan.target === 'story' || plan.target === 'feed' || plan.target === 'reels') {
+      setTarget(plan.target as RenderTarget);
+    }
+
+    if (typeof plan.showSafeArea === 'boolean') setShowSafeArea(plan.showSafeArea);
+    if (typeof plan.durationSeconds === 'number' && plan.durationSeconds > 0 && plan.durationSeconds <= 60) {
+      setDurationSeconds(plan.durationSeconds);
+    }
+    if (typeof plan.headline === 'string') setHeadline(plan.headline);
+    if (typeof plan.metricPrefix === 'string') setMetricPrefix(plan.metricPrefix);
+    if (typeof plan.metricNumber === 'string') setMetricNumber(plan.metricNumber);
+    if (typeof plan.metricLabel === 'string') setMetricLabel(plan.metricLabel);
+
+    if (Array.isArray(plan.platforms)) {
+      const cleaned = plan.platforms.filter((p: unknown): p is PlatformName => typeof p === 'string');
+      if (cleaned.length > 0) setPlatformsSel(cleaned);
+    }
+
+    if (typeof plan.glowColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(plan.glowColor)) {
+      setGlowColor(plan.glowColor);
+    }
+    if (typeof plan.bgColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(plan.bgColor)) {
+      setBgColor(plan.bgColor);
+    }
+
+    if (typeof plan.coverMotion === 'string') setCoverMotion(normalizeCoverMotionId(plan.coverMotion));
+    if (typeof plan.coverSize === 'number' && plan.coverSize > 0) setCoverSize(plan.coverSize);
+
+    setActiveStudioTool('cover');
+    setSaveMessage('Plano IA aplicado no Studio');
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('aiPlan');
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      /* noop */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Quando troca template, atualiza defaults
   useEffect(() => {
     const next = getProject(template);
