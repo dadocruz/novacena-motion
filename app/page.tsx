@@ -2751,17 +2751,14 @@ export default function Home() {
           boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
         }}
       >
-        {STUDIO_TOOL_DOCK.map((tool) => {
+        {STUDIO_TOOL_DOCK.filter((tool) => tool.id !== 'render').map((tool) => {
           const active = activeStudioTool === tool.id;
 
           return (
             <button
               key={tool.id}
               type="button"
-              onClick={() => {
-                selectStudioTool(tool.id);
-                scrollToStudioSection(tool.section);
-              }}
+              onClick={() => selectStudioTool(tool.id)}
               style={{
                 border: active ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(255,255,255,0.08)',
                 background: active
