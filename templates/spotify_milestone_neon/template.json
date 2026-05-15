@@ -1,0 +1,40 @@
+{
+  "id": "spotify_milestone_neon",
+  "name": "Spotify Milestone Neon",
+  "category": "spotify_milestone",
+  "defaultDurationSeconds": 12,
+  "supportedFormats": ["story", "square"],
+  "requiredAssets": ["cover"],
+  "editableFields": [
+    "cover",
+    "artistLogo",
+    "number",
+    "label",
+    "platform",
+    "headline",
+    "background",
+    "primaryColor",
+    "fontMood"
+  ],
+  "fixedCommunicationOrder": [
+    "logo_or_brand",
+    "headline",
+    "big_number",
+    "label",
+    "cover",
+    "platform",
+    "final_hold"
+  ],
+  "numberRenderModes": [
+    "native_text",
+    "styled_text_from_reference",
+    "uploaded_graphic"
+  ],
+  "defaultMotion": {
+    "preset": "spotify_milestone_neon_bounce",
+    "intensity": 0.82,
+    "coverMotion": "scale_bounce",
+    "textMotion": "bounce_in",
+    "backgroundMotion": "slow_zoom"
+  }
+}

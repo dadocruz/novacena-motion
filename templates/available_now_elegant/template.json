@@ -1,0 +1,34 @@
+{
+  "id": "available_now_elegant",
+  "name": "Available Now Elegant",
+  "category": "available_now",
+  "defaultDurationSeconds": 12,
+  "supportedFormats": ["story", "square"],
+  "requiredAssets": ["cover"],
+  "editableFields": [
+    "cover",
+    "title",
+    "artist",
+    "date",
+    "cta",
+    "platforms",
+    "fontMood",
+    "primaryColor"
+  ],
+  "fixedCommunicationOrder": [
+    "emotional_background",
+    "available_or_launch_text",
+    "date_optional",
+    "cover",
+    "title_artist",
+    "platforms",
+    "cta_final"
+  ],
+  "defaultMotion": {
+    "preset": "available_now_slow_elegant",
+    "intensity": 0.55,
+    "coverMotion": "parallax_float",
+    "textMotion": "fade_up",
+    "backgroundMotion": "blur_zoom"
+  }
+}

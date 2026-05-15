@@ -1,0 +1,32 @@
+{
+  "id": "youtube_watch_story",
+  "name": "YouTube Watch Story",
+  "category": "youtube_watch",
+  "defaultDurationSeconds": 12,
+  "supportedFormats": ["story", "square"],
+  "requiredAssets": ["cover"],
+  "editableFields": [
+    "backgroundVideo",
+    "thumbnail",
+    "headline",
+    "handle",
+    "youtubeDecor",
+    "primaryColor"
+  ],
+  "fixedCommunicationOrder": [
+    "background_artist",
+    "youtube_icons",
+    "headline_assista_no",
+    "headline_youtube",
+    "thumbnail_card",
+    "handle",
+    "final_hold"
+  ],
+  "defaultMotion": {
+    "preset": "youtube_icons_card_reveal",
+    "intensity": 0.75,
+    "coverMotion": "scale_bounce",
+    "textMotion": "tracking_reveal",
+    "backgroundMotion": "video_loop"
+  }
+}
