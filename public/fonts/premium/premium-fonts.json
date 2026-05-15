@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-05-15T14:10:32.023Z",
+  "defaults": {
+    "headline": "Akira Expanded E BOLD",
+    "number": "Panton ExtraBlack",
+    "date": "DIN Condensed",
+    "cta": "Nexa",
+    "premium": "Fair Prosper",
+    "sertanejo": "Bebas Neue"
+  },
+  "categories": {
+    "impacto": [
+      "Akira Expanded E BOLD",
+      "Akira Expanded",
+      "Gramatika Black",
+      "Heavitas",
+      "1797 Compressed",
+      "LEMON MILK",
+      "Panton ExtraBlack",
+      "Aldivaro ExtraBold"
+    ],
+    "sertanejo": [
+      "Bebas Neue",
+      "Kenyan Coffee",
+      "BigNoodleTitling Oblique"
+    ],
+    "premium": [
+      "Fair Prosper",
+      "Candrika",
+      "Varane",
+      "Casanova Scotia"
+    ],
+    "cta": [
+      "Nexa"
+    ]
+  },
+  "fonts": [
+    {
+      "family": "Akira Expanded E BOLD",
+      "category": "impacto",
+      "file": "/fonts/premium/akiraexpandedebold.otf"
+    },
+    {
+      "family": "Akira Expanded",
+      "category": "impacto",
+      "file": "/fonts/premium/akiraexpanded.otf"
+    },
+    {
+      "family": "Bebas Neue",
+      "category": "sertanejo",
+      "file": "/fonts/premium/bebasneue.otf"
+    },
+    {
+      "family": "Gramatika Black",
+      "category": "impacto",
+      "file": "/fonts/premium/gramatikablack.ttf"
+    },
+    {
+      "family": "Heavitas",
+      "category": "impacto",
+      "file": "/fonts/premium/heavitas.ttf"
+    },
+    {
+      "family": "1797 Compressed",
+      "category": "impacto",
+      "file": "/fonts/premium/1797compressed.otf"
+    },
+    {
+      "family": "Nexa",
+      "category": "cta",
+      "file": "/fonts/premium/nexa.otf"
+    },
+    {
+      "family": "Fair Prosper",
+      "category": "premium",
+      "file": "/fonts/premium/fairprosper.ttf"
+    },
+    {
+      "family": "Candrika",
+      "category": "premium",
+      "file": "/fonts/premium/candrika.ttf"
+    },
+    {
+      "family": "Kenyan Coffee",
+      "category": "sertanejo",
+      "file": "/fonts/premium/kenyancoffee.otf"
+    },
+    {
+      "family": "Varane",
+      "category": "premium",
+      "file": "/fonts/premium/varane.otf"
+    },
+    {
+      "family": "LEMON MILK",
+      "category": "impacto",
+      "file": "/fonts/premium/lemonmilk.otf"
+    },
+    {
+      "family": "BigNoodleTitling Oblique",
+      "category": "sertanejo",
+      "file": "/fonts/premium/bignoodletitlingoblique.ttf"
+    },
+    {
+      "family": "Casanova Scotia",
+      "category": "premium",
+      "file": "/fonts/premium/casanovascotia.otf"
+    },
+    {
+      "family": "Panton ExtraBlack",
+      "category": "impacto",
+      "file": "/fonts/premium/pantonextrablack.otf"
+    },
+    {
+      "family": "Aldivaro ExtraBold",
+      "category": "impacto",
+      "file": "/fonts/premium/aldivaroextrabold.otf"
+    }
+  ],
+  "missing": [
+    {
+      "family": "Arvo Bold",
+      "aliases": [
+        "Arvo BOLD",
+        "Arvo Bold",
+        "Arvo-Bold"
+      ],
+      "category": "premium"
+    },
+    {
+      "family": "DIN Condensed",
+      "aliases": [
+        "DIN Condensed BOLD",
+        "DIN Condensed",
+        "DINCondensed"
+      ],
+      "category": "cta"
+    },
+    {
+      "family": "Smoothread",
+      "aliases": [
+        "Smoothread"
+      ],
+      "category": "premium"
+    },
+    {
+      "family": "AXIS ExtraBold",
+      "aliases": [
+        "AXIS ExtraBold",
+        "AXIS Extra Bold",
+        "Axis ExtraBold"
+      ],
+      "category": "impacto"
+    },
+    {
+      "family": "Tactical",
+      "aliases": [
+        "Tactical Regular",
+        "Tactical"
+      ],
+      "category": "sertanejo"
+    }
+  ]
+}

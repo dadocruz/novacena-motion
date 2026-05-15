@@ -1,0 +1,127 @@
+@font-face {
+  font-family: "Akira Expanded E BOLD";
+  src: url("/fonts/premium/akiraexpandedebold.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Akira Expanded";
+  src: url("/fonts/premium/akiraexpanded.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bebas Neue";
+  src: url("/fonts/premium/bebasneue.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Gramatika Black";
+  src: url("/fonts/premium/gramatikablack.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Heavitas";
+  src: url("/fonts/premium/heavitas.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "1797 Compressed";
+  src: url("/fonts/premium/1797compressed.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Nexa";
+  src: url("/fonts/premium/nexa.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fair Prosper";
+  src: url("/fonts/premium/fairprosper.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Candrika";
+  src: url("/fonts/premium/candrika.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Kenyan Coffee";
+  src: url("/fonts/premium/kenyancoffee.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Varane";
+  src: url("/fonts/premium/varane.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "LEMON MILK";
+  src: url("/fonts/premium/lemonmilk.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "BigNoodleTitling Oblique";
+  src: url("/fonts/premium/bignoodletitlingoblique.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Casanova Scotia";
+  src: url("/fonts/premium/casanovascotia.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Panton ExtraBlack";
+  src: url("/fonts/premium/pantonextrablack.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Aldivaro ExtraBold";
+  src: url("/fonts/premium/aldivaroextrabold.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
