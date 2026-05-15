@@ -558,40 +558,63 @@ export default function Home() {
     const plan = saved?.plan;
     if (!plan || typeof plan !== 'object') return;
 
-    if (typeof plan.template === 'string') {
+    // ---- mapeia category -> TemplateId do Studio ----
+    // category vem do mock como "spotify_milestone", "spotify_available_now" etc.
+    const categoryToTemplate: Record<string, string> = {
+      spotify_milestone: 'milestone',
+      milestone: 'milestone',
+      spotify_available_now: 'available_now',
+      available_now: 'available_now',
+    };
+    const wantedTemplate =
+      categoryToTemplate[plan.category as string] ??
+      categoryToTemplate[plan.templateId as string] ??
+      null;
+    if (wantedTemplate) {
       const validTemplates = (templateOrder as readonly string[]) ?? Object.keys(templateLabels ?? {});
-      if (validTemplates.includes(plan.template)) {
-        setTemplate(plan.template as TemplateId);
+      if (validTemplates.includes(wantedTemplate)) {
+        setTemplate(wantedTemplate as TemplateId);
       }
     }
 
-    if (plan.target === 'story' || plan.target === 'feed' || plan.target === 'reels') {
-      setTarget(plan.target as RenderTarget);
+    // ---- target a partir de formats[0] ----
+    const firstFormat = Array.isArray(plan.formats) ? plan.formats[0] : null;
+    if (firstFormat === 'story' || firstFormat === 'feed' || firstFormat === 'reels') {
+      setTarget(firstFormat as RenderTarget);
+    } else if (firstFormat === 'square') {
+      setTarget('feed' as RenderTarget);
     }
 
-    if (typeof plan.showSafeArea === 'boolean') setShowSafeArea(plan.showSafeArea);
     if (typeof plan.durationSeconds === 'number' && plan.durationSeconds > 0 && plan.durationSeconds <= 60) {
       setDurationSeconds(plan.durationSeconds);
     }
-    if (typeof plan.headline === 'string') setHeadline(plan.headline);
-    if (typeof plan.metricPrefix === 'string') setMetricPrefix(plan.metricPrefix);
-    if (typeof plan.metricNumber === 'string') setMetricNumber(plan.metricNumber);
-    if (typeof plan.metricLabel === 'string') setMetricLabel(plan.metricLabel);
 
-    if (Array.isArray(plan.platforms)) {
-      const cleaned = plan.platforms.filter((p: unknown): p is PlatformName => typeof p === 'string');
-      if (cleaned.length > 0) setPlatformsSel(cleaned);
+    // ---- textos (vêm dentro de plan.texts) ----
+    const texts = plan.texts ?? {};
+    if (typeof texts.headline === 'string') setHeadline(texts.headline);
+    if (typeof texts.number === 'string') setMetricNumber(texts.number);
+    if (typeof texts.label === 'string') setMetricLabel(texts.label);
+    if (typeof texts.title === 'string') setMetricPrefix(texts.title);
+
+    // platform é string única; transformamos em array de uma posição
+    if (typeof texts.platform === 'string' && texts.platform.trim()) {
+      setPlatformsSel([texts.platform as PlatformName]);
     }
 
-    if (typeof plan.glowColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(plan.glowColor)) {
-      setGlowColor(plan.glowColor);
+    // ---- cores (vêm dentro de plan.style) ----
+    const style = plan.style ?? {};
+    if (typeof style.backgroundColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(style.backgroundColor)) {
+      setBgColor(style.backgroundColor);
     }
-    if (typeof plan.bgColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(plan.bgColor)) {
-      setBgColor(plan.bgColor);
+    if (typeof style.primaryColor === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(style.primaryColor)) {
+      setGlowColor(style.primaryColor);
     }
 
-    if (typeof plan.coverMotion === 'string') setCoverMotion(normalizeCoverMotionId(plan.coverMotion));
-    if (typeof plan.coverSize === 'number' && plan.coverSize > 0) setCoverSize(plan.coverSize);
+    // ---- motion (vêm dentro de plan.motion) ----
+    const motion = plan.motion ?? {};
+    if (typeof motion.coverMotion === 'string') {
+      setCoverMotion(normalizeCoverMotionId(motion.coverMotion));
+    }
 
     setActiveStudioTool('cover');
     setSaveMessage('Plano IA aplicado no Studio');
