@@ -1499,8 +1499,23 @@ export default function Home() {
 
     window.setTimeout(() => {
       const rightPanel = document.querySelector('[data-novacena-right-panel="true"]') as HTMLElement | null;
-      rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 60);
+      const target = document.querySelector(`[data-studio-section="${tool}"]`) as HTMLElement | null;
+
+      if (!rightPanel || !target) {
+        rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const panelRect = rightPanel.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const currentScroll = rightPanel.scrollTop;
+      const nextTop = currentScroll + (targetRect.top - panelRect.top) - 10;
+
+      rightPanel.scrollTo({
+        top: Math.max(0, nextTop),
+        behavior: 'smooth',
+      });
+    }, 80);
   }
 
   async function renderScript(script: string, label: string) {
@@ -1867,7 +1882,6 @@ export default function Home() {
             </div>
           )}
         </div>
-        </>)}
       </aside>
 
       {/* ─── ÁREA CENTRAL ─── */}
@@ -2108,7 +2122,6 @@ export default function Home() {
           <button onClick={resetMotion} style={resetBtnStyle} title="Resetar tudo">↺</button>
         </div>
 
-        {activeStudioTool === 'motion' && (<>
         {/* PROJETO */}
         <Section title="Projeto" draggablePanel>
           <div style={{ marginBottom: 12 }}>
@@ -2235,9 +2248,6 @@ export default function Home() {
             </div>
           )}
         </Section>
-        </>)}
-
-        {activeStudioTool === 'logos' && (<>
         {/* LOGOS DAS PLATAFORMAS */}
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
@@ -2325,10 +2335,7 @@ export default function Home() {
 
         </Section>
 
-        </>)}
-
-        {activeStudioTool === 'text' && (<>
-        <Section title="Texto">
+                                        <Section title="Texto">
           
           <div style={{
             marginBottom: 14,
@@ -2351,23 +2358,6 @@ export default function Home() {
             <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
             <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
             <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              <button
-                type="button"
-                onClick={() => setShowCta1((v) => !v)}
-                style={showCta1 ? segBtnActive : segBtn}
-              >
-                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCta2((v) => !v)}
-                style={showCta2 ? segBtnActive : segBtn}
-              >
-                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
-              </button>
-            </div>
           </div>
 
           <FontsPanel
@@ -2468,9 +2458,7 @@ export default function Home() {
 
         </Section>
 
-        </>)}
-
-        {activeStudioTool === 'cta' && template === 'available_now' && (
+        {template === 'available_now' && (
           <Section title="Ritmo CTA (Disponível)" draggablePanel>
             <div style={{ marginBottom: 10 }}>
               <div style={{ ...miniInputLabel, display: 'flex', justifyContent: 'space-between' }}>
@@ -2553,9 +2541,6 @@ export default function Home() {
           </Section>
         )}
 
-        )}
-
-        {activeStudioTool === 'overlay' && (<>
         {/* OVERLAYS */}
         <Section title="Overlays (filmburn / película)" draggablePanel>
           <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
@@ -2580,9 +2565,6 @@ export default function Home() {
             </div>
           )}
         </Section>
-        </>)}
-
-        {activeStudioTool === 'cover' && (<>
         {/* CAPA */}
         <Section title="Capa" draggablePanel>
               <div style={{ marginTop: 12 }}>
@@ -2637,7 +2619,99 @@ export default function Home() {
           <SliderRow label="Wiggle CTA" value={wiggleC} min={0} max={2} step={0.1}
             onChange={setWiggleC} format={(v) => v.toFixed(1)} />
         </Section>
-        <Section title="Brilho" draggablePanel>
+
+        
+        <Section title="Transições de Texto" draggablePanel>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <label style={miniLabel}>Headline</label>
+            <select
+              value={trHeadline}
+              onChange={(e) => setTrHeadline(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <label style={miniLabel}>Data</label>
+            <select
+              value={trDate}
+              onChange={(e) => setTrDate(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <label style={miniLabel}>Chamadas / CTA</label>
+            <select
+              value={trCta}
+              onChange={(e) => setTrCta(e.target.value as TextTransitionId)}
+              style={{
+                width: '100%',
+                height: 38,
+                borderRadius: 10,
+                border: '1px solid rgba(255,255,255,0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '0 12px',
+                fontSize: 12,
+                outline: 'none',
+              }}
+            >
+              {TEXT_TRANSITIONS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} — {t.description}
+                </option>
+              ))}
+            </select>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => setShowCta1((v) => !v)}
+                style={showCta1 ? segBtnActive : segBtn}
+              >
+                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCta2((v) => !v)}
+                style={showCta2 ? segBtnActive : segBtn}
+              >
+                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
+              </button>
+            </div>
+          </div>
+        </Section>
+
+<Section title="Brilho" draggablePanel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             {GLOW_PRESETS.map((g) => (
               <button key={g.label} onClick={() => setGlowColor(g.color)} title={g.label}
@@ -2650,9 +2724,6 @@ export default function Home() {
           </div>
         </Section>
 
-        </>)}
-
-        {activeStudioTool === 'overlay' && (<>
         <Section title="Efeitos" draggablePanel>
           <ToggleRow label="Partículas bokeh" value={particlesEnabled} onChange={setParticlesEnabled} />
           <ToggleRow label="Flash final" value={finalFlash} onChange={setFinalFlash} />
@@ -2680,14 +2751,17 @@ export default function Home() {
           boxShadow: '0 18px 60px rgba(0,0,0,0.45)',
         }}
       >
-        {STUDIO_TOOL_DOCK.filter((tool) => tool.id !== 'render').map((tool) => {
+        {STUDIO_TOOL_DOCK.map((tool) => {
           const active = activeStudioTool === tool.id;
 
           return (
             <button
               key={tool.id}
               type="button"
-              onClick={() => selectStudioTool(tool.id)}
+              onClick={() => {
+                selectStudioTool(tool.id);
+                scrollToStudioSection(tool.section);
+              }}
               style={{
                 border: active ? '1px solid rgba(255,255,255,0.28)' : '1px solid rgba(255,255,255,0.08)',
                 background: active
