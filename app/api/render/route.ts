@@ -9,6 +9,11 @@ import { randomBytes } from 'crypto';
 
 const execAsync = promisify(exec);
 
+function shQuote(value: string) {
+  return JSON.stringify(value);
+}
+
+
 export const runtime = 'nodejs';
 
 const RenderRequestSchema = z.object({
@@ -163,14 +168,108 @@ export async function POST(request: NextRequest) {
         await writeFile(tmpFile, JSON.stringify(renderProps), 'utf-8');
 
         const outputFileForRender = comp.out.replace(/\.mp4$/, `-${Date.now()}.mp4`);
-        const cmd = `npx remotion render remotion-entry/index.ts ${comp.id} ${outputFileForRender} --props=${tmpFile}`;
+
+        const posterCfg = renderProps?.posterFrame;
+        const posterEnabled = Boolean(posterCfg?.enabled);
+        const posterHoldSecRaw = Number(posterCfg?.holdSec ?? 1);
+        const posterHoldSec = Number.isFinite(posterHoldSecRaw) && posterHoldSecRaw > 0 ? Math.min(posterHoldSecRaw, 5) : 1;
+        const posterFrameSecRaw = Number(posterCfg?.frameSec ?? 0);
+        const posterFrameSec = Number.isFinite(posterFrameSecRaw) && posterFrameSecRaw >= 0 ? posterFrameSecRaw : 0;
+        const posterOutroEnabled = posterCfg?.outroEnabled !== false;
+
+        const normalOutputFile = posterEnabled
+          ? outputFileForRender.replace(/\.mp4$/, `.normal.mp4`)
+          : outputFileForRender;
+
+        const cmd = `npx remotion render remotion-entry/index.ts ${comp.id} ${normalOutputFile} --props=${tmpFile}`;
 
         try {
           const { stdout, stderr } = await execAsync(cmd, {
             cwd: process.cwd(),
             maxBuffer: 1024 * 1024 * 100,
           });
-          const output = [stdout, stderr].filter(Boolean).join('\n');
+
+          let output = [stdout, stderr].filter(Boolean).join('\n');
+
+          if (posterEnabled) {
+            const fps = 30;
+            const durationSecondsForPoster = Number(renderProps?.durationSeconds ?? 8);
+            const safeDurationSeconds = Number.isFinite(durationSecondsForPoster) && durationSecondsForPoster > 0
+              ? durationSecondsForPoster
+              : 8;
+
+            const maxFrame = Math.max(0, Math.round(safeDurationSeconds * fps) - 1);
+            const posterFrame = Math.max(0, Math.min(maxFrame, Math.round(posterFrameSec * fps)));
+
+            const posterPng = outputFileForRender.replace(/\.mp4$/, `-poster-${posterFrame}f.png`);
+            const posterIntroMp4 = outputFileForRender.replace(/\.mp4$/, `.poster-intro.mp4`);
+            const posterOutroMp4 = outputFileForRender.replace(/\.mp4$/, `.poster-outro.mp4`);
+            const concatList = outputFileForRender.replace(/\.mp4$/, `.concat.txt`);
+
+            const stillCmd = `npx remotion still remotion-entry/index.ts ${comp.id} ${posterPng} --props=${tmpFile} --frame=${posterFrame}`;
+            const { stdout: stillStdout, stderr: stillStderr } = await execAsync(stillCmd, {
+              cwd: process.cwd(),
+              maxBuffer: 1024 * 1024 * 100,
+            });
+
+            output += '\n' + [stillStdout, stillStderr].filter(Boolean).join('\n');
+
+            const makePosterClip = async (file: string) => {
+              const ffmpegCmd = [
+                'ffmpeg -y',
+                '-loop 1',
+                `-t ${posterHoldSec}`,
+                `-i ${shQuote(posterPng)}`,
+                `-f lavfi -t ${posterHoldSec} -i anullsrc=channel_layout=stereo:sample_rate=48000`,
+                '-vf "format=yuv420p"',
+                '-r 30',
+                '-c:v libx264',
+                '-c:a aac',
+                '-shortest',
+                shQuote(file),
+              ].join(' ');
+
+              return execAsync(ffmpegCmd, {
+                cwd: process.cwd(),
+                maxBuffer: 1024 * 1024 * 100,
+              });
+            };
+
+            await makePosterClip(posterIntroMp4);
+            if (posterOutroEnabled) {
+              await makePosterClip(posterOutroMp4);
+            }
+
+            const concatContent = posterOutroEnabled
+              ? `file '${posterIntroMp4.replace(/'/g, "'\\''")}'\nfile '${normalOutputFile.replace(/'/g, "'\\''")}'\nfile '${posterOutroMp4.replace(/'/g, "'\\''")}'\n`
+              : `file '${posterIntroMp4.replace(/'/g, "'\\''")}'\nfile '${normalOutputFile.replace(/'/g, "'\\''")}'\n`;
+
+            await writeFile(concatList, concatContent, 'utf-8');
+
+            const concatCmd = [
+              'ffmpeg -y',
+              '-f concat',
+              '-safe 0',
+              `-i ${shQuote(concatList)}`,
+              '-c copy',
+              shQuote(outputFileForRender),
+            ].join(' ');
+
+            const { stdout: ffStdout, stderr: ffStderr } = await execAsync(concatCmd, {
+              cwd: process.cwd(),
+              maxBuffer: 1024 * 1024 * 100,
+            });
+
+            output += '\n' + [ffStdout, ffStderr].filter(Boolean).join('\n');
+            output += `\nPoster salvo: ${posterPng}`;
+            output += `\nVideo final com poster: ${outputFileForRender}`;
+
+            await unlink(normalOutputFile).catch(() => {});
+            await unlink(posterIntroMp4).catch(() => {});
+            await unlink(posterOutroMp4).catch(() => {});
+            await unlink(concatList).catch(() => {});
+          }
+
           await unlink(tmpFile).catch(() => {});
           return NextResponse.json({ ok: true, output, outputFile: outputFileForRender });
         } catch (err: any) {

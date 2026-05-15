@@ -309,6 +309,13 @@ export default function Home() {
 
   // Project settings
   const [durationSeconds, setDurationSeconds] = useState<number>(8);
+
+  // Capa/poster oficial do arquivo renderizado.
+  // O MP4 final pode começar e terminar com esse frame congelado.
+  const [posterFrameEnabled, setPosterFrameEnabled] = useState<boolean>(false);
+  const [posterFrameSec, setPosterFrameSec] = useState<number>(3);
+  const [posterHoldSec, setPosterHoldSec] = useState<number>(1);
+  const [posterOutroEnabled, setPosterOutroEnabled] = useState<boolean>(true);
   const [bgVideo, setBgVideo] = useState<string>('');
   const [bgVideoStartSec, setBgVideoStartSec] = useState<number>(0);
   const [bgVideoDuration, setBgVideoDuration] = useState<number>(0);
@@ -1481,6 +1488,16 @@ export default function Home() {
     setUseVideoAudio(false);
   }
 
+  function useCurrentPlayerFrameAsPoster() {
+    const player = playerRef.current as any;
+    const frame = typeof player?.getCurrentFrame === 'function' ? player.getCurrentFrame() : 0;
+    const seconds = Math.max(0, Number((frame / 30).toFixed(2)));
+
+    setPosterFrameSec(seconds);
+    setPosterFrameEnabled(true);
+    setSaveMessage(`Frame ${frame} (${seconds}s) salvo como capa do vídeo.`);
+  }
+
   async function renderScript(script: string, label: string) {
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
@@ -1490,6 +1507,12 @@ export default function Home() {
       durationSeconds,
       motion: motionWithStyles,
       renderTarget: target,
+      posterFrame: {
+        enabled: posterFrameEnabled,
+        frameSec: posterFrameSec,
+        holdSec: posterHoldSec,
+        outroEnabled: posterOutroEnabled,
+      },
     };
 
     const response = await fetch('/api/render', {
@@ -1821,6 +1844,97 @@ export default function Home() {
               onUpdate={updateOverlay}
               onRemove={removeOverlay}
             />
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 12,
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--bg-2)',
+                display: 'grid',
+                gap: 10,
+              }}
+            >
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Capa do vídeo / primeiro frame
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
+                  Usar frame atual como capa
+                </button>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterFrameEnabled}
+                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
+                  />
+                  Renderizar capa no início
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                  <input
+                    type="checkbox"
+                    checked={posterOutroEnabled}
+                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
+                  />
+                  Repetir no final
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Segundo da capa
+                  <input
+                    type="number"
+                    min={0}
+                    max={durationSeconds}
+                    step={0.01}
+                    value={posterFrameSec}
+                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+
+                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Duração da capa
+                  <input
+                    type="number"
+                    min={0.1}
+                    max={5}
+                    step={0.1}
+                    value={posterHoldSec}
+                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-1)',
+                      color: 'var(--text-1)',
+                      padding: '7px 8px',
+                      fontSize: 12,
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
+                O PNG da capa será salvo junto com os vídeos prontos.
+              </div>
+            </div>
 
             <div style={renderBarStyle}>
               <button
