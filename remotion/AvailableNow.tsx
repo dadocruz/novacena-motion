@@ -226,6 +226,20 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             width: '100%',
           }}
         >
+          <div
+
+            data-cover-position-wrapper
+
+            style={{
+
+              transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`,
+
+              willChange: 'transform',
+
+            }}
+
+          >
+
           <PremiumCover
             src={props.coverImage}
             size={coverSize}
@@ -238,6 +252,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             accentFrames={accents}
             glowColor={glowColor}
           />
+
+          </div>
         </div>
 
         <div

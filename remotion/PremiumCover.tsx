@@ -19,6 +19,8 @@ type CoverMotionId =
 type Props = {
   src?: string;
   size?: number;
+  offsetY?: number;
+  offsetX?: number;
   entryFrame?: number;
   accentFrames?: number[];
   spinStart?: number;

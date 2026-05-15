@@ -196,6 +196,8 @@ export type MotionConfig = {
     vibe: string;
   }[];
   coverSize?: number;
+  coverY?: number;
+  coverX?: number;
   /** Animação de entrada da capa */
   coverMotion?: CoverMotionId;
   spinTurns?: number;

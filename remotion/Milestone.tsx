@@ -110,6 +110,20 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
 
         {/* CAPA */}
         <div style={{ marginTop: 50 }}>
+          <div
+
+            data-cover-position-wrapper
+
+            style={{
+
+              transform: `translate(${(M as any).coverX ?? 0}px, ${(M as any).coverY ?? 0}px)`,
+
+              willChange: 'transform',
+
+            }}
+
+          >
+
           <PremiumCover
             src={props.coverImage}
             size={Math.min(M.coverSize, 460)}
@@ -121,6 +135,8 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             accentFrames={accents}
             glowColor={M.glowColor}
           />
+
+          </div>
         </div>
 
         {/* NÚMERO GIGANTE */}

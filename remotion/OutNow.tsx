@@ -140,6 +140,20 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
         {/* CAPA */}
         <div style={{ marginTop: 70 }}>
+          <div
+
+            data-cover-position-wrapper
+
+            style={{
+
+              transform: `translate(${(M as any).coverX ?? 0}px, ${(M as any).coverY ?? 0}px)`,
+
+              willChange: 'transform',
+
+            }}
+
+          >
+
           <PremiumCover
             src={props.coverImage}
             size={M.coverSize + 40}
@@ -151,6 +165,8 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             accentFrames={accents}
             glowColor={M.glowColor}
           />
+
+          </div>
         </div>
 
         {/* CTA char stagger */}

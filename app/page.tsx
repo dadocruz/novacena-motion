@@ -277,6 +277,8 @@ export default function Home() {
   const [fontDate, setFontDate] = useState<string>(DEFAULT_FONTS.date);
   const [fontCta, setFontCta] = useState<string>(DEFAULT_FONTS.cta);
   const [coverSize, setCoverSize] = useState<number>(510);
+  const [coverY, setCoverY] = useState<number>(0);
+  const [coverX, setCoverX] = useState<number>(0);
   const [coverMotion, setCoverMotion] = useState<CoverMotionId>('zoom_bounce');
   const [spinTurns, setSpinTurns] = useState<number>(2);
   const [wiggleIntensity, setWiggleIntensity] = useState<number>(1);
@@ -806,6 +808,8 @@ export default function Home() {
       previewNonce,
       coverMotion,
       coverSize,
+      coverY,
+      coverX,
       spinTurns,
       wiggleIntensity,
       wiggleHeadline: wiggleH,
@@ -861,6 +865,8 @@ export default function Home() {
       previewNonce,
       coverMotion,
       coverSize,
+      coverY,
+      coverX,
       spinTurns,
       wiggleIntensity,
       wiggleH,
@@ -923,6 +929,8 @@ export default function Home() {
       previewNonce,
       coverMotion,
       coverSize,
+      coverY,
+      coverX,
       spinTurns,
       wiggleIntensity,
       wiggleH,
@@ -1205,6 +1213,8 @@ export default function Home() {
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
       setCoverSize(m.coverSize ?? 510);
+      setCoverY(m.coverY ?? 0);
+      setCoverX(m.coverX ?? 0);
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 22);
       setPlatformLogoScales(m.platformLogoScales ?? {});
@@ -1457,6 +1467,8 @@ export default function Home() {
     setFontDate(DEFAULT_FONTS.date);
     setFontCta(DEFAULT_FONTS.cta);
     setCoverSize(510);
+    setCoverY(0);
+    setCoverX(0);
     setSpinTurns(2);
     setWiggleIntensity(1);
     setWiggleH(0);
@@ -2605,8 +2617,12 @@ export default function Home() {
               </div>
 
 
-          <SliderRow label="Tamanho" value={coverSize} min={320} max={680} step={10}
+          <SliderRow label="Tamanho / Escala" value={coverSize} min={120} max={1200} step={5}
             onChange={setCoverSize} format={(v) => `${v}px`} />
+          <SliderRow label="Posição Y da capa" value={coverY} min={-500} max={500} step={1}
+            onChange={setCoverY} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
+          <SliderRow label="Posição X da capa" value={coverX} min={-500} max={500} step={1}
+            onChange={setCoverX} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
           <SliderRow label="Voltas Y" value={spinTurns} min={0} max={4} step={0.5}
             onChange={setSpinTurns} format={(v) => `${v}×`} />
           <SliderRow label="Wiggle (global)" value={wiggleIntensity} min={0} max={2} step={0.1}
