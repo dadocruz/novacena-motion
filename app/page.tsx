@@ -696,11 +696,6 @@ export default function Home() {
 
     return base.slice(0, 18);
   }, [allFonts, fontSearch, favoriteFontIds]);
-
-
-
-
-        <div data-studio-section="text" />
   // ── FONTES: helpers únicos ─────────────────────────────
   const findFont = (id: string) =>
     allFonts.find((f) => f.id === id) ?? allFonts[0];
@@ -1503,15 +1498,23 @@ export default function Home() {
     setActiveStudioTool(tool);
 
     window.setTimeout(() => {
-      const target = document.querySelector(`[data-studio-section="${tool}"]`) as HTMLElement | null;
       const rightPanel = document.querySelector('[data-novacena-right-panel="true"]') as HTMLElement | null;
+      const target = document.querySelector(`[data-studio-section="${tool}"]`) as HTMLElement | null;
 
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!rightPanel || !target) {
+        rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
-      rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
+      const panelRect = rightPanel.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const currentScroll = rightPanel.scrollTop;
+      const nextTop = currentScroll + (targetRect.top - panelRect.top) - 10;
+
+      rightPanel.scrollTo({
+        top: Math.max(0, nextTop),
+        behavior: 'smooth',
+      });
     }, 80);
   }
 
@@ -2245,8 +2248,6 @@ export default function Home() {
             </div>
           )}
         </Section>
-
-        <div data-studio-section="logos" />
         {/* LOGOS DAS PLATAFORMAS */}
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
@@ -2564,8 +2565,6 @@ export default function Home() {
             </div>
           )}
         </Section>
-
-        <div data-studio-section="cover" />
         {/* CAPA */}
         <Section title="Capa" draggablePanel>
               <div style={{ marginTop: 12 }}>
@@ -2579,7 +2578,6 @@ export default function Home() {
                     fontWeight: 700,
                   }}
                 >
-        <div data-studio-section="motion" />
                   ANIMAÇÃO DA CAPA
                 </div>
                 <select
