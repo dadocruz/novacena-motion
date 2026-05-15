@@ -2122,6 +2122,54 @@ export default function Home() {
           <button onClick={resetMotion} style={resetBtnStyle} title="Resetar tudo">↺</button>
         </div>
 
+        <div
+          data-studio-tool-dock="right"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 30,
+            padding: '10px 14px 12px',
+            background: 'linear-gradient(180deg, rgba(14,14,18,0.98), rgba(14,14,18,0.88))',
+            backdropFilter: 'blur(14px)',
+            borderBottom: '1px solid var(--border-1)',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 6,
+            }}
+          >
+            {STUDIO_TOOL_DOCK.filter((tool) => tool.id !== 'render').map((tool) => {
+              const active = activeStudioTool === tool.id;
+
+              return (
+                <button
+                  key={`right-${tool.id}`}
+                  type="button"
+                  onClick={() => selectStudioTool(tool.id)}
+                  style={{
+                    minHeight: 34,
+                    borderRadius: 10,
+                    border: active ? '1px solid rgba(255,255,255,0.28)' : '1px solid var(--border-1)',
+                    background: active
+                      ? 'linear-gradient(135deg, rgba(168,85,247,0.95), rgba(249,115,22,0.85))'
+                      : 'rgba(255,255,255,0.045)',
+                    color: active ? '#fff' : 'var(--text-2)',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    boxShadow: active ? '0 10px 26px rgba(168,85,247,0.22)' : 'none',
+                  }}
+                >
+                  {tool.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* PROJETO */}
         <div data-studio-section="motion" />
         <Section title="Projeto" draggablePanel>
