@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './fonts.css';
 
 export const metadata: Metadata = {
   title: 'NovaCena Motion Studio',
@@ -14,6 +15,7 @@ export default function RootLayout({
       <head>
         {/* CSS dinâmico das fontes do usuário (gerado on-the-fly pela API) */}
         <link rel="stylesheet" href="/api/fonts/css" />
+        <link rel="stylesheet" href="/fonts/premium/premium-fonts.css" />
       </head>
       <body suppressHydrationWarning>{children}</body>
     </html>
