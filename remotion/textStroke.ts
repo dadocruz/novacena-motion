@@ -72,11 +72,85 @@ export const textStrokeStyle = (stroke?: TextStroke | any): React.CSSProperties 
   } as React.CSSProperties;
 };
 
+
+function clamp01(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  if (value > 1) return Math.max(0, Math.min(100, value)) / 100;
+  return Math.max(0, Math.min(1, value));
+}
+
+function colorWithAlpha(color: string | undefined, alphaRaw: number | undefined) {
+  const alpha = clamp01(Number(alphaRaw ?? 1));
+  const fallback = `rgba(255,255,255,${alpha})`;
+  if (!color) return fallback;
+
+  const c = String(color).trim();
+
+  if (c.startsWith('rgba(')) {
+    return c.replace(/rgba\(([^)]+)\)/, (_m, inner) => {
+      const parts = String(inner).split(',').map((v) => v.trim());
+      return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+    });
+  }
+
+  if (c.startsWith('rgb(')) {
+    return c.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  }
+
+  const hex = c.replace('#', '');
+
+  if (/^[0-9a-fA-F]{3}$/.test(hex)) {
+    const r = parseInt(hex[0] + hex[0], 16);
+    const g = parseInt(hex[1] + hex[1], 16);
+    const b = parseInt(hex[2] + hex[2], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  return c;
+}
+
 export const textFillStyle = (stroke?: TextStroke | any): React.CSSProperties => {
   if (!stroke) return {};
 
-  // Não usamos opacity aqui porque opacity apagaria o texto inteiro,
-  // inclusive contorno/brilho. O preenchimento real já é controlado
-  // pela cor/degradê do texto.
-  return {};
+  const enabled =
+    stroke.type === 'external' ||
+    stroke.type === 'internal' ||
+    stroke.type === 'both' ||
+    stroke.enabled === true ||
+    stroke.mode === 'external' ||
+    stroke.mode === 'internal';
+
+  const fillOpacity =
+    stroke.fillOpacity ??
+    stroke.fillAlpha ??
+    stroke.textFillOpacity ??
+    stroke.opacityFill ??
+    stroke.opacity ??
+    1;
+
+  const fillColor =
+    stroke.fillColor ??
+    stroke.textColor ??
+    stroke.color ??
+    stroke.primaryColor ??
+    '#FFFFFF';
+
+  // Importante:
+  // NÃO usar opacity aqui, porque opacity apaga preenchimento + contorno juntos.
+  // Photoshop-like: só o miolo da fonte fica transparente.
+  if (!enabled && Number(fillOpacity) >= 1) return {};
+
+  const fill = colorWithAlpha(fillColor, Number(fillOpacity));
+
+  return {
+    color: fill,
+    WebkitTextFillColor: fill,
+  } as React.CSSProperties;
 };
