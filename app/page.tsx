@@ -543,6 +543,8 @@ export default function Home() {
   // Aplica plano vindo do AI Lab (via /?aiPlan=1 + localStorage.novacena.ai.lastPlan)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // pequeno delay pra evitar hydration mismatch — aplica depois do primeiro paint
+    const timer = window.setTimeout(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('aiPlan') !== '1') return;
 
@@ -627,6 +629,8 @@ export default function Home() {
       /* noop */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Quando troca template, atualiza defaults
