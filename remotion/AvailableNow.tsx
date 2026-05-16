@@ -183,12 +183,17 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     ));
   };
 
-  const getFillOpacity = (style?: any) => {
+  const getFillOpacity = (style?: any, stroke?: any) => {
     const raw =
       style?.fillOpacity ??
       style?.textOpacity ??
       style?.opacityFill ??
       style?.fillAlpha ??
+      stroke?.fillOpacity ??
+      stroke?.textOpacity ??
+      stroke?.opacityFill ??
+      stroke?.fillAlpha ??
+      stroke?.opacity ??
       100;
 
     const value = Number(raw);
@@ -224,6 +229,15 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
+  const renderPlainLines = (value: string) => {
+    return String(value ?? '').split(/\r?\n/).map((line, lineIndex, arr) => (
+      <React.Fragment key={`plain-line-${lineIndex}`}>
+        {line}
+        {lineIndex < arr.length - 1 ? <br /> : null}
+      </React.Fragment>
+    ));
+  };
+
   const textStrokeLayerCss = (stroke?: any): React.CSSProperties => {
     if (!stroke || stroke.mode === 'none' || Number(stroke.width ?? 0) <= 0) return {};
 
@@ -237,15 +251,22 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     } as React.CSSProperties;
   };
 
-  const textFillLayerCss = (style?: any): React.CSSProperties => {
-    const fillOpacity = getFillOpacity(style);
+  const textFillLayerCss = (style?: any, stroke?: any): React.CSSProperties => {
+    const fillOpacity = getFillOpacity(style, stroke);
 
     if (hasGradient(style)) {
+      const from = style?.gradientFrom || style?.color || '#ffffff';
+      const to = style?.gradientTo || style?.color2 || style?.color || '#ffffff';
+      const angle = Number(style?.gradientAngle ?? 90);
+
       return {
-        ...applyGradientStyle(style),
-        display: 'inline-block',
+        backgroundImage: `linear-gradient(${angle}deg, ${from}, ${to})`,
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        color: 'transparent',
         WebkitTextFillColor: 'transparent',
         opacity: fillOpacity,
+        display: 'inline-block',
       } as React.CSSProperties;
     }
 
@@ -254,6 +275,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     return {
       color: hexToRgba(color, fillOpacity),
       WebkitTextFillColor: hexToRgba(color, fillOpacity),
+      display: 'inline-block',
     } as React.CSSProperties;
   };
 
@@ -263,7 +285,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     style?: typeof motion.styleHeadline,
     stroke?: any
   ) => {
-    const content = renderTextLines(text, tx);
+    const usePlainText = hasGradient(style) || getFillOpacity(style, stroke) < 1;
+    const fillContent = usePlainText ? renderPlainLines(text) : renderTextLines(text, tx);
+    const strokeContent = renderPlainLines(text);
+
     const strokeCss = textStrokeLayerCss(stroke);
     const hasStroke = Object.keys(strokeCss).length > 0;
 
@@ -280,34 +305,29 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               pointerEvents: 'none',
             }}
           >
-            {content}
+            {strokeContent}
           </span>
 
           <span
             style={{
-              ...textFillLayerCss(style),
+              ...textFillLayerCss(style, stroke),
               position: 'relative',
               zIndex: 1,
-              display: 'inline-block',
             }}
           >
-            {content}
+            {fillContent}
           </span>
         </span>
       );
     }
 
     return (
-      <span
-        style={{
-          ...textFillLayerCss(style),
-          display: 'inline-block',
-        }}
-      >
-        {content}
+      <span style={textFillLayerCss(style, stroke)}>
+        {fillContent}
       </span>
     );
   };
+
 
 
 
