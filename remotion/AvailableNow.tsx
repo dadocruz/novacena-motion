@@ -183,25 +183,132 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     ));
   };
 
-  const renderTextWithStyle = (text: string, tx: typeof tH, style?: typeof motion.styleHeadline) => {
-    const content = renderTextLines(text, tx);
+  const getFillOpacity = (style?: any) => {
+    const raw =
+      style?.fillOpacity ??
+      style?.textOpacity ??
+      style?.opacityFill ??
+      style?.fillAlpha ??
+      100;
+
+    const value = Number(raw);
+
+    if (!Number.isFinite(value)) return 1;
+    if (value > 1) return Math.max(0, Math.min(1, value / 100));
+
+    return Math.max(0, Math.min(1, value));
+  };
+
+  const normalizeHex = (color?: string) => {
+    if (!color) return '#ffffff';
+    if (color.startsWith('#')) return color;
+    return color;
+  };
+
+  const hexToRgba = (color: string, alpha: number) => {
+    const safe = normalizeHex(color);
+
+    if (!safe.startsWith('#')) return safe;
+
+    const hex = safe.replace('#', '');
+    const full = hex.length === 3
+      ? hex.split('').map((c) => c + c).join('')
+      : hex;
+
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+
+    if ([r, g, b].some((n) => Number.isNaN(n))) return safe;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const textStrokeLayerCss = (stroke?: any): React.CSSProperties => {
+    if (!stroke || stroke.mode === 'none' || Number(stroke.width ?? 0) <= 0) return {};
+
+    const width = Number(stroke.width ?? 0);
+    const color = stroke.color || stroke.gradientFrom || '#ffffff';
+
+    return {
+      WebkitTextStroke: `${width}px ${color}`,
+      WebkitTextFillColor: 'transparent',
+      paintOrder: 'stroke fill',
+    } as React.CSSProperties;
+  };
+
+  const textFillLayerCss = (style?: any): React.CSSProperties => {
+    const fillOpacity = getFillOpacity(style);
 
     if (hasGradient(style)) {
+      return {
+        ...applyGradientStyle(style),
+        display: 'inline-block',
+        WebkitTextFillColor: 'transparent',
+        opacity: fillOpacity,
+      } as React.CSSProperties;
+    }
+
+    const color = style?.color || '#ffffff';
+
+    return {
+      color: hexToRgba(color, fillOpacity),
+      WebkitTextFillColor: hexToRgba(color, fillOpacity),
+    } as React.CSSProperties;
+  };
+
+  const renderTextWithStyle = (
+    text: string,
+    tx: typeof tH,
+    style?: typeof motion.styleHeadline,
+    stroke?: any
+  ) => {
+    const content = renderTextLines(text, tx);
+    const strokeCss = textStrokeLayerCss(stroke);
+    const hasStroke = Object.keys(strokeCss).length > 0;
+
+    if (hasStroke) {
       return (
-        <span
-          style={{
-            ...applyGradientStyle(style),
-            display: 'inline-block',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          {content}
+        <span style={{ position: 'relative', display: 'inline-block' }}>
+          <span
+            aria-hidden
+            style={{
+              ...strokeCss,
+              position: 'absolute',
+              inset: 0,
+              zIndex: 0,
+              pointerEvents: 'none',
+            }}
+          >
+            {content}
+          </span>
+
+          <span
+            style={{
+              ...textFillLayerCss(style),
+              position: 'relative',
+              zIndex: 1,
+              display: 'inline-block',
+            }}
+          >
+            {content}
+          </span>
         </span>
       );
     }
 
-    return content;
+    return (
+      <span
+        style={{
+          ...textFillLayerCss(style),
+          display: 'inline-block',
+        }}
+      >
+        {content}
+      </span>
+    );
   };
+
 
 
   return (
@@ -361,7 +468,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(motion.styleCta1 ?? motion.styleCta, tC1.wrapStyle),
             }}
           >
-            {renderTextWithStyle(cta1Text, tC1, motion.styleCta1 ?? motion.styleCta)}
+            {renderTextWithStyle(cta1Text, tC1, motion.styleCta1 ?? motion.styleCta, motion.strokeCta1 ?? motion.strokeCta)}
           </div>
 
           {/* CTA 2 */}
@@ -385,7 +492,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(motion.styleCta2 ?? motion.styleCta, tC.wrapStyle),
             }}
           >
-            {renderTextWithStyle(cta2Text, tC, motion.styleCta2 ?? motion.styleCta)}
+            {renderTextWithStyle(cta2Text, tC, motion.styleCta2 ?? motion.styleCta, motion.strokeCta2 ?? motion.strokeCta)}
           </div>
 
           {/* LOGOS — apenas logos customizados enviados pelo usuário */}
