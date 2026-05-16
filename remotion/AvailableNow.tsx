@@ -38,8 +38,19 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline, motion.customFonts ?? []);
   const fontDate = findFont(motion.fontDate ?? DEFAULT_FONTS.date, motion.customFonts ?? []);
   const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
-  const fontCta1 = findFont(motion.fontCta1 ?? motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
-  const fontCta2 = findFont(motion.fontCta2 ?? motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
+
+  const fontCta1Id =
+    motion.fontCta1 && motion.fontCta1 !== DEFAULT_FONTS.cta
+      ? motion.fontCta1
+      : motion.fontCta ?? DEFAULT_FONTS.cta;
+
+  const fontCta2Id =
+    motion.fontCta2 && motion.fontCta2 !== DEFAULT_FONTS.cta
+      ? motion.fontCta2
+      : motion.fontCta ?? DEFAULT_FONTS.cta;
+
+  const fontCta1 = findFont(fontCta1Id, motion.customFonts ?? []);
+  const fontCta2 = findFont(fontCta2Id, motion.customFonts ?? []);
   const coverSize = motion.coverSize ?? 510;
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
