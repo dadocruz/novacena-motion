@@ -137,6 +137,34 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   };
 
   // Wrappa em <span> com gradiente quando style tem useGradient
+  const textStrokeCss = (stroke?: any): React.CSSProperties => {
+    if (!stroke || stroke.mode === 'none' || Number(stroke.width ?? 0) <= 0) return {};
+
+    const width = Number(stroke.width ?? 0);
+    const color = stroke.color || stroke.gradientFrom || '#ffffff';
+
+    if (stroke.mode === 'outer') {
+      return {
+        WebkitTextStroke: `${width}px ${color}`,
+        paintOrder: 'stroke fill',
+      } as React.CSSProperties;
+    }
+
+    if (stroke.mode === 'inner') {
+      return {
+        textShadow: `
+          ${width}px 0 0 ${color},
+          -${width}px 0 0 ${color},
+          0 ${width}px 0 ${color},
+          0 -${width}px 0 ${color},
+          0 0 ${Math.max(2, width * 2)}px ${color}
+        `,
+      } as React.CSSProperties;
+    }
+
+    return {};
+  };
+
   function withoutFontFamily(style: React.CSSProperties): React.CSSProperties {
     const next = { ...style } as React.CSSProperties;
     delete (next as any).fontFamily;
@@ -159,7 +187,17 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     const content = renderTextLines(text, tx);
 
     if (hasGradient(style)) {
-      return <span style={applyGradientStyle(style)}>{content}</span>;
+      return (
+        <span
+          style={{
+            ...applyGradientStyle(style),
+            display: 'inline-block',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          {content}
+        </span>
+      );
     }
 
     return content;
@@ -318,6 +356,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               opacity: cta1Text.trim() ? (showAll ? 0 : cta1Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
               ...withoutFontFamily(applyTextStyle(motion.styleCta1 ?? motion.styleCta)),
+              ...textStrokeCss(motion.strokeCta1 ?? motion.strokeCta),
               ...(showAll ? {} : tC1.wrapStyle),
               ...userTextTransform(motion.styleCta1 ?? motion.styleCta, tC1.wrapStyle),
             }}
@@ -341,6 +380,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               opacity: cta2Text.trim() ? (showAll ? 1 : cta2Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
               ...withoutFontFamily(applyTextStyle(motion.styleCta2 ?? motion.styleCta)),
+              ...textStrokeCss(motion.strokeCta2 ?? motion.strokeCta),
               ...(showAll ? {} : tC.wrapStyle),
               ...userTextTransform(motion.styleCta2 ?? motion.styleCta, tC.wrapStyle),
             }}
