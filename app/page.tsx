@@ -1761,14 +1761,14 @@ export default function Home() {
 
         <Section title="Conteúdo">
           <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
-          <Field label="Headline" value={headline} onChange={setHeadline} placeholder="LANÇAMENTO" />
+          <TextAreaField label="Headline" value={headline} onChange={setHeadline} placeholder={"LANÇAMENTO"} rows={2} />
           {template === 'available_now' ? (
             <>
-              <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder="FAÇA O PRÉ-SAVE" />
-              <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+              <TextAreaField label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder={"FAÇA O\nPRÉ-SAVE"} rows={2} />
+              <TextAreaField label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
             </>
           ) : (
-            <Field label="Chamada / CTA" value={cta} onChange={setCta} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+            <TextAreaField label="Chamada / CTA" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
           )}
           {template === 'watch_youtube' && (
             <Field label="Canal" value={channelName} onChange={setChannelName} />
@@ -3390,6 +3390,40 @@ function Section({
 
       {children}
     </section>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 2,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <label style={{ display: 'grid', gap: 6 }}>
+      <span style={miniInputLabel}>{label}</span>
+      <textarea
+        value={value}
+        placeholder={placeholder}
+        rows={rows}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          ...fieldInputStyle,
+          minHeight: Math.max(50, rows * 30),
+          lineHeight: 1.35,
+          resize: 'vertical',
+          whiteSpace: 'pre-wrap',
+          fontFamily: 'inherit',
+        }}
+      />
+    </label>
   );
 }
 
