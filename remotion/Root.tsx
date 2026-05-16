@@ -21,9 +21,9 @@ const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
 // ============================================================
 // CARREGAMENTO DE FONTES PARA O RENDER
 // ============================================================
-// O Remotion CLI roda num Chromium isolado que NÃO tem acesso ao app/fonts.css.
-// Sem isso, todas as fontes caem pra Arial (Sans-Serif default).
-// Aqui injetamos as 18 fontes via @font-face antes de qualquer composition renderizar.
+// IMPORTANTE: as fontes precisam ser injetadas DENTRO do contexto
+// de cada composition (não no RemotionRoot), porque o Remotion CLI
+// renderiza cada composition num documento isolado.
 
 const FONT_DEFINITIONS: Array<{ family: string; file: string; format: string }> = [
   // PREMIUM IMPORTADAS
@@ -69,61 +69,76 @@ const FONT_DEFINITIONS: Array<{ family: string; file: string; format: string }> 
   { family: 'Toxico',                file: 'Toxico.otf',                     format: 'opentype' },
 ];
 
-let fontsInjected = false;
+// Gera o CSS @font-face uma única vez por modulo
+const FONT_FACE_CSS = FONT_DEFINITIONS.map(
+  (f) =>
+    `@font-face { font-family: '${f.family}'; src: url('${staticFile(`fonts/${f.file}`)}') format('${f.format}'); font-display: block; }`
+).join('\n');
 
-function injectFontsOnce(): Promise<void> {
-  if (fontsInjected || typeof document === 'undefined') {
-    return Promise.resolve();
-  }
-  fontsInjected = true;
-
-  // Cria um <style> com @font-face apontando pra /public/fonts/
-  // staticFile() resolve a URL correta tanto no preview quanto no render CLI.
-  const css = FONT_DEFINITIONS.map(
-    (f) =>
-      `@font-face { font-family: '${f.family}'; src: url('${staticFile(`fonts/${f.file}`)}') format('${f.format}'); font-display: block; }`
-  ).join('\n');
-
-  const style = document.createElement('style');
-  style.setAttribute('data-novacena-fonts', 'true');
-  style.textContent = css;
-  document.head.appendChild(style);
-
-  // Força o navegador (Chromium do render) a baixar e parsear cada fonte
-  // ANTES de qualquer frame ser renderizado.
-  if (typeof document.fonts?.load === 'function') {
-    return Promise.all(
-      FONT_DEFINITIONS.map((f) =>
-        document.fonts.load(`16px '${f.family}'`).catch(() => null)
-      )
-    ).then(() => undefined);
-  }
-
-  // Fallback simples se a Font Loading API não existir
-  return new Promise((resolve) => setTimeout(resolve, 300));
-}
-
-// Hook que segura o render até as fontes estarem prontas
-function useFontsReady() {
-  const [handle] = React.useState(() => delayRender('Loading fonts'));
+// Componente que injeta as fontes e segura o render até estarem prontas.
+// Roda DENTRO do contexto da composition — é isso que faz funcionar no CLI.
+const FontsInjector: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [handle] = React.useState(() => delayRender('Loading fonts (composition)'));
+  const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
-    injectFontsOnce()
-      .then(() => continueRender(handle))
-      .catch(() => continueRender(handle));
+    let cancelled = false;
+
+    const loadAll = async () => {
+      try {
+        if (typeof document !== 'undefined' && typeof document.fonts?.load === 'function') {
+          await Promise.all(
+            FONT_DEFINITIONS.map((f) =>
+              document.fonts.load(`16px '${f.family}'`).catch(() => null)
+            )
+          );
+        }
+      } catch {
+        // ignore
+      }
+      if (!cancelled) {
+        setReady(true);
+        continueRender(handle);
+      }
+    };
+
+    loadAll();
+
+    return () => {
+      cancelled = true;
+    };
   }, [handle]);
-}
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: FONT_FACE_CSS }} />
+      {ready ? children : null}
+    </>
+  );
+};
+
+// Wrappers que aplicam o FontsInjector a cada componente template
+const AvailableNowWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><AvailableNow {...props} /></FontsInjector>
+);
+const WatchOnYouTubeWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><WatchOnYouTube {...props} /></FontsInjector>
+);
+const MilestoneWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><Milestone {...props} /></FontsInjector>
+);
+const OutNowWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><OutNow {...props} /></FontsInjector>
+);
 
 const templates = [
-  { id: 'AvailableNow', component: AvailableNow, project: getProject('available_now') },
-  { id: 'WatchOnYouTube', component: WatchOnYouTube, project: getProject('watch_youtube') },
-  { id: 'Milestone', component: Milestone, project: getProject('milestone') },
-  { id: 'OutNow', component: OutNow, project: getProject('out_now') },
+  { id: 'AvailableNow', component: AvailableNowWithFonts, project: getProject('available_now') },
+  { id: 'WatchOnYouTube', component: WatchOnYouTubeWithFonts, project: getProject('watch_youtube') },
+  { id: 'Milestone', component: MilestoneWithFonts, project: getProject('milestone') },
+  { id: 'OutNow', component: OutNowWithFonts, project: getProject('out_now') },
 ] as const;
 
 export const RemotionRoot: React.FC = () => {
-  useFontsReady();
-
   return (
     <>
       {templates.map((template) => (
@@ -131,7 +146,7 @@ export const RemotionRoot: React.FC = () => {
           <Composition
             calculateMetadata={resolveDurationInFramesFromProps}
             id={template.id}
-            component={template.component}
+            component={template.component as any}
             width={1080}
             height={1920}
             fps={FPS}
@@ -140,7 +155,7 @@ export const RemotionRoot: React.FC = () => {
           <Composition
             calculateMetadata={resolveDurationInFramesFromProps}
             id={`${template.id}Feed`}
-            component={template.component}
+            component={template.component as any}
             width={1080}
             height={1350}
             fps={FPS}
