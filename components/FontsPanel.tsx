@@ -12,17 +12,21 @@ export type FontDef = {
   vibe?: string;
 };
 
-export type FontRole = 'headline' | 'date' | 'cta';
+export type FontRole = 'headline' | 'date' | 'cta' | 'cta1' | 'cta2';
 
 type Props = {
   styleHeadline?: any;
   styleDate?: any;
   styleCta?: any;
+  styleCta1?: any;
+  styleCta2?: any;
   onChangeTextStyle?: (role: FontRole, next: any) => void;
   allFonts: FontDef[];
   fontHeadline: string;
   fontDate: string;
   fontCta: string;
+  fontCta1?: string;
+  fontCta2?: string;
   onChangeFont: (role: FontRole, id: string) => void;
 
   favoriteIds: string[];
@@ -31,6 +35,8 @@ type Props = {
   strokeHeadline: TextStroke;
   strokeDate: TextStroke;
   strokeCta: TextStroke;
+  strokeCta1?: TextStroke;
+  strokeCta2?: TextStroke;
   onChangeStroke: (role: FontRole, stroke: TextStroke) => void;
 
   uploadInputRef: React.RefObject<HTMLInputElement | null>;
@@ -41,6 +47,7 @@ type Props = {
   sampleHeadline: string;
   sampleDate: string;
   sampleCta: string;
+  sampleCta2?: string;
 
   // controles de escala/posição por role
   txScale: Record<string,number>;
@@ -96,9 +103,10 @@ const seg = (active: boolean): React.CSSProperties => ({
   cursor: 'pointer',
 });
 
-function getSample(role: FontRole, headline: string, date: string, cta: string) {
+function getSample(role: FontRole, headline: string, date: string, cta: string, cta2?: string) {
   if (role === 'date') return date || '07/06';
-  if (role === 'cta') return cta || 'OUÇA AGORA';
+  if (role === 'cta2') return cta2 || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+  if (role === 'cta' || role === 'cta1') return cta || 'FAÇA O PRÉ-SAVE';
   return headline || 'LANÇAMENTO';
 }
 
@@ -414,16 +422,22 @@ export default function FontsPanel({
   fontHeadline,
   fontDate,
   fontCta,
+  fontCta1,
+  fontCta2,
   onChangeFont,
   favoriteIds,
   onToggleFavorite,
   strokeHeadline,
   strokeDate,
   strokeCta,
+  strokeCta1,
+  strokeCta2,
   onChangeStroke,
   styleHeadline,
   styleDate,
   styleCta,
+  styleCta1,
+  styleCta2,
   onChangeTextStyle,
   uploadInputRef,
   uploadFont,
@@ -452,11 +466,28 @@ export default function FontsPanel({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const selectedId = role === 'headline' ? fontHeadline : role === 'date' ? fontDate : fontCta;
-  const currentStroke = role === 'headline' ? strokeHeadline : role === 'date' ? strokeDate : strokeCta;
-  const currentTextStyle = role === 'headline' ? styleHeadline : role === 'date' ? styleDate : styleCta;
+  const selectedId =
+    role === 'headline' ? fontHeadline :
+    role === 'date' ? fontDate :
+    role === 'cta2' ? (fontCta2 ?? fontCta) :
+    role === 'cta1' ? (fontCta1 ?? fontCta) :
+    fontCta;
+
+  const currentStroke =
+    role === 'headline' ? strokeHeadline :
+    role === 'date' ? strokeDate :
+    role === 'cta2' ? (strokeCta2 ?? strokeCta) :
+    role === 'cta1' ? (strokeCta1 ?? strokeCta) :
+    strokeCta;
+
+  const currentTextStyle =
+    role === 'headline' ? styleHeadline :
+    role === 'date' ? styleDate :
+    role === 'cta2' ? (styleCta2 ?? styleCta) :
+    role === 'cta1' ? (styleCta1 ?? styleCta) :
+    styleCta;
   const patchTextStyle = (patch: any) => onChangeTextStyle?.(role, { ...(currentTextStyle || {}), ...patch });
-  const sample = getSample(role, sampleHeadline, sampleDate, sampleCta);
+  const sample = getSample(role, sampleHeadline, sampleDate, sampleCta, sampleCta2);
   const selectedFont = allFonts.find((f) => f.id === selectedId) ?? allFonts[0];
 
   const favoriteFonts = useMemo(
@@ -550,7 +581,8 @@ export default function FontsPanel({
         <div style={{ display: 'flex', gap: 5 }}>
           <button type="button" onClick={() => setRole('headline')} style={tab(role === 'headline')}>Headline</button>
           <button type="button" onClick={() => setRole('date')} style={tab(role === 'date')}>Data</button>
-          <button type="button" onClick={() => setRole('cta')} style={tab(role === 'cta')}>CTA</button>
+          <button type="button" onClick={() => setRole('cta1')} style={tab(role === 'cta1' || role === 'cta')}>CTA 1</button>
+          <button type="button" onClick={() => setRole('cta2')} style={tab(role === 'cta2')}>CTA 2</button>
         </div>
       </div>
 

@@ -38,6 +38,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline, motion.customFonts ?? []);
   const fontDate = findFont(motion.fontDate ?? DEFAULT_FONTS.date, motion.customFonts ?? []);
   const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
+  const fontCta1 = findFont(motion.fontCta1 ?? motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
+  const fontCta2 = findFont(motion.fontCta2 ?? motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
   const coverSize = motion.coverSize ?? 510;
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
@@ -154,7 +156,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '']} />
+      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -285,47 +287,47 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           {/* CTA 1 */}
           <div
             style={{
-              fontFamily: `'${fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
+              fontFamily: `'${fontCta1?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
               width: '100%',
               minHeight: 44,
               fontSize: 27,
               lineHeight: 1.1,
-              fontWeight: fontCta?.weight ?? 900,
+              fontWeight: fontCta1?.weight ?? fontCta?.weight ?? 900,
               letterSpacing: 2.2,
               whiteSpace: 'pre-line',
               maxWidth: '100%',
               textShadow: 'none',
               opacity: cta1Text.trim() ? (showAll ? 0 : cta1Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
-              ...applyTextStyle(motion.styleCta),
+              ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
               ...(showAll ? {} : tC1.wrapStyle),
-              ...userTextTransform(motion.styleCta, tC1.wrapStyle),
+              ...userTextTransform(motion.styleCta1 ?? motion.styleCta, tC1.wrapStyle),
             }}
           >
-            {renderTextWithStyle(cta1Text, tC1, motion.styleCta)}
+            {renderTextWithStyle(cta1Text, tC1, motion.styleCta1 ?? motion.styleCta)}
           </div>
 
           {/* CTA 2 */}
           <div
             style={{
-              fontFamily: `'${fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
+              fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
               width: '100%',
               minHeight: 52,
               fontSize: 29,
               lineHeight: 1.12,
-              fontWeight: fontCta?.weight ?? 900,
+              fontWeight: fontCta2?.weight ?? fontCta?.weight ?? 900,
               letterSpacing: 2.5,
               whiteSpace: 'pre-line',
               maxWidth: '100%',
               textShadow: 'none',
               opacity: cta2Text.trim() ? (showAll ? 1 : cta2Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
-              ...applyTextStyle(motion.styleCta),
+              ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
               ...(showAll ? {} : tC.wrapStyle),
-              ...userTextTransform(motion.styleCta, tC.wrapStyle),
+              ...userTextTransform(motion.styleCta2 ?? motion.styleCta, tC.wrapStyle),
             }}
           >
-            {renderTextWithStyle(cta2Text, tC, motion.styleCta)}
+            {renderTextWithStyle(cta2Text, tC, motion.styleCta2 ?? motion.styleCta)}
           </div>
 
           {/* LOGOS — apenas logos customizados enviados pelo usuário */}

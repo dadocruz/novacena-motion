@@ -276,6 +276,8 @@ export default function Home() {
   const [fontHeadline, setFontHeadline] = useState<string>(DEFAULT_FONTS.headline);
   const [fontDate, setFontDate] = useState<string>(DEFAULT_FONTS.date);
   const [fontCta, setFontCta] = useState<string>(DEFAULT_FONTS.cta);
+  const [fontCta1, setFontCta1] = useState<string>(DEFAULT_FONTS.cta);
+  const [fontCta2, setFontCta2] = useState<string>(DEFAULT_FONTS.cta);
   const [coverSize, setCoverSize] = useState<number>(510);
   const [coverY, setCoverY] = useState<number>(0);
   const [coverX, setCoverX] = useState<number>(0);
@@ -302,6 +304,12 @@ export default function Home() {
     ...DATE_STYLE_DEFAULTS,
   });
   const [styleCta, setStyleCta] = useState<TextStyleState>({
+    ...CTA_STYLE_DEFAULTS,
+  });
+  const [styleCta1, setStyleCta1] = useState<TextStyleState>({
+    ...CTA_STYLE_DEFAULTS,
+  });
+  const [styleCta2, setStyleCta2] = useState<TextStyleState>({
     ...CTA_STYLE_DEFAULTS,
   });
   const [cta1InFrame, setCta1InFrame] = useState<number>(CTA_TIMING_DEFAULTS.cta1InFrame);
@@ -370,11 +378,11 @@ export default function Home() {
   const [showArtistModal, setShowArtistModal] = useState(false);
 
   const playerRef = useRef<any>(null);
-  const [txScale, setTxScale] = React.useState<Record<string,number>>({ headline:1, date:1, cta:1 });
-  const [txLS, setTxLS] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
-  const [txLH, setTxLH] = React.useState<Record<string,number>>({ headline:1.2, date:1.2, cta:1.3 });
-  const [txOX, setTxOX] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
-  const [txOY, setTxOY] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number });
+  const [txScale, setTxScale] = React.useState<Record<string,number>>({ headline:1, date:1, cta:1, cta1:1, cta2:1 });
+  const [txLS, setTxLS] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
+  const [txLH, setTxLH] = React.useState<Record<string,number>>({ headline:1.2, date:1.2, cta:1.3, cta1:1.3, cta2:1.3 });
+  const [txOX, setTxOX] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
+  const [txOY, setTxOY] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
   const [txAlign, setTxAlign] = React.useState<Record<string,string>>({ headline:'center', date:'center', cta:'center' } as Record<string,string>);
   function updTxN(setter: React.Dispatch<React.SetStateAction<Record<string,number>>>, key: string, val: number) {
     setter(prev => ({ ...prev, [key]: val }));
@@ -766,6 +774,8 @@ export default function Home() {
   const [strokeHeadline, setStrokeHeadline] = useState(defaultTextStroke);
   const [strokeDate, setStrokeDate] = useState(defaultTextStroke);
   const [strokeCta, setStrokeCta] = useState(defaultTextStroke);
+  const [strokeCta1, setStrokeCta1] = useState(defaultTextStroke);
+  const [strokeCta2, setStrokeCta2] = useState(defaultTextStroke);
   const [textOpacity, setTextOpacity] = useState(1);
   const [previewNonce, setPreviewNonce] = useState(0);
 
@@ -800,6 +810,8 @@ export default function Home() {
       fontHeadline,
       fontDate,
       fontCta,
+      fontCta1,
+      fontCta2,
       customFonts: userFonts.map(userFontToFontDef),
       strokeHeadline: { ...strokeHeadline },
       strokeDate: { ...strokeDate },
@@ -970,12 +982,16 @@ export default function Home() {
     const h: any = styleHeadline;
     const d: any = styleDate;
     const c: any = styleCta;
+    const c1: any = styleCta1;
+    const c2: any = styleCta2;
 
     return {
       ...motion,
       strokeHeadline: strokeHeadline,
       strokeDate: strokeDate,
       strokeCta: strokeCta,
+      strokeCta1: strokeCta1,
+      strokeCta2: strokeCta2,
       styleHeadline: {
         ...styleHeadline,
         scale: h.scale ?? txScale.headline ?? 1,
@@ -1000,8 +1016,24 @@ export default function Home() {
         offsetX: c.offsetX ?? txOX.cta ?? 0,
         offsetY: c.offsetY ?? txOY.cta ?? 0,
       },
+      styleCta1: {
+        ...styleCta1,
+        scale: c1.scale ?? txScale.cta1 ?? txScale.cta ?? 1,
+        letterSpacing: txLS.cta1 ?? c1.letterSpacing ?? 0,
+        lineHeight: c1.lineHeight ?? txLH.cta1 ?? 1.3,
+        offsetX: c1.offsetX ?? txOX.cta1 ?? 0,
+        offsetY: c1.offsetY ?? txOY.cta1 ?? 0,
+      },
+      styleCta2: {
+        ...styleCta2,
+        scale: c2.scale ?? txScale.cta2 ?? txScale.cta ?? 1,
+        letterSpacing: txLS.cta2 ?? c2.letterSpacing ?? 0,
+        lineHeight: c2.lineHeight ?? txLH.cta2 ?? 1.3,
+        offsetX: c2.offsetX ?? txOX.cta2 ?? 0,
+        offsetY: c2.offsetY ?? txOY.cta2 ?? 0,
+      },
     };
-  }, [motion, fontHeadline, fontDate, fontCta, userFonts, styleHeadline, styleDate, styleCta, strokeHeadline, strokeDate, strokeCta, txScale, txLS, txLH, txOX, txOY]);
+  }, [motion, fontHeadline, fontDate, fontCta, fontCta1, fontCta2, userFonts, styleHeadline, styleDate, styleCta, styleCta1, styleCta2, strokeHeadline, strokeDate, strokeCta, strokeCta1, strokeCta2, txScale, txLS, txLH, txOX, txOY]);
 
   const project = useMemo(() => {
     const base = getProject(template);
@@ -2448,22 +2480,30 @@ export default function Home() {
 
           <FontsPanel
             allFonts={allFonts}
-            fontHeadline={fontHeadline} fontDate={fontDate} fontCta={fontCta}
+            fontHeadline={fontHeadline} fontDate={fontDate} fontCta={fontCta} fontCta1={fontCta1} fontCta2={fontCta2}
             onChangeFont={applyFontTo}
             favoriteIds={favoriteFontIds} onToggleFavorite={toggleFavoriteFont}
-            strokeHeadline={strokeHeadline} strokeDate={strokeDate} strokeCta={strokeCta}
+            strokeHeadline={strokeHeadline} strokeDate={strokeDate} strokeCta={strokeCta} strokeCta1={strokeCta1} strokeCta2={strokeCta2}
             onChangeStroke={changeTextStroke}
             styleHeadline={styleHeadline}
             styleDate={styleDate}
             styleCta={styleCta}
+            styleCta1={styleCta1}
+            styleCta2={styleCta2}
             onChangeTextStyle={(role, next) => {
               if (role === 'headline') setStyleHeadline(next);
               if (role === 'date') setStyleDate(next);
-              if (role === 'cta') setStyleCta(next);
+              if (role === 'cta') {
+                setStyleCta(next);
+                setStyleCta1(next);
+                setStyleCta2(next);
+              }
+              if (role === 'cta1') setStyleCta1(next);
+              if (role === 'cta2') setStyleCta2(next);
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={headline} sampleDate={releaseDate} sampleCta={cta}
+            sampleHeadline={headline} sampleDate={releaseDate} sampleCta={cta} sampleCta2={cta2}
             txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}
             onTxScale={(r,v) => updTxN(setTxScale,r,v)}
             onTxLS={(r,v)    => updTxN(setTxLS,r,v)}

@@ -180,12 +180,16 @@ export type MotionConfig = {
   strokeHeadline?: TextStroke;
   strokeDate?: TextStroke;
   strokeCta?: TextStroke;
+  strokeCta1?: TextStroke;
+  strokeCta2?: TextStroke;
   /** Opacidade global da camada de texto 0..1 */
   textOpacity?: number;
   /** Força atualização visual do Player sem resetar frame */
   previewNonce?: number;
   fontDate?: string;
   fontCta?: string;
+  fontCta1?: string;
+  fontCta2?: string;
   customFonts?: {
     id: string;
     label: string;
@@ -220,6 +224,8 @@ export type MotionConfig = {
   styleHeadline?: TextStyle;
   styleDate?: TextStyle;
   styleCta?: TextStyle;
+  styleCta1?: TextStyle;
+  styleCta2?: TextStyle;
   /** Mapa de logos customizados por plataforma (chave = nome) */
   customLogos?: Record<string, string>;
   platformLogoSize?: number;
