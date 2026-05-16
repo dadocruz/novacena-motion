@@ -725,14 +725,22 @@ export default function Home() {
     );
   }
 
-  async function applyFontTo(role: 'headline' | 'date' | 'cta', id: string) {
+  async function applyFontTo(role: FontRole, id: string) {
     const font = findFont(id);
     try {
       await document.fonts.load(`${font.weight || 700} 32px "${font.family}"`);
     } catch {}
     if (role === 'headline') setFontHeadline(id);
     if (role === 'date') setFontDate(id);
-    if (role === 'cta') setFontCta(id);
+
+    if (role === 'cta') {
+      setFontCta(id);
+      setFontCta1(id);
+      setFontCta2(id);
+    }
+
+    if (role === 'cta1') setFontCta1(id);
+    if (role === 'cta2') setFontCta2(id);
   }
 
   // Estilos locais do painel de fontes
@@ -785,7 +793,7 @@ export default function Home() {
     setPreviewNonce((n) => n + 1);
   }
 
-  function changeTextStroke(role: 'headline' | 'date' | 'cta', stroke: any) {
+  function changeTextStroke(role: FontRole, stroke: any) {
     const nextStroke = {
       mode: stroke?.mode ?? stroke?.type ?? 'none',
       width: Number(stroke?.width ?? 0),
@@ -800,7 +808,15 @@ export default function Home() {
 
     if (role === 'headline') setStrokeHeadline(nextStroke);
     if (role === 'date') setStrokeDate(nextStroke);
-    if (role === 'cta') setStrokeCta(nextStroke);
+
+    if (role === 'cta') {
+      setStrokeCta(nextStroke);
+      setStrokeCta1(nextStroke);
+      setStrokeCta2(nextStroke);
+    }
+
+    if (role === 'cta1') setStrokeCta1(nextStroke);
+    if (role === 'cta2') setStrokeCta2(nextStroke);
 
     setPreviewNonce((n) => n + 1);
   }

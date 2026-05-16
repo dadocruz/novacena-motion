@@ -444,7 +444,8 @@ export default function FontsPanel({
   sampleHeadline,
   sampleDate,
   sampleCta,
-  textOpacity,
+  
+  sampleCta2,textOpacity,
   onChangeTextOpacity,
   txScale, txLS, txLH, txOX, txOY,
   onTxScale, onTxLS, onTxLH, onTxOX, onTxOY,
