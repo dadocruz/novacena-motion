@@ -126,6 +126,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   };
 
   // Wrappa em <span> com gradiente quando style tem useGradient
+  function withoutFontFamily(style: React.CSSProperties): React.CSSProperties {
+    const next = { ...style } as React.CSSProperties;
+    delete (next as any).fontFamily;
+    delete (next as any).fontWeight;
+    return next;
+  }
+
   const renderTextLines = (value: string, tx: typeof tH) => {
     const lines = String(value ?? '').split(/\r?\n/);
 
@@ -299,7 +306,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               textShadow: 'none',
               opacity: cta1Text.trim() ? (showAll ? 0 : cta1Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
-              ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
+              ...withoutFontFamily(applyTextStyle(motion.styleCta1 ?? motion.styleCta)),
               ...(showAll ? {} : tC1.wrapStyle),
               ...userTextTransform(motion.styleCta1 ?? motion.styleCta, tC1.wrapStyle),
             }}
@@ -322,7 +329,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               textShadow: 'none',
               opacity: cta2Text.trim() ? (showAll ? 1 : cta2Opacity) : 0,
               transform: showAll ? undefined : wigC.transform,
-              ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
+              ...withoutFontFamily(applyTextStyle(motion.styleCta2 ?? motion.styleCta)),
               ...(showAll ? {} : tC.wrapStyle),
               ...userTextTransform(motion.styleCta2 ?? motion.styleCta, tC.wrapStyle),
             }}
