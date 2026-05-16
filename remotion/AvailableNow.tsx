@@ -124,13 +124,27 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   };
 
   // Wrappa em <span> com gradiente quando style tem useGradient
+  const renderTextLines = (value: string, tx: typeof tH) => {
+    const lines = String(value ?? '').split(/\r?\n/);
+
+    return lines.map((line, lineIndex) => (
+      <React.Fragment key={`line-${lineIndex}`}>
+        {showAll || !tx.perChar ? line : renderText(line, tx)}
+        {lineIndex < lines.length - 1 ? <br /> : null}
+      </React.Fragment>
+    ));
+  };
+
   const renderTextWithStyle = (text: string, tx: typeof tH, style?: typeof motion.styleHeadline) => {
-    const content = showAll || !tx.perChar ? text : renderText(text, tx);
+    const content = renderTextLines(text, tx);
+
     if (hasGradient(style)) {
       return <span style={applyGradientStyle(style)}>{content}</span>;
     }
+
     return content;
   };
+
 
   return (
     <AbsoluteFill
