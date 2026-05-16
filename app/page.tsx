@@ -726,21 +726,34 @@ export default function Home() {
   }
 
   async function applyFontTo(role: FontRole, id: string) {
-    const font = findFont(id);
-    try {
-      await document.fonts.load(`${font.weight || 700} 32px "${font.family}"`);
-    } catch {}
-    if (role === 'headline') setFontHeadline(id);
-    if (role === 'date') setFontDate(id);
+    if (role === 'headline') {
+      setFontHeadline(id);
+      return;
+    }
+
+    if (role === 'date') {
+      setFontDate(id);
+      return;
+    }
 
     if (role === 'cta') {
       setFontCta(id);
       setFontCta1(id);
       setFontCta2(id);
+      return;
     }
 
-    if (role === 'cta1') setFontCta1(id);
-    if (role === 'cta2') setFontCta2(id);
+    if (role === 'cta1') {
+      setFontCta(id);
+      setFontCta1(id);
+      return;
+    }
+
+    if (role === 'cta2') {
+      setFontCta(id);
+      setFontCta2(id);
+      return;
+    }
   }
 
   // Estilos locais do painel de fontes
