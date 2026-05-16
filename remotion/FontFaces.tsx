@@ -16,15 +16,32 @@ type Props = {
 };
 
 function fontFormat(file: string) {
-  const lower = file.toLowerCase();
-  if (lower.endsWith('.ttf')) return 'truetype';
-  if (lower.endsWith('.otf')) return 'opentype';
-  if (lower.endsWith('.woff2')) return 'woff2';
-  return 'woff';
+  const lower = String(file || '').toLowerCase();
+
+  if (lower.includes('font/ttf') || lower.endsWith('.ttf')) return 'truetype';
+  if (lower.includes('font/otf') || lower.endsWith('.otf')) return 'opentype';
+  if (lower.includes('font/woff2') || lower.endsWith('.woff2')) return 'woff2';
+  if (lower.includes('font/woff') || lower.endsWith('.woff')) return 'woff';
+
+  return 'opentype';
 }
 
 function escapeCss(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function fontUrl(file: string) {
+  const raw = String(file || '');
+
+  if (raw.startsWith('data:')) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  if (raw.startsWith('/api/uploads/user-fonts/')) return raw;
+  if (raw.startsWith('/uploads/user-fonts/')) return raw.replace(/^\/uploads/, '/api/uploads');
+  if (raw.startsWith('public/uploads/user-fonts/')) {
+    return `/api/uploads/user-fonts/${encodeURIComponent(raw.split('/').pop() || '')}`;
+  }
+
+  return `/api/uploads/user-fonts/${encodeURIComponent(raw.replace(/^\/+/, '').split('/').pop() || raw)}`;
 }
 
 export const FontFaces: React.FC<Props> = ({ fonts = [], activeFontIds = [] }) => {
@@ -32,7 +49,7 @@ export const FontFaces: React.FC<Props> = ({ fonts = [], activeFontIds = [] }) =
 
   const selectedFonts = fonts.filter((font) => {
     if (!font?.id || !font?.family || !font?.file) return false;
-    if (active.size === 0) return false;
+    if (active.size === 0) return true;
     return active.has(font.id);
   });
 
@@ -48,13 +65,13 @@ export const FontFaces: React.FC<Props> = ({ fonts = [], activeFontIds = [] }) =
   const css = uniqueFonts
     .map((font) => {
       const family = escapeCss(font.family);
-      const file = encodeURIComponent(font.file);
+      const file = fontUrl(font.file);
       const format = fontFormat(font.file);
 
       return `
 @font-face {
   font-family: '${family}';
-  src: url('/api/uploads/user-fonts/${file}') format('${format}');
+  src: url('${file}') format('${format}');
   font-weight: ${font.weight || 700};
   font-style: normal;
   font-display: block;

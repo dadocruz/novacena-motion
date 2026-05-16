@@ -1001,7 +1001,7 @@ export default function Home() {
         offsetY: c.offsetY ?? txOY.cta ?? 0,
       },
     };
-  }, [motion, styleHeadline, styleDate, styleCta, strokeHeadline, strokeDate, strokeCta, txScale, txLS, txLH, txOX, txOY]);
+  }, [motion, fontHeadline, fontDate, fontCta, userFonts, styleHeadline, styleDate, styleCta, strokeHeadline, strokeDate, strokeCta, txScale, txLS, txLH, txOX, txOY]);
 
   const project = useMemo(() => {
     const base = getProject(template);

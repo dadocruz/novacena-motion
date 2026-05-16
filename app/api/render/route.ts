@@ -160,6 +160,41 @@ export async function POST(request: NextRequest) {
           }
         }
 
+
+        if (renderProps?.motion?.customFonts && Array.isArray(renderProps.motion.customFonts)) {
+          const userFontsDir = join(process.cwd(), 'public', 'uploads', 'user-fonts');
+
+          for (let i = 0; i < renderProps.motion.customFonts.length; i++) {
+            const font = renderProps.motion.customFonts[i];
+
+            if (!font || typeof font.file !== 'string' || !font.file) continue;
+            if (font.file.startsWith('data:')) continue;
+
+            try {
+              const filename = font.file.replace(/^\/+/, '').split('/').pop();
+              if (!filename) continue;
+
+              const fontPath = join(userFontsDir, filename);
+              const buffer = await readFile(fontPath);
+              const ext = (filename.split('.').pop() || '').toLowerCase();
+
+              const mime =
+                ext === 'otf' ? 'font/otf' :
+                ext === 'ttf' ? 'font/ttf' :
+                ext === 'woff2' ? 'font/woff2' :
+                ext === 'woff' ? 'font/woff' :
+                'application/octet-stream';
+
+              renderProps.motion.customFonts[i] = {
+                ...font,
+                file: `data:${mime};base64,${buffer.toString('base64')}`,
+              };
+            } catch (error) {
+              console.warn('[render] Não consegui embutir fonte custom:', font.file, error);
+            }
+          }
+        }
+
         renderProps.renderTarget = comp.target;
 
         // FIX E2BIG: escreve props num arquivo temp em vez de passar via --props='...'
@@ -180,6 +215,12 @@ export async function POST(request: NextRequest) {
         const normalOutputFile = posterEnabled
           ? outputFileForRender.replace(/\.mp4$/, `.normal.mp4`)
           : outputFileForRender;
+
+        // DEBUG: salva props ao lado do mp4 para inspecao
+        try {
+          const debugFile = outputFileForRender.replace(/\.mp4$/, '.props.json');
+          await writeFile(debugFile, JSON.stringify(renderProps, null, 2), 'utf-8');
+        } catch {}
 
         const cmd = `npx remotion render remotion-entry/index.ts ${comp.id} ${normalOutputFile} --props=${tmpFile}`;
 
