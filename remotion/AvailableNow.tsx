@@ -285,8 +285,11 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
     style?: typeof motion.styleHeadline,
     stroke?: any
   ) => {
-    const usePlainText = hasGradient(style) || getFillOpacity(style, stroke) < 1;
-    const fillContent = usePlainText ? renderPlainLines(text) : renderTextLines(text, tx);
+    // IMPORTANTE:
+    // Não renderizar fonte decorativa letra por letra.
+    // Split por letra quebra ligaduras, kerning e desenho real da fonte.
+    // Por isso o texto visual usa bloco inteiro e mantém apenas transform/posição do wrapper.
+    const fillContent = renderPlainLines(text);
     const strokeContent = renderPlainLines(text);
 
     const strokeCss = textStrokeLayerCss(stroke);
@@ -327,6 +330,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
       </span>
     );
   };
+
 
 
 
