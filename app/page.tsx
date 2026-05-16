@@ -1761,14 +1761,14 @@ export default function Home() {
 
         <Section title="Conteúdo">
           <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
-          <Field label="Headline" value={headline} onChange={setHeadline} placeholder="LANÇAMENTO" />
+          <Field label="Headline" value={headline} onChange={setHeadline} placeholder={"LANÇAMENTO"} multiline rows={2} />
           {template === 'available_now' ? (
             <>
-              <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder="FAÇA O PRÉ-SAVE" />
-              <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+              <Field label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder={"FAÇA O\\nPRÉ-SAVE"} multiline rows={2} />
+              <Field label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\\nPLATAFORMAS DIGITAIS"} multiline rows={2} />
             </>
           ) : (
-            <Field label="Chamada / CTA" value={cta} onChange={setCta} placeholder="EM TODAS AS PLATAFORMAS DIGITAIS" />
+            <Field label="Chamada / CTA" value={cta} onChange={setCta} placeholder={"EM TODAS AS\\nPLATAFORMAS DIGITAIS"} multiline rows={2} />
           )}
           {template === 'watch_youtube' && (
             <Field label="Canal" value={channelName} onChange={setChannelName} />
@@ -3393,8 +3393,50 @@ function Section({
   );
 }
 
-function Field({ label, value, onChange, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  multiline = false,
+  rows = 2,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  rows?: number;
+}) {
+  return (
+    <label style={{ display: 'grid', gap: 6 }}>
+      <span style={miniInputLabel}>{label}</span>
+
+      {multiline ? (
+        <textarea
+          value={value}
+          placeholder={placeholder}
+          rows={rows}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            ...fieldInputStyle,
+            minHeight: Math.max(44, rows * 28),
+            lineHeight: 1.35,
+            resize: 'vertical',
+            whiteSpace: 'pre-wrap',
+            fontFamily: 'inherit',
+          }}
+        />
+      ) : (
+        <input
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          style={fieldInputStyle}
+        />
+      )}
+    </label>
+  );
 }) {
   return (
     <label style={{ display: 'block', marginBottom: 10 }}>
