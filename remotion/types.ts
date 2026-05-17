@@ -216,6 +216,8 @@ export type MotionConfig = {
   transitionHeadline?: TextTransitionId;
   transitionDate?: TextTransitionId;
   transitionCta?: TextTransitionId;
+  transitionCta1?: TextTransitionId;
+  transitionCta2?: TextTransitionId;
   /** Wiggle individual por elemento (multiplica o global) */
   wiggleHeadline?: number;
   wiggleDate?: number;

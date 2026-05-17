@@ -295,6 +295,8 @@ export default function Home() {
   const [trHeadline, setTrHeadline] = useState<TextTransitionId>('mask_reveal');
   const [trDate, setTrDate] = useState<TextTransitionId>('scale_pop');
   const [trCta, setTrCta] = useState<TextTransitionId>('split_letters');
+  const [trCta1, setTrCta1] = useState<TextTransitionId>('scale_pop');
+  const [trCta2, setTrCta2] = useState<TextTransitionId>('split_letters');
 
   // Estilo de texto (cor + gradiente) por elemento
   const [styleHeadline, setStyleHeadline] = useState<TextStyleState>({
@@ -863,6 +865,8 @@ export default function Home() {
       transitionHeadline: trHeadline,
       transitionDate: trDate,
       transitionCta: trCta,
+      transitionCta1: trCta1,
+      transitionCta2: trCta2,
       styleHeadline,
       styleDate,
       styleCta,
@@ -1294,6 +1298,8 @@ export default function Home() {
       setTrHeadline(m.transitionHeadline ?? 'mask_reveal');
       setTrDate(m.transitionDate ?? 'scale_pop');
       setTrCta(m.transitionCta ?? 'split_letters');
+      setTrCta1(m.transitionCta1 ?? m.transitionCta ?? 'scale_pop');
+      setTrCta2(m.transitionCta2 ?? m.transitionCta ?? 'split_letters');
       setStyleHeadline(mergeTextStyle(HEADLINE_STYLE_DEFAULTS, m.styleHeadline));
       setStyleDate(mergeTextStyle(DATE_STYLE_DEFAULTS, m.styleDate));
       setStyleCta(mergeTextStyle(CTA_STYLE_DEFAULTS, m.styleCta));
@@ -2487,7 +2493,8 @@ export default function Home() {
 
             <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
             <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
-            <TransitionPicker label="CTA" value={trCta} onChange={setTrCta} />
+            <TransitionPicker label="CTA 1" value={trCta1} onChange={setTrCta1} />
+            <TransitionPicker label="CTA 2" value={trCta2} onChange={setTrCta2} />
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
               <button

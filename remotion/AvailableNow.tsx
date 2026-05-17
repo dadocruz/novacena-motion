@@ -71,8 +71,11 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
 
   const tH = getTextTransition(txHeadline)(frame, HEADLINE_IN);
   const tD = getTextTransition(txDate)(frame, DATE_IN);
-  const tC1 = getTextTransition('split_letters')(frame, cta1In);
-  const tC = getTextTransition(txCta)(frame, cta2In);
+  const txCta1 = motion.transitionCta1 ?? motion.transitionCta ?? 'scale_pop';
+  const txCta2 = motion.transitionCta2 ?? motion.transitionCta ?? txCta;
+
+  const tC1 = getTextTransition(txCta1)(frame, cta1In);
+  const tC = getTextTransition(txCta2)(frame, cta2In);
 
   // Wiggle individual por elemento (multiplica intensity global)
   const wigH = elegantWiggle(frame, { intensity: wH * wiggleIntensity, offset: 10 });
