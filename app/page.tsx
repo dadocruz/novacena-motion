@@ -1105,6 +1105,23 @@ export default function Home() {
     };
   }, [project, durationSeconds, motionWithStyles, target]);
 
+
+  const playerRemountKey = [
+    template,
+    target,
+    trHeadline,
+    trDate,
+    trCta,
+    trCta1,
+    trCta2,
+    fontHeadline,
+    fontDate,
+    fontCta,
+    fontCta1,
+    fontCta2,
+    previewNonce,
+  ].join('|');
+
   const Component = componentByTemplate[template];
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
@@ -2234,6 +2251,7 @@ return (
               }}
             >
               <Player
+                key={playerRemountKey}
       acknowledgeRemotionLicense
                 ref={playerRef}
                 component={Component}
