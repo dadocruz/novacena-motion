@@ -3,7 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
 import { readFile, writeFile, mkdir, unlink } from 'fs/promises';
-import { join } from 'path';
+import {join, basename} from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 
