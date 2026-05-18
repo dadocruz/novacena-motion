@@ -10,7 +10,7 @@ import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform } from '../l
 import type { TemplateProps, TextTransitionId } from './types';
 import { StyledText } from './StyledText';
 
-const HEADLINE_IN = 18;
+const HEADLINE_IN = 0;
 const DATE_IN = 38;
 const COVER_IN = 54;
 const MID_HIT = 124;
@@ -51,15 +51,41 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const cta2In = motion.cta2InFrame ?? CTA2_IN_DEFAULT;
   const logosIn = motion.logosInFrame ?? LOGOS_IN_DEFAULT;
 
+  const keepTextVisibleTransition = <T extends { wrapStyle?: React.CSSProperties; perChar?: any }>(
+    tx: T
+  ): T => {
+    const wrapOpacity = Number((tx.wrapStyle as any)?.opacity);
+    const safeWrapStyle = {
+      ...(tx.wrapStyle ?? {}),
+      opacity: Number.isFinite(wrapOpacity) ? Math.max(wrapOpacity, 1) : 1,
+    };
+
+    return {
+      ...tx,
+      wrapStyle: safeWrapStyle,
+      perChar: tx.perChar
+        ? (i: number, total: number) => {
+            const charStyle = tx.perChar(i, total) ?? {};
+            const charOpacity = Number((charStyle as any).opacity);
+
+            return {
+              ...charStyle,
+              opacity: Number.isFinite(charOpacity) ? Math.max(charOpacity, 1) : 1,
+            };
+          }
+        : undefined,
+    };
+  };
+
   const txHeadline: TextTransitionId = (motion.transitionHeadline ?? (motion as any).trHeadline ?? 'mask_reveal') as TextTransitionId;
   const txDate: TextTransitionId = (motion.transitionDate ?? (motion as any).trDate ?? 'scale_pop') as TextTransitionId;
   const txCta: TextTransitionId = (motion.transitionCta ?? (motion as any).trCta ?? 'split_letters') as TextTransitionId;
-  const tH = getTextTransition(txHeadline)(frame, HEADLINE_IN);
-  const tD = getTextTransition(txDate)(frame, DATE_IN);
+  const tH = keepTextVisibleTransition(getTextTransition(txHeadline)(frame, HEADLINE_IN));
+  const tD = keepTextVisibleTransition(getTextTransition(txDate)(frame, DATE_IN));
   const txCta1 = (motion.transitionCta1 ?? (motion as any).trCta1 ?? motion.transitionCta ?? (motion as any).trCta ?? 'scale_pop') as TextTransitionId;
   const txCta2 = (motion.transitionCta2 ?? (motion as any).trCta2 ?? motion.transitionCta ?? (motion as any).trCta ?? txCta) as TextTransitionId;
-  const tC1 = getTextTransition(txCta1)(frame, cta1In);
-  const tC = getTextTransition(txCta2)(frame, cta2In);
+  const tC1 = keepTextVisibleTransition(getTextTransition(txCta1)(frame, cta1In));
+  const tC = keepTextVisibleTransition(getTextTransition(txCta2)(frame, cta2In));
 
   const wigH = elegantWiggle(frame, { intensity: wH * wiggleIntensity, offset: 10 });
   const wigD = elegantWiggle(frame, { intensity: wD * wiggleIntensity, offset: 70 });
