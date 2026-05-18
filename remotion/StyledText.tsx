@@ -1,6 +1,11 @@
 import React from 'react';
 import type { TextStroke } from './types';
-import type { TextTransitionStyle } from './motionEngine';
+
+export type TextTransitionForStyledText = {
+  wrapStyle?: React.CSSProperties;
+  charStyle?: React.CSSProperties;
+  perChar?: (index: number, total: number) => React.CSSProperties;
+};
 
 export type StyledTextStyle = {
   color?: string;
@@ -11,15 +16,18 @@ export type StyledTextStyle = {
   gradientColor2?: string;
   gradientAngle?: number;
   fillOpacity?: number;
+  textOpacity?: number;
+  opacityFill?: number;
+  fillAlpha?: number;
   opacity?: number;
 };
 
 type StyledTextProps = {
   text: string;
-  transition: TextTransitionStyle;
-  style?: StyledTextStyle;
+  transition?: TextTransitionForStyledText;
+  style?: StyledTextStyle | any;
   stroke?: TextStroke | any;
-  freeze?: boolean;
+  preserveFontShape?: boolean;
 };
 
 function clamp01(value: number): number {
@@ -28,26 +36,33 @@ function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
-function getFillOpacity(style?: StyledTextStyle, stroke?: any): number {
+function getFillOpacity(style?: any, stroke?: any): number {
   const raw =
     style?.fillOpacity ??
-    style?.opacity ??
+    style?.textOpacity ??
+    style?.opacityFill ??
+    style?.fillAlpha ??
     stroke?.fillOpacity ??
+    stroke?.textOpacity ??
+    stroke?.opacityFill ??
+    stroke?.fillAlpha ??
     1;
 
   return clamp01(Number(raw));
 }
 
-function hasGradient(style?: StyledTextStyle): boolean {
+function hasGradient(style?: any): boolean {
   if (!style) return false;
+
   return Boolean(
     style.useGradient ||
+    style.fillKind === 'gradient' ||
     (style.gradientFrom && style.gradientTo) ||
     (style.gradientColor1 && style.gradientColor2)
   );
 }
 
-function hexToRgba(input: string | undefined, alpha: number): string {
+function colorToRgba(input: string | undefined, alpha: number): string {
   const a = clamp01(alpha);
   if (!input) return `rgba(255,255,255,${a})`;
 
@@ -83,23 +98,16 @@ function hexToRgba(input: string | undefined, alpha: number): string {
   return color;
 }
 
-function getGradient(style?: StyledTextStyle): string | null {
-  if (!style || !hasGradient(style)) return null;
-
-  const from = style.gradientFrom ?? style.gradientColor1 ?? style.color ?? '#ffffff';
-  const to = style.gradientTo ?? style.gradientColor2 ?? style.color ?? '#ffffff';
-  const angle = Number(style.gradientAngle ?? 90);
-
-  return `linear-gradient(${angle}deg, ${from}, ${to})`;
-}
-
-function getFillStyle(style?: StyledTextStyle, stroke?: any): React.CSSProperties {
+function getFillCss(style?: any, stroke?: any): React.CSSProperties {
   const fillOpacity = getFillOpacity(style, stroke);
-  const gradient = getGradient(style);
 
-  if (gradient) {
+  if (hasGradient(style)) {
+    const from = style?.gradientFrom ?? style?.gradientColor1 ?? style?.color ?? '#ffffff';
+    const to = style?.gradientTo ?? style?.gradientColor2 ?? style?.color ?? '#ffffff';
+    const angle = Number(style?.gradientAngle ?? 90);
+
     return {
-      backgroundImage: gradient,
+      backgroundImage: `linear-gradient(${angle}deg, ${from}, ${to})`,
       backgroundClip: 'text',
       WebkitBackgroundClip: 'text',
       color: 'transparent',
@@ -109,7 +117,7 @@ function getFillStyle(style?: StyledTextStyle, stroke?: any): React.CSSPropertie
     };
   }
 
-  const color = hexToRgba(style?.color ?? '#ffffff', fillOpacity);
+  const color = colorToRgba(style?.color ?? '#ffffff', fillOpacity);
 
   return {
     color,
@@ -118,7 +126,7 @@ function getFillStyle(style?: StyledTextStyle, stroke?: any): React.CSSPropertie
   };
 }
 
-function getStrokeStyle(stroke?: TextStroke | any): React.CSSProperties | null {
+function getStrokeCss(stroke?: any): React.CSSProperties | null {
   if (!stroke || stroke.mode === 'none') return null;
 
   const width = Number(stroke.width ?? 0);
@@ -126,47 +134,44 @@ function getStrokeStyle(stroke?: TextStroke | any): React.CSSProperties | null {
 
   if (!Number.isFinite(width) || width <= 0 || opacity <= 0) return null;
 
-  const baseColor =
+  const color = colorToRgba(
     stroke.fillKind === 'gradient'
       ? stroke.gradientFrom || stroke.gradientTo || stroke.color || '#ffffff'
-      : stroke.color || stroke.gradientFrom || '#ffffff';
-
-  const color = hexToRgba(baseColor, opacity);
+      : stroke.color || stroke.gradientFrom || '#ffffff',
+    opacity
+  );
 
   return {
     WebkitTextStroke: `${width}px ${color}`,
     WebkitTextFillColor: 'transparent',
     color: 'transparent',
     paintOrder: 'stroke fill',
-    textShadow: width >= 2 ? `0 0 ${Math.max(2, width * 1.25)}px ${color}` : 'none',
-  } as React.CSSProperties;
+    textShadow: width >= 2 ? `0 0 ${Math.max(2, width * 1.25)}px ${color}` : undefined,
+  };
 }
 
-function renderContent(text: string, transition: TextTransitionStyle, freeze: boolean) {
+function renderLines(
+  text: string,
+  transition?: TextTransitionForStyledText,
+  preserveFontShape = true
+) {
   const lines = String(text ?? '').split(/\r?\n/);
 
   return lines.map((line, lineIndex) => {
-    if (transition.perChar && !freeze) {
-      const chars = line.split('');
-
-      return (
-        <React.Fragment key={`line-${lineIndex}`}>
-          {chars.map((char, charIndex) => (
-            <span
-              key={`char-${lineIndex}-${charIndex}`}
-              style={transition.perChar!(charIndex, chars.length)}
-            >
-              {char === ' ' ? '\u00A0' : char}
-            </span>
-          ))}
-          {lineIndex < lines.length - 1 ? <br /> : null}
-        </React.Fragment>
-      );
-    }
+    const shouldSplit = Boolean(transition?.perChar && !preserveFontShape);
 
     return (
       <React.Fragment key={`line-${lineIndex}`}>
-        {line}
+        {shouldSplit
+          ? line.split('').map((char, charIndex, chars) => (
+              <span
+                key={`char-${lineIndex}-${charIndex}`}
+                style={transition?.perChar?.(charIndex, chars.length)}
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </span>
+            ))
+          : line}
         {lineIndex < lines.length - 1 ? <br /> : null}
       </React.Fragment>
     );
@@ -178,11 +183,12 @@ export function StyledText({
   transition,
   style,
   stroke,
-  freeze = false,
+  preserveFontShape = true,
 }: StyledTextProps) {
-  const strokeCss = getStrokeStyle(stroke);
-  const fillCss = getFillStyle(style, stroke);
-  const content = renderContent(text, transition, freeze);
+  const strokeCss = getStrokeCss(stroke);
+  const fillCss = getFillCss(style, stroke);
+
+  const content = renderLines(text, transition, preserveFontShape);
 
   if (strokeCss) {
     return (

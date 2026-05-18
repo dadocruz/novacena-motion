@@ -282,8 +282,8 @@ export async function POST(request: NextRequest) {
             }
 
             const concatContent = posterOutroEnabled
-              ? `file '${posterIntroMp4.replace(/'/g, "'\\''")}'\nfile '${normalOutputFile.replace(/'/g, "'\\''")}'\nfile '${posterOutroMp4.replace(/'/g, "'\\''")}'\n`
-              : `file '${posterIntroMp4.replace(/'/g, "'\\''")}'\nfile '${normalOutputFile.replace(/'/g, "'\\''")}'\n`;
+              ? `file '${basename(posterIntroMp4).replace(/'/g, "'\\''")}'\nfile '${basename(normalOutputFile).replace(/'/g, "'\\''")}'\nfile '${basename(posterOutroMp4).replace(/'/g, "'\\''")}'\n`
+              : `file '${basename(posterIntroMp4).replace(/'/g, "'\\''")}'\nfile '${basename(normalOutputFile).replace(/'/g, "'\\''")}'\n`;
 
             await writeFile(concatList, concatContent, 'utf-8');
 
