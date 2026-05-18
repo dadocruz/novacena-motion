@@ -169,7 +169,20 @@ function renderLines(
                   display: 'inline-block',
                   whiteSpace: 'pre',
                   ...transition?.charStyle,
-                  ...transition?.perChar?.(charIndex, chars.length),
+                  ...(() => {
+                    const s = transition?.perChar?.(charIndex, chars.length) ?? {};
+                    const opacity = Number((s as any).opacity);
+
+                    // MODO SEGURO:
+                    // Algumas transições por letra começam com opacity 0.
+                    // Isso fazia headline/CTA sumirem no preview e parecer que a transição quebrou.
+                    // Mantemos movimento/rotação/escala, mas nunca deixamos a letra invisível.
+                    if (Number.isFinite(opacity) && opacity <= 0.02) {
+                      return { ...s, opacity: 1 };
+                    }
+
+                    return s;
+                  })(),
                 }}
               >
                 {char === ' ' ? '\u00A0' : char}
