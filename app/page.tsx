@@ -1672,7 +1672,84 @@ export default function Home() {
   // ============================================================
   // RENDER
   // ============================================================
-  return (
+  
+  const exportStudioPresetV1 = React.useCallback(() => {
+    const preset = {
+      version: 'novacena-preset-v1',
+      exportedAt: new Date().toISOString(),
+      app: 'novacena-motion',
+      project: {
+        template,
+        releaseDate,
+        headline,
+        cta,
+        cta2,
+        showCta1,
+        showCta2,
+        motion: motionWithStyles,
+      },
+    };
+
+    const safeHeadline = String(headline || 'arte')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase();
+
+    const fileName = `novacena-preset-${String(template || 'template')}-${safeHeadline || 'arte'}-${Date.now()}.json`;
+
+    const blob = new Blob([JSON.stringify(preset, null, 2)], {
+      type: 'application/json',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  }, [
+    template,
+    releaseDate,
+    headline,
+    cta,
+    cta2,
+    showCta1,
+    showCta2,
+    motionWithStyles,
+  ]);
+
+  const presetExportButtonV1 = (
+    <button
+      type="button"
+      onClick={exportStudioPresetV1}
+      title="Exportar preset JSON"
+      style={{
+        position: 'fixed',
+        left: 18,
+        bottom: 92,
+        zIndex: 9999,
+        border: 0,
+        borderRadius: 14,
+        padding: '12px 14px',
+        cursor: 'pointer',
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: 900,
+        letterSpacing: 0.3,
+        background: 'linear-gradient(135deg, #8f4df8, #f97316)',
+        boxShadow: '0 14px 40px rgba(0,0,0,0.35)',
+      }}
+    >
+      Exportar preset
+    </button>
+  );
+
+
+return (
     <main
       style={{
         height: '100vh',
@@ -1686,6 +1763,8 @@ export default function Home() {
         `,
       }}
     >
+      {presetExportButtonV1}
+
       {/* ─── TOPBAR ─── */}
       <header style={topbarStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
