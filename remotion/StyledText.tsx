@@ -163,14 +163,22 @@ function renderLines(
     return (
       <React.Fragment key={`line-${lineIndex}`}>
         {shouldSplit
-          ? line.split('').map((char, charIndex, chars) => (
-              <span
-                key={`char-${lineIndex}-${charIndex}`}
-                style={transition?.perChar?.(charIndex, chars.length)}
-              >
-                {char === ' ' ? '\u00A0' : char}
-              </span>
-            ))
+          ? line.split('').map((char, charIndex, chars) => {
+              const perCharStyle = transition?.perChar?.(charIndex, chars.length) ?? {};
+              return (
+                <span
+                  key={`char-${lineIndex}-${charIndex}`}
+                  style={{
+                    display: 'inline-block',
+                    whiteSpace: 'pre',
+                    ...transition?.charStyle,
+                    ...perCharStyle,
+                  }}
+                >
+                  {char === ' ' ? '\u00A0' : char}
+                </span>
+              );
+            })
           : line}
         {lineIndex < lines.length - 1 ? <br /> : null}
       </React.Fragment>
@@ -188,11 +196,22 @@ export function StyledText({
   const strokeCss = getStrokeCss(stroke);
   const fillCss = getFillCss(style, stroke);
 
-  const content = renderLines(text, transition, preserveFontShape);
+  const forcePreserve =
+    preserveFontShape &&
+    (hasGradient(style) || Boolean(strokeCss) || getFillOpacity(style, stroke) < 1);
+
+  const content = renderLines(text, transition, forcePreserve);
+
+  const outerStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'inline-block',
+    whiteSpace: 'pre-line',
+    ...transition?.wrapStyle,
+  };
 
   if (strokeCss) {
     return (
-      <span style={{ position: 'relative', display: 'inline-block' }}>
+      <span style={outerStyle}>
         <span
           aria-hidden
           style={{
@@ -201,6 +220,7 @@ export function StyledText({
             inset: 0,
             zIndex: 0,
             pointerEvents: 'none',
+            whiteSpace: 'pre-line',
           }}
         >
           {content}
@@ -211,6 +231,7 @@ export function StyledText({
             ...fillCss,
             position: 'relative',
             zIndex: 1,
+            whiteSpace: 'pre-line',
           }}
         >
           {content}
@@ -219,5 +240,14 @@ export function StyledText({
     );
   }
 
-  return <span style={fillCss}>{content}</span>;
+  return (
+    <span
+      style={{
+        ...outerStyle,
+        ...fillCss,
+      }}
+    >
+      {content}
+    </span>
+  );
 }
