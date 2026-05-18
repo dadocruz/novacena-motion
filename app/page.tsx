@@ -1673,6 +1673,9 @@ export default function Home() {
   // RENDER
   // ============================================================
   
+  const presetImportInputRefV1 = React.useRef<HTMLInputElement | null>(null);
+  const [presetImportStatusV1, setPresetImportStatusV1] = React.useState('');
+
   const exportStudioPresetV1 = React.useCallback(() => {
     const preset = {
       version: 'novacena-preset-v1',
@@ -1722,30 +1725,171 @@ export default function Home() {
     motionWithStyles,
   ]);
 
+
+  const applyStudioPresetV1 = React.useCallback((rawPreset: any) => {
+    const preset = rawPreset?.project ? rawPreset.project : rawPreset;
+    const m = preset?.motion ?? rawPreset?.motion ?? {};
+
+    if (!preset) {
+      setPresetImportStatusV1('Preset inválido.');
+      window.setTimeout(() => setPresetImportStatusV1(''), 3000);
+      return;
+    }
+
+    if (typeof preset.releaseDate === 'string') setReleaseDate(preset.releaseDate);
+    if (typeof preset.headline === 'string') setHeadline(preset.headline);
+    if (typeof preset.cta === 'string') setCta(preset.cta);
+    if (typeof preset.cta2 === 'string') setCta2(preset.cta2);
+
+    if (typeof preset.showCta1 === 'boolean') setShowCta1(preset.showCta1);
+    if (typeof preset.showCta2 === 'boolean') setShowCta2(preset.showCta2);
+
+    if (m.fontHeadline) setFontHeadline(m.fontHeadline);
+    if (m.fontDate) setFontDate(m.fontDate);
+    if (m.fontCta) setFontCta(m.fontCta);
+    if (m.fontCta1) setFontCta1(m.fontCta1);
+    if (m.fontCta2) setFontCta2(m.fontCta2);
+
+    if (m.styleHeadline) setStyleHeadline((s: any) => ({ ...s, ...m.styleHeadline }));
+    if (m.styleDate) setStyleDate((s: any) => ({ ...s, ...m.styleDate }));
+    if (m.styleCta) setStyleCta((s: any) => ({ ...s, ...m.styleCta }));
+    if (m.styleCta1) setStyleCta1((s: any) => ({ ...s, ...m.styleCta1 }));
+    if (m.styleCta2) setStyleCta2((s: any) => ({ ...s, ...m.styleCta2 }));
+
+    if (m.strokeHeadline) setStrokeHeadline(m.strokeHeadline);
+    if (m.strokeDate) setStrokeDate(m.strokeDate);
+    if (m.strokeCta) setStrokeCta(m.strokeCta);
+    if (m.strokeCta1) setStrokeCta1(m.strokeCta1);
+    if (m.strokeCta2) setStrokeCta2(m.strokeCta2);
+
+    if (m.transitionHeadline) setTrHeadline(m.transitionHeadline);
+    if (m.transitionDate) setTrDate(m.transitionDate);
+    if (m.transitionCta) setTrCta(m.transitionCta);
+
+    if (typeof setTrCta1 === 'function' && m.transitionCta1) setTrCta1(m.transitionCta1);
+    if (typeof setTrCta2 === 'function' && m.transitionCta2) setTrCta2(m.transitionCta2);
+
+    if (typeof m.cta1InFrame === 'number') setCta1InFrame(m.cta1InFrame);
+    if (typeof m.ctaSwapFrame === 'number') setCtaSwapFrame(m.ctaSwapFrame);
+    if (typeof m.cta2InFrame === 'number') setCta2InFrame(m.cta2InFrame);
+    if (typeof m.logosInFrame === 'number') setLogosInFrame(m.logosInFrame);
+
+    if (typeof m.coverSize === 'number') setCoverSize(m.coverSize);
+    if (typeof m.coverX === 'number') setCoverX(m.coverX);
+    if (typeof m.coverY === 'number') setCoverY(m.coverY);
+
+    if (typeof m.videoOpacity === 'number') setBgVideoOpacity(m.videoOpacity);
+    if (typeof m.videoBlur === 'number') setBgVideoBlur(m.videoBlur);
+    if (typeof m.videoSaturation === 'number') setBgVideoSaturation(m.videoSaturation);
+
+    setPresetImportStatusV1('Preset importado.');
+    window.setTimeout(() => setPresetImportStatusV1(''), 2500);
+  }, []);
+
+  const importStudioPresetV1 = React.useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      const parsed = JSON.parse(content);
+
+      if (parsed?.version && parsed.version !== 'novacena-preset-v1') {
+        console.warn('Versão de preset diferente:', parsed.version);
+      }
+
+      applyStudioPresetV1(parsed);
+    } catch (error) {
+      console.error(error);
+      setPresetImportStatusV1('Erro ao importar preset.');
+      window.setTimeout(() => setPresetImportStatusV1(''), 3500);
+    }
+  }, [applyStudioPresetV1]);
+
+
   const presetExportButtonV1 = (
-    <button
-      type="button"
-      onClick={exportStudioPresetV1}
-      title="Exportar preset JSON"
+    <div
       style={{
         position: 'fixed',
         left: 18,
         bottom: 92,
         zIndex: 9999,
-        border: 0,
-        borderRadius: 14,
-        padding: '12px 14px',
-        cursor: 'pointer',
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 900,
-        letterSpacing: 0.3,
-        background: 'linear-gradient(135deg, #8f4df8, #f97316)',
+        display: 'grid',
+        gap: 8,
+        padding: 10,
+        borderRadius: 16,
+        background: 'rgba(10,10,14,0.78)',
+        border: '1px solid rgba(255,255,255,0.12)',
+        backdropFilter: 'blur(16px)',
         boxShadow: '0 14px 40px rgba(0,0,0,0.35)',
       }}
     >
-      Exportar preset
-    </button>
+      <div
+        style={{
+          fontSize: 10,
+          color: 'rgba(255,255,255,0.65)',
+          textTransform: 'uppercase',
+          letterSpacing: 1.4,
+          fontWeight: 900,
+        }}
+      >
+        Presets
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <button
+          type="button"
+          onClick={exportStudioPresetV1}
+          title="Exportar preset JSON"
+          style={{
+            border: 0,
+            borderRadius: 12,
+            padding: '10px 12px',
+            cursor: 'pointer',
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 900,
+            background: 'linear-gradient(135deg, #8f4df8, #f97316)',
+          }}
+        >
+          Exportar
+        </button>
+
+        <button
+          type="button"
+          onClick={() => presetImportInputRefV1.current?.click()}
+          title="Importar preset JSON"
+          style={{
+            border: '1px solid rgba(255,255,255,0.16)',
+            borderRadius: 12,
+            padding: '10px 12px',
+            cursor: 'pointer',
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 900,
+            background: 'rgba(255,255,255,0.08)',
+          }}
+        >
+          Importar
+        </button>
+      </div>
+
+      {presetImportStatusV1 ? (
+        <div style={{ color: '#fff', fontSize: 11, opacity: 0.8 }}>
+          {presetImportStatusV1}
+        </div>
+      ) : null}
+
+      <input
+        ref={presetImportInputRefV1}
+        type="file"
+        accept="application/json,.json"
+        onChange={importStudioPresetV1}
+        style={{ display: 'none' }}
+      />
+    </div>
   );
 
 
