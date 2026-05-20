@@ -8,12 +8,14 @@ import {
   maskReveal,
   scaleInBack,
   loopFloat,
+  previewSafeAnim,
 } from './motionEngine';
+import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
+import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
 
@@ -29,10 +31,16 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const accents = [MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(255, 140, 60, 0.32)');
+  const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
+  const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
+  const dateIn = props.motion?.dateInFrame ?? DATE_IN;
 
-  const headlineMask = maskReveal(frame, HEADLINE_IN, 28);
-  const ctaChar = charStagger(frame, CTA_IN, 1.0);
-  const dateAnim = scaleInBack(frame, DATE_IN, 18);
+  const previewMode = props.motion?.previewMode === true;
+  const headlineMaskRaw = maskReveal(frame, headlineIn, 28);
+  const ctaChar = charStagger(frame, ctaIn, 1.0);
+  const dateAnimRaw = scaleInBack(frame, dateIn, 18);
+  const headlineMask = previewSafeAnim(headlineMaskRaw, previewMode);
+  const dateAnim = previewSafeAnim(dateAnimRaw, previewMode);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -45,6 +53,31 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
   const showAll = frame >= FINAL_POSTER;
   const cta = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+  const ctaFont = findFont(
+    props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
+    props.motion?.customFonts ?? []
+  ) ?? M.fontCta;
+  const ctaStyle = props.motion?.styleCta1 ?? props.motion?.styleCta;
+  const ctaStroke = props.motion?.strokeCta1 ?? props.motion?.strokeCta ?? M.strokeCta;
+  const headlineWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleHeadline ?? 0.35) * M.wiggleIntensity,
+    frequency: 0.74,
+    seed: 10,
+  });
+  const ctaWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleCta1 ?? props.motion?.wiggleCta ?? 0.3) * M.wiggleIntensity,
+    frequency: 0.9,
+    seed: 130,
+  });
+  const dateWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleDate ?? 0.25) * M.wiggleIntensity,
+    frequency: 0.64,
+    seed: 70,
+  });
+  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
+    ...anim,
+    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
+  });
 
   // Logos flutuando nos cantos (decorativo)
   const floatingLogos = [
@@ -62,7 +95,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -131,7 +164,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               overflow: 'visible',
               ...applyTextStyle(props.motion?.styleHeadline),
               ...(showAll ? {} : headlineMask),
-              ...userTextTransform(props.motion?.styleHeadline, headlineMask),
+              ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
             }}
           >
             OUÇA<br />AGORA
@@ -146,7 +179,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
             style={{
 
-              transform: `translate(${(M as any).coverX ?? 0}px, ${(M as any).coverY ?? 0}px)`,
+              transform: `translate(${props.motion?.coverX ?? 0}px, ${props.motion?.coverY ?? 0}px)`,
 
               willChange: 'transform',
 
@@ -172,13 +205,16 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         {/* CTA char stagger */}
         <div
           style={{
-            fontFamily: ff(M.fontCta.family),
+            fontFamily: ff(ctaFont.family),
             marginTop: 80,
             fontSize: 38,
-            fontWeight: M.fontCta.weight,
+            fontWeight: ctaFont.weight,
             letterSpacing: 2.6,
             textShadow: 'none',
-            ...applyTextStyle(props.motion?.styleCta),
+            ...textStrokeStyle(ctaStroke),
+            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+            ...applyTextStyle(ctaStyle),
+            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
           }}
         >
           {showAll
@@ -202,14 +238,14 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               opacity: 0.92,
               ...applyTextStyle(props.motion?.styleDate),
               ...(showAll ? {} : dateAnim),
-              ...userTextTransform(props.motion?.styleDate, dateAnim),
+              ...userTextTransform(props.motion?.styleDate, showAll ? { transform: dateWiggle.transform } : mergeAnim(dateAnim, dateWiggle.transform)),
             }}
           >
             DESDE {props.releaseDate}
           </div>
         ) : null}
       </AbsoluteFill>
-<AbsoluteFill
+      <AbsoluteFill
         style={{
           background: '#fff',
           opacity: finalFlash,

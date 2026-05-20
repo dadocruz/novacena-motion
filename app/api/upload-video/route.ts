@@ -7,8 +7,10 @@ export const maxDuration = 60;
 
 const VIDEOS_DIR = path.join(process.cwd(), 'public', 'uploads', 'videos');
 
-// Limite de 200MB pra vídeos de fundo (40s em qualidade boa)
-const MAX_SIZE = 4 * 1024 * 1024 * 1024; // 4GB
+// Limite suficiente para vídeos curtos de fundo sem deixar upload gigante travar o app.
+const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
+const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
 
 function safeFileName(name: string): string {
   const ext = path.extname(name || '.mp4').toLowerCase() || '.mp4';
@@ -48,15 +50,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 4 GB.`,
+          error: `Arquivo muito grande (${(file.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 500 MB.`,
         },
         { status: 413 }
       );
     }
 
-    // Validação básica de tipo
-    const allowedTypes = ['video/mp4', 'video/quicktime', 'video/webm'];
-    if (file.type && !allowedTypes.includes(file.type)) {
+    const ext = path.extname(file.name).toLowerCase();
+    if (!ALLOWED_EXT.includes(ext)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV ou WEBM.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Alguns browsers deixam MIME vazio, então extensão é obrigatória e MIME reforça quando existir.
+    if (file.type && !ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
         {
           ok: false,

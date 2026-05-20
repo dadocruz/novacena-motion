@@ -8,12 +8,14 @@ import {
   maskReveal,
   scaleInBack,
   loopFloat,
+  previewSafeAnim,
 } from './motionEngine';
+import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
+import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
 
@@ -29,10 +31,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const accents = [MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(255, 40, 40, 0.32)');
+  const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
+  const channelIn = props.motion?.dateInFrame ?? CHANNEL_IN;
+  const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
 
-  const headlineMask = maskReveal(frame, HEADLINE_IN, 28);
-  const channelAnim = scaleInBack(frame, CHANNEL_IN, 20);
-  const ctaChar = charStagger(frame, CTA_IN, 1.0);
+  const previewMode = props.motion?.previewMode === true;
+  const headlineMask = previewSafeAnim(maskReveal(frame, headlineIn, 28), previewMode);
+  const channelAnim = previewSafeAnim(scaleInBack(frame, channelIn, 20), previewMode);
+  const ctaChar = charStagger(frame, ctaIn, 1.0);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -46,6 +52,31 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const showAll = frame >= FINAL_POSTER;
   const cta = props.cta || 'CLIPE OFICIAL DISPONÍVEL';
   const channel = props.channelName || 'CANAL OFICIAL';
+  const ctaFont = findFont(
+    props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
+    props.motion?.customFonts ?? []
+  ) ?? M.fontCta;
+  const ctaStyle = props.motion?.styleCta1 ?? props.motion?.styleCta;
+  const ctaStroke = props.motion?.strokeCta1 ?? props.motion?.strokeCta ?? M.strokeCta;
+  const headlineWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleHeadline ?? 0.35) * M.wiggleIntensity,
+    frequency: 0.74,
+    seed: 10,
+  });
+  const channelWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleDate ?? 0.25) * M.wiggleIntensity,
+    frequency: 0.64,
+    seed: 70,
+  });
+  const ctaWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleCta1 ?? props.motion?.wiggleCta ?? 0.3) * M.wiggleIntensity,
+    frequency: 0.9,
+    seed: 130,
+  });
+  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
+    ...anim,
+    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
+  });
 
   // YouTube ícones flutuando
   const floatingYT = [
@@ -63,7 +94,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -118,7 +149,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               overflow: 'visible',
               ...applyTextStyle(props.motion?.styleHeadline),
               ...(showAll ? {} : headlineMask),
-              ...userTextTransform(props.motion?.styleHeadline, headlineMask),
+              ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
             }}
           >
             ASSISTA<br />NO YOUTUBE
@@ -133,7 +164,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
 
             style={{
 
-              transform: `translate(${(M as any).coverX ?? 0}px, ${(M as any).coverY ?? 0}px)`,
+              transform: `translate(${props.motion?.coverX ?? 0}px, ${props.motion?.coverY ?? 0}px)`,
 
               willChange: 'transform',
 
@@ -171,6 +202,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             boxShadow: '0 20px 50px rgba(255,0,0,0.36)',
             ...applyTextStyle(props.motion?.styleDate),
             ...(showAll ? {} : channelAnim),
+            ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
           }}
         >
           ▶ {channel}
@@ -179,13 +211,16 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         {/* CTA */}
         <div
           style={{
-            fontFamily: ff(M.fontCta.family),
+            fontFamily: ff(ctaFont.family),
             marginTop: 32,
             fontSize: 32,
-            fontWeight: M.fontCta.weight,
+            fontWeight: ctaFont.weight,
             letterSpacing: 2.4,
             textShadow: 'none',
-            ...applyTextStyle(props.motion?.styleCta),
+            ...textStrokeStyle(ctaStroke),
+            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+            ...applyTextStyle(ctaStyle),
+            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
           }}
         >
           {showAll
@@ -197,7 +232,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               ))}
         </div>
       </AbsoluteFill>
-<AbsoluteFill
+      <AbsoluteFill
         style={{
           background: '#fff',
           opacity: finalFlash,

@@ -14,6 +14,14 @@ const PresetSchema = z.object({
 type Preset = z.infer<typeof PresetSchema>;
 
 const PRESETS_FILE = path.join(process.cwd(), 'data', 'presets.json');
+function safeJsonFileName(name: string): string {
+  const safe = String(name || 'novacena-preset')
+    .replace(/[^a-z0-9._-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+
+  return `${safe || 'novacena-preset'}.json`;
+}
 
 /**
  * Carregar presets do arquivo
@@ -43,6 +51,7 @@ async function savePresets(presets: Preset[]): Promise<void> {
  */
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id');
+  const shouldDownload = request.nextUrl.searchParams.get('download') === '1';
 
   try {
     const presets = await loadPresets();
@@ -55,6 +64,18 @@ export async function GET(request: NextRequest) {
           { status: 404 }
         );
       }
+
+      if (shouldDownload) {
+        const body = JSON.stringify(preset.config, null, 2);
+        return new NextResponse(body, {
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Disposition': `attachment; filename="${safeJsonFileName(preset.name)}"`,
+            'Cache-Control': 'no-store',
+          },
+        });
+      }
+
       return NextResponse.json({ preset });
     }
 

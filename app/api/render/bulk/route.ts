@@ -6,7 +6,7 @@ const BulkRenderSchema = z.object({
     z.object({
       artistName: z.string(),
       songTitle: z.string(),
-      templates: z.array(z.enum(['available_now', 'watch_youtube', 'milestone', 'out_now'])),
+      templates: z.array(z.enum(['available_now', 'watch_youtube', 'milestone', 'out_now', 'spotify_print'])),
       formats: z.array(z.enum(['story', 'feed'])).optional().default(['story', 'feed']),
     })
   ),
@@ -53,9 +53,6 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-
-    // Armazenar jobs (em produção, usar database)
-    console.log(`✅ Batch ${batchId} enfileirado com ${jobs.length} render(s)`);
 
     return NextResponse.json(
       {

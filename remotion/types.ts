@@ -4,7 +4,7 @@ export type TextStrokeFillKind = 'solid' | 'gradient';
 
 export type TextStroke = {
   mode: TextStrokeMode;       // none | outer | inner
-  width: number;              // 0–10 px
+  width: number;              // 0-24 px
   fillKind: TextStrokeFillKind;
   color: string;              // hex quando solid
   gradientFrom?: string;      // hex
@@ -32,7 +32,8 @@ export type TemplateId =
   | 'available_now'
   | 'watch_youtube'
   | 'milestone'
-  | 'out_now';
+  | 'out_now'
+  | 'spotify_print';
 
 export type PlatformName =
   | 'Spotify'
@@ -80,6 +81,15 @@ export type TextTransitionId =
   | 'scale_pop'
   | 'rise_clean';
 
+export type TextTransitionTuning = {
+  /** Multiplica distância, blur e overshoot da transição. */
+  intensity?: number;
+  /** Multiplica a velocidade geral da entrada. 1 = padrão. */
+  speed?: number;
+  /** Controla espaçamento entre letras/palavras em transições stagger. */
+  stagger?: number;
+};
+
 export type CoverMotionId =
   | 'zoom_bounce'
   | 'slide_up'
@@ -111,6 +121,45 @@ export type OverlayPlacement = {
   opacity: number;
   /** blend mode CSS */
   blendMode: 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal';
+  /** modo de repetição do vídeo do overlay */
+  loopMode?: 'normal' | 'pingpong';
+  /** duração original do asset usado para calcular o loop ping-pong */
+  sourceDurationSec?: number;
+  /** imagem como elemento livre, ou mídia em tela cheia */
+  layout?: 'cover' | 'element';
+  /** posição do elemento em px a partir do centro */
+  x?: number;
+  y?: number;
+  /** escala do elemento */
+  scale?: number;
+  /** rotação em graus */
+  rotate?: number;
+  /** transição de entrada do elemento */
+  entryTransition?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-pop' | 'bounce-left';
+  /** duração da entrada em frames */
+  entryDurationFrames?: number;
+  /** wiggle contínuo de posição em px */
+  wigglePosition?: number;
+  /** wiggle contínuo de rotação em graus */
+  wiggleRotate?: number;
+  /** velocidade do wiggle */
+  wiggleSpeed?: number;
+  /** sombra do elemento */
+  shadowBlur?: number;
+  shadowOpacity?: number;
+  shadowColor?: string;
+  /** contorno por drop-shadow em PNG transparente */
+  outlineWidth?: number;
+  outlineColor?: string;
+  /** halo/degradê atrás do elemento */
+  gradientEnabled?: boolean;
+  gradientFrom?: string;
+  gradientTo?: string;
+  gradientOpacity?: number;
+  /** recolore PNG/SVG usando o alpha do asset como máscara */
+  tintEnabled?: boolean;
+  tintColor?: string;
+  tintOpacity?: number;
   /** label livre pra UI */
   label?: string;
 };
@@ -120,7 +169,12 @@ export type OverlayPlacement = {
  */
 export type BackgroundConfig = {
   videoSrc?: string;
+  mediaType?: 'video' | 'image';
   videoStartFrame?: number;
+  videoDurationSec?: number;
+  videoNeedsTrim?: boolean;
+  videoOriginalName?: string;
+  videoOriginalSize?: number;
   videoOpacity?: number;
   bgColor?: string;
   videoBlur?: number;
@@ -147,6 +201,10 @@ export type TextStyle = {
   color?: string;
   /** Se ativar gradiente nas letras */
   useGradient?: boolean;
+  /** Compatibilidade com o painel atual de degradê */
+  fillKind?: 'solid' | 'gradient';
+  gradientFrom?: string;
+  gradientTo?: string;
   /** Cor inicial do gradiente */
   gradientColor1?: string;
   /** Cor final do gradiente */
@@ -186,6 +244,8 @@ export type MotionConfig = {
   textOpacity?: number;
   /** Força atualização visual do Player sem resetar frame */
   previewNonce?: number;
+  /** No editor, evita que uma troca de transição deixe o texto totalmente invisível. */
+  previewMode?: boolean;
   fontDate?: string;
   fontCta?: string;
   fontCta1?: string;
@@ -218,10 +278,20 @@ export type MotionConfig = {
   transitionCta?: TextTransitionId;
   transitionCta1?: TextTransitionId;
   transitionCta2?: TextTransitionId;
+  /** Frame de entrada por texto */
+  headlineInFrame?: number;
+  dateInFrame?: number;
+  transitionTuningHeadline?: TextTransitionTuning;
+  transitionTuningDate?: TextTransitionTuning;
+  transitionTuningCta?: TextTransitionTuning;
+  transitionTuningCta1?: TextTransitionTuning;
+  transitionTuningCta2?: TextTransitionTuning;
   /** Wiggle individual por elemento (multiplica o global) */
   wiggleHeadline?: number;
   wiggleDate?: number;
   wiggleCta?: number;
+  wiggleCta1?: number;
+  wiggleCta2?: number;
   /** Estilo de cor por elemento de texto */
   styleHeadline?: TextStyle;
   styleDate?: TextStyle;
@@ -233,6 +303,9 @@ export type MotionConfig = {
   platformLogoSize?: number;
   platformLogoGap?: number;
   platformLogoScales?: Record<string, number>;
+  /** Pulso orgânico contínuo dos logos de plataforma. */
+  platformLogoWiggle?: number;
+  platformLogoWiggleSpeed?: number;
 
 
   /** Overlays na timeline */
@@ -245,6 +318,35 @@ export type MotionConfig = {
   cta2InFrame?: number;
   /** Timing da entrada dos logos */
   logosInFrame?: number;
+  // ─── Spotify Print: controles do celular ───────────────
+  /** Inclinação do celular (graus, -25 a 25) */
+  phoneTilt?: number;
+  /** Largura do celular em px (300-700) */
+  phoneSize?: number;
+  /** Offset X do celular */
+  phoneX?: number;
+  /** Offset Y do celular */
+  phoneY?: number;
+  /** Preset de entrada do celular */
+  phoneMotion?:
+    | 'zoom_bounce'
+    | 'slide_up'
+    | 'slide_down'
+    | 'slide_left'
+    | 'slide_right'
+    | 'flip_card'
+    | 'tilt_in_left'
+    | 'tilt_in_right'
+    | 'drop_in'
+    | 'stamp'
+    | 'diagonal_tl'
+    | 'diagonal_tr';
+  /** Voltas extra de rotateY (3D spin) */
+  phoneSpinTurns?: number;
+  /** Wiggle individual do celular (multiplica o global) */
+  phoneWiggle?: number;
+  /** Dynamic island (true) ou notch (false) */
+  phoneDynamicIsland?: boolean;
 };
 
 export type MotionProject = {

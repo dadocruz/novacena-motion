@@ -54,8 +54,6 @@ export const AudioUpload: React.FC<AudioUploadProps> = ({ className = '' }) => {
           },
         });
 
-        // Toast de sucesso
-        console.log('🎵 Áudio analisado:', audioAnalysis);
       } catch (error) {
         console.error('Erro ao analisar áudio:', error);
       }

@@ -11,6 +11,7 @@ export const TemplateIdSchema = z.enum([
   'watch_youtube',
   'milestone',
   'out_now',
+  'spotify_print',
   'collaborator',
 ]);
 
@@ -43,23 +44,26 @@ export const MotionConfigSchema = z
     fontHeadline: z.string().optional(),
     fontDate: z.string().optional(),
     fontCta: z.string().optional(),
-    coverSize: z.number().min(0.1).max(2).optional(),
+    fontCta1: z.string().optional(),
+    fontCta2: z.string().optional(),
+    coverSize: z.number().min(1).max(2000).optional(),
+    coverX: z.number().min(-1000).max(1000).optional(),
+    coverY: z.number().min(-1000).max(1000).optional(),
     spinTurns: z.number().min(0).max(5).optional(),
-    wiggleIntensity: z.number().min(0.5).max(2).optional(),
+    wiggleIntensity: z.number().min(0).max(10).optional(),
+    wiggleFrequency: z.number().min(0).max(20).optional(),
+    wiggleSeed: z.number().optional(),
     particlesEnabled: z.boolean().optional(),
     finalFlash: z.boolean().optional(),
     glowColor: z.string().optional(),
-    speed: z.number().min(0.5).max(2).optional(),
+    speed: z.number().min(0.1).max(5).optional(),
     durationSeconds: z.number().min(5).max(120).optional(),
-    background: z
-      .object({
-        overlay: z.number().min(0).max(1),
-        blur: z.number().min(0).max(20),
-      })
-      .optional(),
+    background: z.record(z.string(), z.unknown()).optional(),
     transitionHeadline: TextTransitionSchema.optional(),
     transitionDate: TextTransitionSchema.optional(),
     transitionCta: TextTransitionSchema.optional(),
+    transitionCta1: TextTransitionSchema.optional(),
+    transitionCta2: TextTransitionSchema.optional(),
     styleHeadline: z
       .object({
         color: z.string(),
@@ -67,26 +71,63 @@ export const MotionConfigSchema = z
         gradientColor1: z.string().optional(),
         gradientColor2: z.string().optional(),
       })
+      .passthrough()
       .optional(),
-    styleDate: z.string().optional(),
-    styleCta: z.string().optional(),
+    styleDate: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+    styleCta: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+    styleCta1: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+    styleCta2: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
     cta1InFrame: z.number().min(0).max(360).optional(),
     ctaSwapFrame: z.number().min(0).max(360).optional(),
     cta2InFrame: z.number().min(0).max(360).optional(),
     logosInFrame: z.number().min(0).max(360).optional(),
+    platformLogoSize: z.number().min(1).max(500).optional(),
+    platformLogoGap: z.number().min(0).max(500).optional(),
+    platformLogoWiggle: z.number().min(0).max(10).optional(),
+    platformLogoWiggleSpeed: z.number().min(0).max(10).optional(),
     customLogos: z.record(z.string(), z.string()).optional(),
     overlays: z
       .array(
         z.object({
           id: z.string(),
-          startFrame: z.number(),
-          endFrame: z.number(),
-          blendMode: z.enum(['normal', 'screen', 'overlay', 'lighten']),
-        })
+          src: z.string().optional(),
+          type: z.enum(['video', 'image']).optional(),
+          startSec: z.number().min(0).optional(),
+          durationSec: z.number().min(0).optional(),
+          opacity: z.number().min(0).max(1).optional(),
+          blendMode: z.enum(['normal', 'screen', 'overlay', 'lighten', 'soft-light']).optional(),
+          loopMode: z.enum(['normal', 'pingpong']).optional(),
+          sourceDurationSec: z.number().min(0).optional(),
+          layout: z.enum(['cover', 'element']).optional(),
+          x: z.number().optional(),
+          y: z.number().optional(),
+          scale: z.number().min(0).max(10).optional(),
+          rotate: z.number().optional(),
+          entryTransition: z.enum(['none', 'fade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'zoom-pop', 'bounce-left']).optional(),
+          entryDurationFrames: z.number().min(1).max(240).optional(),
+          wigglePosition: z.number().min(0).max(300).optional(),
+          wiggleRotate: z.number().min(0).max(180).optional(),
+          wiggleSpeed: z.number().min(0).max(10).optional(),
+          shadowBlur: z.number().min(0).max(200).optional(),
+          shadowOpacity: z.number().min(0).max(1).optional(),
+          shadowColor: z.string().optional(),
+          outlineWidth: z.number().min(0).max(80).optional(),
+          outlineColor: z.string().optional(),
+          gradientEnabled: z.boolean().optional(),
+          gradientFrom: z.string().optional(),
+          gradientTo: z.string().optional(),
+          gradientOpacity: z.number().min(0).max(1).optional(),
+          tintEnabled: z.boolean().optional(),
+          tintColor: z.string().optional(),
+          tintOpacity: z.number().min(0).max(1).optional(),
+          label: z.string().optional(),
+          startFrame: z.number().optional(),
+          endFrame: z.number().optional(),
+        }).passthrough()
       )
       .optional(),
   })
-  .strict();
+  .passthrough();
 
 // Media Config
 export const MediaConfigSchema = z.object({
@@ -118,13 +159,13 @@ export const MotionProjectSchema = z.object({
   headline: z.string().optional(),
   cta: z.string().optional(),
   cta2: z.string().optional(),
-  releaseDate: z.string().date().optional(),
+  releaseDate: z.string().optional(),
   channelName: z.string().optional(),
   metricPrefix: z.string().optional(),
-  metricNumber: z.number().optional(),
+  metricNumber: z.union([z.number(), z.string()]).optional(),
   metricLabel: z.string().optional(),
   platforms: z.array(PlatformNameSchema),
-  coverImage: z.string().url().or(z.string().startsWith('data:')),
+  coverImage: z.string().min(1),
   media: MediaConfigSchema.optional(),
   format: FormatConfigSchema,
   motion: MotionConfigSchema.optional(),
@@ -202,8 +243,7 @@ export function validateProject(data: unknown): MotionProject {
 export function validateProjectSafe(data: unknown): MotionProject | null {
   try {
     return MotionProjectSchema.parse(data);
-  } catch (error) {
-    console.error('Project validation failed:', error);
+  } catch {
     return null;
   }
 }

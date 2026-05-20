@@ -8,6 +8,7 @@ export const templateOrder: TemplateId[] = [
   'watch_youtube',
   'milestone',
   'out_now',
+  'spotify_print',
 ];
 
 export const templateLabels: Record<TemplateId, string> = {
@@ -15,6 +16,7 @@ export const templateLabels: Record<TemplateId, string> = {
   watch_youtube: 'Assista no YouTube',
   milestone: '100k / Milestone',
   out_now: 'Ouça Agora',
+  spotify_print: '📱 Spotify Print',
 };
 
 export function getProject(template: TemplateId): MotionProject {

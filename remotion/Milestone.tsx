@@ -7,13 +7,14 @@ import {
   eased,
   maskReveal,
   scaleInBack,
-  elegantWiggle,
+  previewSafeAnim,
 } from './motionEngine';
+import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
-import { resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
+import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
 
@@ -28,16 +29,19 @@ const FINAL_POSTER = 222;
 
 export const Milestone: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
-  const accents = [NUMBER_IN, MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(60, 220, 130, 0.32)');
+  const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
+  const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
+  const labelIn = props.motion?.cta1InFrame ?? LABEL_IN;
+  const logoIn = props.motion?.logosInFrame ?? LOGO_IN;
+  const accents = [numberIn, MID_HIT, FINAL_HIT];
 
-  const prefixMask = maskReveal(frame, PREFIX_IN, 24);
-  const numberAnim = scaleInBack(frame, NUMBER_IN, 26);
-  const numberChar = charStagger(frame, NUMBER_IN + 4, 1.4);
-  const labelMask = maskReveal(frame, LABEL_IN, 22);
-  const logoAnim = scaleInBack(frame, LOGO_IN, 18);
-
-  const wig = elegantWiggle(frame, { intensity: 0.6 * M.wiggleIntensity });
+  const previewMode = props.motion?.previewMode === true;
+  const prefixMask = previewSafeAnim(maskReveal(frame, prefixIn, 24), previewMode);
+  const numberAnim = previewSafeAnim(scaleInBack(frame, numberIn, 26), previewMode);
+  const numberChar = charStagger(frame, numberIn + 4, 1.4);
+  const labelMask = previewSafeAnim(maskReveal(frame, labelIn, 22), previewMode);
+  const logoAnim = previewSafeAnim(scaleInBack(frame, logoIn, 18), previewMode);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -51,7 +55,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   // Pulso de glow no número quando entra
   const numberGlow = interpolate(
     frame,
-    [NUMBER_IN, NUMBER_IN + 14, NUMBER_IN + 40],
+    [numberIn, numberIn + 14, numberIn + 40],
     [0, 1, 0],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
@@ -60,6 +64,31 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const numberText = props.metricNumber || '100.000';
   const labelText = props.metricLabel || 'OUVINTES';
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
+  const labelFont = findFont(
+    props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
+    props.motion?.customFonts ?? []
+  ) ?? M.fontCta;
+  const labelStyle = props.motion?.styleCta1 ?? props.motion?.styleCta;
+  const labelStroke = props.motion?.strokeCta1 ?? props.motion?.strokeCta ?? M.strokeCta;
+  const prefixWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleDate ?? 0.25) * M.wiggleIntensity,
+    frequency: 0.64,
+    seed: 70,
+  });
+  const numberWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleHeadline ?? 0.35) * M.wiggleIntensity,
+    frequency: 0.74,
+    seed: 10,
+  });
+  const labelWiggle = brazuWiggle(frame, {
+    amplitude: (props.motion?.wiggleCta1 ?? props.motion?.wiggleCta ?? 0.3) * M.wiggleIntensity,
+    frequency: 0.9,
+    seed: 130,
+  });
+  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
+    ...anim,
+    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
+  });
 
   return (
     <AbsoluteFill
@@ -69,7 +98,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
         overflow: 'hidden',
       }}
     >
-      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '']} />
+      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
       <CinematicBackground
         coverImage={props.coverImage}
         accentFrames={accents}
@@ -97,12 +126,12 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             fontSize: 50,
             fontWeight: M.fontDate.weight,
             letterSpacing: 2.5,
-            ...textStrokeStyle(M.strokeHeadline),
-              ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
+            ...textStrokeStyle(M.strokeDate),
+              ...(props.motion?.styleDate?.useGradient ? {} : textFillStyle(M.strokeDate)),
               textShadow: 'none',
             ...applyTextStyle(props.motion?.styleDate),
             ...(showAll ? {} : prefixMask),
-              ...userTextTransform(props.motion?.styleDate, prefixMask),
+              ...userTextTransform(props.motion?.styleDate, showAll ? { transform: prefixWiggle.transform } : mergeAnim(prefixMask, prefixWiggle.transform)),
           }}
         >
           {prefixText}
@@ -116,7 +145,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
 
             style={{
 
-              transform: `translate(${(M as any).coverX ?? 0}px, ${(M as any).coverY ?? 0}px)`,
+              transform: `translate(${props.motion?.coverX ?? 0}px, ${props.motion?.coverY ?? 0}px)`,
 
               willChange: 'transform',
 
@@ -143,7 +172,6 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
         <div
           style={{
             marginTop: 60,
-            transform: showAll ? undefined : `${wig.transform}`,
           }}
         >
           <div
@@ -156,8 +184,11 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               color: '#fff',
               textShadow: 'none',
               overflow: 'visible',
+              ...textStrokeStyle(M.strokeHeadline),
+              ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
               ...applyTextStyle(props.motion?.styleHeadline),
               ...(showAll ? {} : { opacity: numberAnim.opacity }),
+              ...userTextTransform(props.motion?.styleHeadline, { transform: numberWiggle.transform }),
             }}
           >
             {showAll
@@ -173,14 +204,17 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
         {/* LABEL */}
         <div
           style={{
-            fontFamily: ff(M.fontCta.family),
+            fontFamily: ff(labelFont.family),
             marginTop: 18,
             fontSize: 48,
-            fontWeight: M.fontCta.weight,
+            fontWeight: labelFont.weight,
             letterSpacing: 4,
             textShadow: 'none',
-            ...applyTextStyle(props.motion?.styleCta),
+            ...textStrokeStyle(labelStroke),
+            ...(labelStyle?.useGradient ? {} : textFillStyle(labelStroke)),
+            ...applyTextStyle(labelStyle),
             ...(showAll ? {} : labelMask),
+            ...userTextTransform(labelStyle, showAll ? { transform: labelWiggle.transform } : mergeAnim(labelMask, labelWiggle.transform)),
           }}
         >
           {labelText}

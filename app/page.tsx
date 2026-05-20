@@ -5,15 +5,10 @@ import {
   RIGHT_PANEL_PRESET_ORDER,
   SIMPLE_MODE_SECTIONS,
   STUDIO_TOOL_DOCK,
-  QUICK_ACTIONS,
   type StudioMode,
 } from '../lib/studioWorkflow';
 import FontsPanel, { type FontRole } from '../components/FontsPanel';
 
-import { AvailableNow } from '../remotion/AvailableNow';
-import { WatchOnYouTube } from '../remotion/WatchOnYouTube';
-import { Milestone } from '../remotion/Milestone';
-import { OutNow } from '../remotion/OutNow';
 import { Player } from '@remotion/player';
 import {
   type PlatformName,
@@ -23,227 +18,138 @@ import {
   type TemplateId,
   type RenderTarget,
   type TextTransitionId,
+  type TextTransitionTuning,
   type MotionConfig,
   type TemplateProps,
 } from '../remotion/types'
-import { TEXT_TRANSITIONS } from '../remotion/motionEngine';
 import {
   templateOrder,
   templateLabels,
   getProject,
 } from '../remotion/project';
 import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../lib/fontCatalog';
-// ============================================================
-// CONSTANTES
-// ============================================================
-const componentByTemplate = {
-  available_now: AvailableNow,
-  watch_youtube: WatchOnYouTube,
-  milestone: Milestone,
-  out_now: OutNow,
-};
 
-const allPlatforms: PlatformName[] = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'];
+import {
+  componentByTemplate,
+  allPlatforms,
+  GLOW_PRESETS,
+  BG_COLORS,
+  PLATFORMS,
+  COVER_MOTION_OPTIONS,
+  HEADLINE_STYLE_DEFAULTS,
+  DATE_STYLE_DEFAULTS,
+  CTA_STYLE_DEFAULTS,
+  CTA_TIMING_DEFAULTS,
+  DEFAULT_TEXT_WIGGLE_VALUES,
+  TEXT_IN_FRAME_DEFAULTS_BY_TEMPLATE,
+  TEXT_TRANSITION_PREVIEW_LEAD_FRAMES,
+  TEXT_TRANSITION_PREVIEW_LOOP_FRAMES,
+  COVER_TRANSITION_IN_FRAME,
+  COVER_TRANSITION_DURATION_FRAMES,
+  COVER_TRANSITION_PREVIEW_LEAD_FRAMES,
+  COVER_TRANSITION_PREVIEW_TAIL_FRAMES,
+  EDITOR_HISTORY_LIMIT,
+  DEFAULT_TEXT_TRANSITION_TUNING,
+  TRANSITION_TUNING_PRESETS,
+  mergeTextStyle,
+  clampTuningValue,
+  normalizeTextTransitionTuning,
+  createDefaultTransitionTuningState,
+  normalizeTransitionTuningState,
+  transitionTuningFromMotion,
+  cloneHistoryValue,
+  serializeEditorSnapshot,
+  parseEditorSnapshot,
+  pushHistorySnapshot,
+  normalizeAssetUrl,
+  normalizeCustomLogos,
+  isBlobUrl,
+  scrollToStudioSection,
+  renderScriptFor,
+  type ArtistRecord,
+  type GalleryItem,
+  type Photo,
+  type UserFontRecord,
+  type OverlayAsset,
+  type TextStyleState,
+  type TextPreviewRole,
+  type EditPreviewLoop,
+  type EditorHistorySnapshot,
+  type TextTransitionTuningState,
+  type StudioToolId,
+} from './editorConstants';
 
-const GLOW_PRESETS: { label: string; color: string }[] = [
-  { label: 'Roxo', color: 'rgba(190, 90, 255, 0.32)' },
-  { label: 'Laranja', color: 'rgba(255, 140, 60, 0.32)' },
-  { label: 'Verde', color: 'rgba(60, 220, 130, 0.32)' },
-  { label: 'Vermelho', color: 'rgba(255, 60, 60, 0.32)' },
-  { label: 'Azul', color: 'rgba(80, 140, 255, 0.32)' },
-  { label: 'Dourado', color: 'rgba(255, 200, 80, 0.32)' },
-  { label: 'Rosa', color: 'rgba(255, 90, 180, 0.32)' },
-  { label: 'Off-white', color: 'rgba(255, 255, 255, 0.20)' },
-];
+import {
+  topbarStyle,
+  separator,
+  topTab,
+  topTabActive,
+  leftSidebar,
+  rightSidebar,
+  centerStyle,
+  previewToolbarStyle,
+  renderBarStyle,
+  downloadVideoBtnStyle,
+  downloadVideoWideBtnStyle,
+  gridTwoCols,
+  uploadCardStyle,
+  uploadCardStyleSmall,
+  uploadThumbStyle,
+  primaryBtn,
+  renderBtnStyle,
+  ghostBtnStyle,
+  chip,
+  chipActive,
+  resetBtnStyle,
+  miniLabel,
+  miniInputLabel,
+  fieldInputStyle,
+  segBtn,
+  segBtnActive,
+  dashedUpload,
+  linkBtnDanger,
+  userFontRow,
+  overlayLibraryRow,
+  tinyAddBtn,
+  tinyDelBtn,
+  platformLogoRow,
+  colorInputStyle,
+  textBoxGridStyle,
+  miniNumberInputStyle,
+  tinyNumInput,
+  tinySelect,
+  photoDelBtn,
+  logBoxStyle,
+} from './editorStyles';
 
-const BG_COLORS = ['#000000', '#030205', '#0a0a14', '#1a0a2a', '#0a1a14', '#2a0a14', '#1a1a2a'];
-
-const PLATFORMS = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'] as const;
-
-const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
-  { value: 'zoom_bounce', label: 'Zoom Bounce — Intro impacto' },
-  { value: 'slide_up', label: 'Slide Up — Vem de baixo' },
-  { value: 'slide_left', label: 'Slide Left — Entra da esquerda' },
-  { value: 'slide_right', label: 'Slide Right — Entra da direita' },
-  { value: 'flip_card', label: 'Flip Card — Virada premium' },
-  { value: 'vinyl_reveal', label: 'Vinyl Reveal — Giro lateral' },
-];
-
-// ============================================================
-// TIPOS LOCAIS DE STATE
-// ============================================================
-type ArtistRecord = {
-  id: string;
-  slug: string;
-  name: string;
-  driveFolderPath?: string;
-};
-
-type GalleryItem = {
-  id: string;
-  title: string;
-  template: string;
-  thumbnailPath?: string;
-  createdAt: string;
-};
-
-type Photo = {
-  id: string;
-  filename: string;
-  path: string;
-  uploadedAt: string;
-};
-
-type UserFontRecord = {
-  id: string;
-  label: string;
-  filename: string;
-  family: string;
-  category: 'display' | 'sans' | 'special';
-  weight: number;
-};
-
-type OverlayAsset = {
-  id: string;
-  label: string;
-  path: string;
-  type: 'video' | 'image';
-  blendMode: 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal';
-};
-
-type TextStyleState = {
-  color: string;
-  useGradient: boolean;
-  gradientColor1: string;
-  gradientColor2: string;
-  gradientAngle: number;
-  letterSpacing?: number;
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  paddingTop?: number;
-  paddingRight?: number;
-  paddingBottom?: number;
-  paddingLeft?: number;
-  marginTop?: number;
-  marginRight?: number;
-  marginBottom?: number;
-  marginLeft?: number;
-};
-
-const HEADLINE_STYLE_DEFAULTS: TextStyleState = {
-  color: '#ffffff',
-  useGradient: false,
-  gradientColor1: '#b855ff',
-  gradientColor2: '#ff9244',
-  gradientAngle: 120,
-  letterSpacing: -2,
-  textAlign: 'center',
-  paddingTop: 0,
-  paddingRight: 0,
-  paddingBottom: 0,
-  paddingLeft: 0,
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: 0,
-  marginLeft: 0,
-};
-
-const DATE_STYLE_DEFAULTS: TextStyleState = {
-  color: '#ffffff',
-  useGradient: false,
-  gradientColor1: '#ffd06b',
-  gradientColor2: '#ff6e51',
-  gradientAngle: 120,
-  letterSpacing: 2.4,
-  textAlign: 'center',
-  paddingTop: 0,
-  paddingRight: 0,
-  paddingBottom: 0,
-  paddingLeft: 0,
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: 0,
-  marginLeft: 0,
-};
-
-const CTA_STYLE_DEFAULTS: TextStyleState = {
-  color: '#ffffff',
-  useGradient: false,
-  gradientColor1: '#ffffff',
-  gradientColor2: '#b855ff',
-  gradientAngle: 120,
-  letterSpacing: 2.4,
-  textAlign: 'center',
-  paddingTop: 0,
-  paddingRight: 0,
-  paddingBottom: 0,
-  paddingLeft: 0,
-  marginTop: 0,
-  marginRight: 0,
-  marginBottom: 0,
-  marginLeft: 0,
-};
-
-function mergeTextStyle(defaults: TextStyleState, style?: TextStyle): TextStyleState {
-  return {
-    ...defaults,
-    ...(style ?? {}),
-  };
-}
-
-const CTA_TIMING_DEFAULTS = {
-  cta1InFrame: 78,
-  ctaSwapFrame: 124,
-  cta2InFrame: 138,
-  logosInFrame: 158,
-} as const;
-
-
-function normalizeAssetUrl(src?: string): string | undefined {
-  if (!src) return src;
-  if (src.startsWith('/uploads/')) return src.replace('/uploads/', '/api/uploads/');
-  return src;
-}
-
-function normalizeCustomLogos(logos: Record<string, string>): Record<string, string> {
-  const next: Record<string, string> = {};
-  for (const [key, value] of Object.entries(logos)) {
-    next[key] = normalizeAssetUrl(value) ?? value;
-  }
-  return next;
-}
-
-function isBlobUrl(src?: string): boolean {
-  return !!src && src.startsWith('blob:');
-}
-
-
-type StudioToolId =
-  | 'cover'
-  | 'text'
-  | 'motion'
-  | 'cta'
-  | 'logos'
-  | 'overlay'
-  | 'render';
-
-
-function scrollToStudioSection(section?: string) {
-  if (!section || typeof window === 'undefined') return;
-
-  window.requestAnimationFrame(() => {
-    const el = document.querySelector(`[data-right-panel-section="${section}"]`);
-    if (el instanceof HTMLElement) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-}
-
+import {
+  DragSlider,
+  BrandSmall,
+  ArtistSelector,
+  ArtistModal,
+  GalleryView,
+  OverlayTimeline,
+  TextColorEditor,
+  TextLayoutEditor,
+  NumberBox,
+  Section,
+  SliderRow,
+  TextAreaField,
+  Field,
+  TemplateButton,
+  ChipButton,
+  SegmentedControl,
+  ToggleRow,
+  FontPicker,
+} from '../components/editor';
 
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
 export default function Home() {
+  const [isClientReady, setIsClientReady] = useState(false);
   const [activeStudioTool, setActiveStudioTool] = useState<StudioToolId>('cover');
+  const [activeTextRole, setActiveTextRole] = useState<FontRole>('headline');
   // ─── ARTISTA ──────────────────────────────────────────────
   const [artists, setArtists] = useState<ArtistRecord[]>([]);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -252,107 +158,193 @@ export default function Home() {
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [driveFolderPath, setDriveFolderPath] = useState('');
+  const factoryAvailableNow = getProject('available_now') as any;
+  const factoryMotion = (factoryAvailableNow.motion ?? {}) as MotionConfig & Record<string, any>;
+  const factoryBackground = (factoryMotion.background ?? {}) as Record<string, any>;
+  const factoryPosterFrame = (factoryAvailableNow.posterFrame ?? {}) as Record<string, any>;
+  const factoryStyleHeadline = (factoryMotion.styleHeadline ?? {}) as Record<string, any>;
+  const factoryStyleDate = (factoryMotion.styleDate ?? {}) as Record<string, any>;
+  const factoryStyleCta = (factoryMotion.styleCta ?? {}) as Record<string, any>;
+  const factoryStyleCta1 = (factoryMotion.styleCta1 ?? factoryMotion.styleCta ?? {}) as Record<string, any>;
+  const factoryStyleCta2 = (factoryMotion.styleCta2 ?? factoryMotion.styleCta ?? {}) as Record<string, any>;
+  const styleNumber = (style: Record<string, any>, key: string, fallback: number) =>
+    typeof style[key] === 'number' ? style[key] : fallback;
+  const factoryTextMetrics = {
+    scale: {
+      headline: styleNumber(factoryStyleHeadline, 'scale', 1),
+      date: styleNumber(factoryStyleDate, 'scale', 1),
+      cta: styleNumber(factoryStyleCta, 'scale', 1),
+      cta1: styleNumber(factoryStyleCta1, 'scale', 1),
+      cta2: styleNumber(factoryStyleCta2, 'scale', 1),
+    },
+    letterSpacing: {
+      headline: styleNumber(factoryStyleHeadline, 'letterSpacing', 0),
+      date: styleNumber(factoryStyleDate, 'letterSpacing', 0),
+      cta: styleNumber(factoryStyleCta, 'letterSpacing', 0),
+      cta1: styleNumber(factoryStyleCta1, 'letterSpacing', 0),
+      cta2: styleNumber(factoryStyleCta2, 'letterSpacing', 0),
+    },
+    lineHeight: {
+      headline: styleNumber(factoryStyleHeadline, 'lineHeight', 1.2),
+      date: styleNumber(factoryStyleDate, 'lineHeight', 1.2),
+      cta: styleNumber(factoryStyleCta, 'lineHeight', 1.3),
+      cta1: styleNumber(factoryStyleCta1, 'lineHeight', 1.3),
+      cta2: styleNumber(factoryStyleCta2, 'lineHeight', 1.3),
+    },
+    offsetX: {
+      headline: styleNumber(factoryStyleHeadline, 'offsetX', 0),
+      date: styleNumber(factoryStyleDate, 'offsetX', 0),
+      cta: styleNumber(factoryStyleCta, 'offsetX', 0),
+      cta1: styleNumber(factoryStyleCta1, 'offsetX', 0),
+      cta2: styleNumber(factoryStyleCta2, 'offsetX', 0),
+    },
+    offsetY: {
+      headline: styleNumber(factoryStyleHeadline, 'offsetY', 0),
+      date: styleNumber(factoryStyleDate, 'offsetY', 0),
+      cta: styleNumber(factoryStyleCta, 'offsetY', 0),
+      cta1: styleNumber(factoryStyleCta1, 'offsetY', 0),
+      cta2: styleNumber(factoryStyleCta2, 'offsetY', 0),
+    },
+  };
 
   // ─── PROJETO ──────────────────────────────────────────────
   const [template, setTemplate] = useState<TemplateId>('available_now');
   const [target, setTarget] = useState<RenderTarget>('story');
   const [showSafeArea, setShowSafeArea] = useState(false);
 
-  const [releaseDate, setReleaseDate] = useState(getProject('available_now').releaseDate ?? '');
-  const [coverImage, setCoverImage] = useState(getProject('available_now').coverImage);
-  const [headline, setHeadline] = useState(getProject('available_now').headline);
-  const [cta, setCta] = useState(getProject('available_now').cta);
-  const [cta2, setCta2] = useState(getProject('available_now').cta2 ?? getProject('available_now').cta);
-  const [showCta1, setShowCta1] = useState(true);
-  const [showCta2, setShowCta2] = useState(true);
+  const [releaseDate, setReleaseDate] = useState(factoryAvailableNow.releaseDate ?? '');
+  const [coverImage, setCoverImage] = useState(factoryAvailableNow.coverImage);
+  const [headline, setHeadline] = useState(factoryAvailableNow.headline);
+  const [cta, setCta] = useState(factoryAvailableNow.cta);
+  const [cta2, setCta2] = useState(factoryAvailableNow.cta2 ?? factoryAvailableNow.cta);
+  const [showCta1, setShowCta1] = useState<boolean>(factoryAvailableNow.showCta1 ?? true);
+  const [showCta2, setShowCta2] = useState<boolean>(factoryAvailableNow.showCta2 ?? true);
 
-  const [channelName, setChannelName] = useState(getProject('available_now').channelName ?? '');
-  const [metricPrefix, setMetricPrefix] = useState(getProject('available_now').metricPrefix ?? 'ULTRAPASSAMOS');
-  const [metricNumber, setMetricNumber] = useState(getProject('available_now').metricNumber ?? '100.000');
-  const [metricLabel, setMetricLabel] = useState(getProject('available_now').metricLabel ?? 'OUVINTES');
-  const [platformsSel, setPlatformsSel] = useState<PlatformName[]>(getProject('available_now').platforms);
+  const [channelName, setChannelName] = useState(factoryAvailableNow.channelName ?? '');
+  const [metricPrefix, setMetricPrefix] = useState(factoryAvailableNow.metricPrefix ?? 'ULTRAPASSAMOS');
+  const [metricNumber, setMetricNumber] = useState(factoryAvailableNow.metricNumber ?? '100.000');
+  const [metricLabel, setMetricLabel] = useState(factoryAvailableNow.metricLabel ?? 'OUVINTES');
+  const [platformsSel, setPlatformsSel] = useState<PlatformName[]>(factoryAvailableNow.platforms);
 
   // ─── MOTION CONFIG ────────────────────────────────────────
-  const [fontHeadline, setFontHeadline] = useState<string>(DEFAULT_FONTS.headline);
-  const [fontDate, setFontDate] = useState<string>(DEFAULT_FONTS.date);
-  const [fontCta, setFontCta] = useState<string>(DEFAULT_FONTS.cta);
-  const [fontCta1, setFontCta1] = useState<string>(DEFAULT_FONTS.cta);
-  const [fontCta2, setFontCta2] = useState<string>(DEFAULT_FONTS.cta);
-  const [coverSize, setCoverSize] = useState<number>(510);
-  const [coverY, setCoverY] = useState<number>(0);
-  const [coverX, setCoverX] = useState<number>(0);
-  const [coverMotion, setCoverMotion] = useState<CoverMotionId>('zoom_bounce');
-  const [spinTurns, setSpinTurns] = useState<number>(2);
-  const [wiggleIntensity, setWiggleIntensity] = useState<number>(1);
-  const [wiggleH, setWiggleH] = useState<number>(0);
-  const [wiggleD, setWiggleD] = useState<number>(0);
-  const [wiggleC, setWiggleC] = useState<number>(0);
-  const [particlesEnabled, setParticlesEnabled] = useState<boolean>(true);
-  const [finalFlash, setFinalFlash] = useState<boolean>(true);
-  const [glowColor, setGlowColor] = useState<string>(GLOW_PRESETS[0].color);
+  const [fontHeadline, setFontHeadline] = useState<string>(factoryMotion.fontHeadline ?? DEFAULT_FONTS.headline);
+  const [fontDate, setFontDate] = useState<string>(factoryMotion.fontDate ?? DEFAULT_FONTS.date);
+  const [fontCta, setFontCta] = useState<string>(factoryMotion.fontCta ?? DEFAULT_FONTS.cta);
+  const [fontCta1, setFontCta1] = useState<string>(factoryMotion.fontCta1 ?? factoryMotion.fontCta ?? DEFAULT_FONTS.cta);
+  const [fontCta2, setFontCta2] = useState<string>(factoryMotion.fontCta2 ?? factoryMotion.fontCta ?? DEFAULT_FONTS.cta);
+  const [coverSize, setCoverSize] = useState<number>(factoryMotion.coverSize ?? 510);
+  const [coverY, setCoverY] = useState<number>(factoryMotion.coverY ?? 0);
+  const [coverX, setCoverX] = useState<number>(factoryMotion.coverX ?? 0);
+  const [coverMotion, setCoverMotion] = useState<CoverMotionId>(factoryMotion.coverMotion ?? 'zoom_bounce');
+  // ─── Controles do Celular (template spotify_print) ──────
+  const [phoneSize, setPhoneSize] = useState<number>(520);
+  const [phoneX, setPhoneX] = useState<number>(0);
+  const [phoneY, setPhoneY] = useState<number>(0);
+  const [phoneTilt, setPhoneTilt] = useState<number>(-6);
+  const [phoneMotion, setPhoneMotion] = useState<
+    | 'zoom_bounce' | 'slide_up' | 'slide_down' | 'slide_left' | 'slide_right'
+    | 'flip_card' | 'tilt_in_left' | 'tilt_in_right' | 'drop_in' | 'stamp'
+    | 'diagonal_tl' | 'diagonal_tr'
+  >('zoom_bounce');
+  const [phoneSpinTurns, setPhoneSpinTurns] = useState<number>(0);
+  const [phoneWiggle, setPhoneWiggle] = useState<number>(0.7);
+  const [phoneDynamicIsland, setPhoneDynamicIsland] = useState<boolean>(true);
+  const [spinTurns, setSpinTurns] = useState<number>(factoryMotion.spinTurns ?? 2);
+  const [wiggleIntensity, setWiggleIntensity] = useState<number>(factoryMotion.wiggleIntensity ?? 1);
+  const [wiggleH, setWiggleH] = useState<number>(factoryMotion.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
+  const [wiggleD, setWiggleD] = useState<number>(factoryMotion.wiggleDate ?? DEFAULT_TEXT_WIGGLE_VALUES.date);
+  const [wiggleC, setWiggleC] = useState<number>(factoryMotion.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta);
+  const [wiggleCta1, setWiggleCta1] = useState<number>(factoryMotion.wiggleCta1 ?? factoryMotion.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta1);
+  const [wiggleCta2, setWiggleCta2] = useState<number>(factoryMotion.wiggleCta2 ?? factoryMotion.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta2);
+  const [particlesEnabled, setParticlesEnabled] = useState<boolean>(factoryMotion.particlesEnabled ?? true);
+  const [finalFlash, setFinalFlash] = useState<boolean>(factoryMotion.finalFlash ?? true);
+  const [glowColor, setGlowColor] = useState<string>(factoryMotion.glowColor ?? GLOW_PRESETS[0].color);
 
   // Transições
-  const [trHeadline, setTrHeadline] = useState<TextTransitionId>('mask_reveal');
-  const [trDate, setTrDate] = useState<TextTransitionId>('scale_pop');
-  const [trCta, setTrCta] = useState<TextTransitionId>('split_letters');
-  const [trCta1, setTrCta1] = useState<TextTransitionId>('scale_pop');
-  const [trCta2, setTrCta2] = useState<TextTransitionId>('split_letters');
+  const [trHeadline, setTrHeadline] = useState<TextTransitionId>(factoryMotion.transitionHeadline ?? 'mask_reveal');
+  const [trDate, setTrDate] = useState<TextTransitionId>(factoryMotion.transitionDate ?? 'scale_pop');
+  const [trCta, setTrCta] = useState<TextTransitionId>(factoryMotion.transitionCta ?? 'split_letters');
+  const [trCta1, setTrCta1] = useState<TextTransitionId>(factoryMotion.transitionCta1 ?? factoryMotion.transitionCta ?? 'scale_pop');
+  const [trCta2, setTrCta2] = useState<TextTransitionId>(factoryMotion.transitionCta2 ?? factoryMotion.transitionCta ?? 'split_letters');
+  const [transitionTuning, setTransitionTuning] = useState<TextTransitionTuningState>(() =>
+    transitionTuningFromMotion(factoryMotion)
+  );
 
   // Estilo de texto (cor + gradiente) por elemento
   const [styleHeadline, setStyleHeadline] = useState<TextStyleState>({
-    ...HEADLINE_STYLE_DEFAULTS,
+    ...mergeTextStyle(HEADLINE_STYLE_DEFAULTS, factoryMotion.styleHeadline as TextStyle),
   });
   const [styleDate, setStyleDate] = useState<TextStyleState>({
-    ...DATE_STYLE_DEFAULTS,
+    ...mergeTextStyle(DATE_STYLE_DEFAULTS, factoryMotion.styleDate as TextStyle),
   });
   const [styleCta, setStyleCta] = useState<TextStyleState>({
-    ...CTA_STYLE_DEFAULTS,
+    ...mergeTextStyle(CTA_STYLE_DEFAULTS, factoryMotion.styleCta as TextStyle),
   });
   const [styleCta1, setStyleCta1] = useState<TextStyleState>({
-    ...CTA_STYLE_DEFAULTS,
+    ...mergeTextStyle(CTA_STYLE_DEFAULTS, (factoryMotion.styleCta1 ?? factoryMotion.styleCta) as TextStyle),
   });
   const [styleCta2, setStyleCta2] = useState<TextStyleState>({
-    ...CTA_STYLE_DEFAULTS,
+    ...mergeTextStyle(CTA_STYLE_DEFAULTS, (factoryMotion.styleCta2 ?? factoryMotion.styleCta) as TextStyle),
   });
-  const [cta1InFrame, setCta1InFrame] = useState<number>(CTA_TIMING_DEFAULTS.cta1InFrame);
-  const [ctaSwapFrame, setCtaSwapFrame] = useState<number>(CTA_TIMING_DEFAULTS.ctaSwapFrame);
-  const [cta2InFrame, setCta2InFrame] = useState<number>(CTA_TIMING_DEFAULTS.cta2InFrame);
-  const [logosInFrame, setLogosInFrame] = useState<number>(CTA_TIMING_DEFAULTS.logosInFrame);
+  const [cta1InFrame, setCta1InFrame] = useState<number>(factoryMotion.cta1InFrame ?? CTA_TIMING_DEFAULTS.cta1InFrame);
+  const [ctaSwapFrame, setCtaSwapFrame] = useState<number>(factoryMotion.ctaSwapFrame ?? CTA_TIMING_DEFAULTS.ctaSwapFrame);
+  const [cta2InFrame, setCta2InFrame] = useState<number>(factoryMotion.cta2InFrame ?? CTA_TIMING_DEFAULTS.cta2InFrame);
+  const [textInFrames, setTextInFrames] = useState<Partial<Record<TextPreviewRole, number>>>({
+    headline: factoryMotion.headlineInFrame,
+    date: factoryMotion.dateInFrame,
+    cta1: factoryMotion.cta1InFrame,
+    cta2: factoryMotion.cta2InFrame,
+  });
+  const [logosInFrame, setLogosInFrame] = useState<number>(factoryMotion.logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
+
+  const textTimingDefaults = TEXT_IN_FRAME_DEFAULTS_BY_TEMPLATE[template] ?? TEXT_IN_FRAME_DEFAULTS_BY_TEMPLATE.available_now;
+  const effectiveTextInFrames: Record<TextPreviewRole, number> = {
+    headline: textInFrames.headline ?? textTimingDefaults.headline,
+    date: textInFrames.date ?? textTimingDefaults.date,
+    cta1: textInFrames.cta1 ?? (template === 'available_now' ? cta1InFrame : textTimingDefaults.cta1),
+    cta2: textInFrames.cta2 ?? (template === 'available_now' ? cta2InFrame : textTimingDefaults.cta2),
+  };
 
   // Project settings
-  const [durationSeconds, setDurationSeconds] = useState<number>(8);
+  const [durationSeconds, setDurationSeconds] = useState<number>(
+    factoryAvailableNow.durationSeconds ?? factoryMotion.durationSeconds ?? 8
+  );
 
   // Capa/poster oficial do arquivo renderizado.
   // O MP4 final pode começar e terminar com esse frame congelado.
-  const [posterFrameEnabled, setPosterFrameEnabled] = useState<boolean>(false);
-  const [posterFrameSec, setPosterFrameSec] = useState<number>(3);
-  const [posterHoldSec, setPosterHoldSec] = useState<number>(1);
-  const [posterOutroEnabled, setPosterOutroEnabled] = useState<boolean>(true);
-  const [bgVideo, setBgVideo] = useState<string>('');
-  const [bgVideoStartSec, setBgVideoStartSec] = useState<number>(0);
-  const [bgVideoDuration, setBgVideoDuration] = useState<number>(0);
-  const [bgVideoOpacity, setBgVideoOpacity] = useState<number>(1);
-  const [bgColor, setBgColor] = useState<string>('#030205');
-  const [bgVideoBlur, setBgVideoBlur] = useState<number>(22);
-  const [bgVideoSaturation, setBgVideoSaturation] = useState<number>(1.15);
+  const [posterFrameEnabled, setPosterFrameEnabled] = useState<boolean>(factoryPosterFrame.enabled ?? false);
+  const [posterFrameSec, setPosterFrameSec] = useState<number>(factoryPosterFrame.frameSec ?? 3);
+  const [posterHoldSec, setPosterHoldSec] = useState<number>(factoryPosterFrame.holdSec ?? 1);
+  const [posterOutroEnabled, setPosterOutroEnabled] = useState<boolean>(factoryPosterFrame.outroEnabled ?? true);
+  const [bgVideo, setBgVideo] = useState<string>(factoryBackground.videoSrc ?? '');
+  const [bgVideoStartSec, setBgVideoStartSec] = useState<number>(
+    typeof factoryBackground.videoStartFrame === 'number' ? factoryBackground.videoStartFrame / 30 : 0
+  );
+  const [bgVideoDuration, setBgVideoDuration] = useState<number>(factoryBackground.videoDurationSec ?? 0);
+  const [bgVideoNeedsTrim, setBgVideoNeedsTrim] = useState<boolean>(factoryBackground.videoNeedsTrim ?? false);
+  const [bgVideoOriginalName, setBgVideoOriginalName] = useState<string>(factoryBackground.videoOriginalName ?? '');
+  const [bgVideoOpacity, setBgVideoOpacity] = useState<number>(factoryBackground.videoOpacity ?? 1);
+  const [bgColor, setBgColor] = useState<string>(factoryBackground.bgColor ?? '#030205');
+  const [bgVideoBlur, setBgVideoBlur] = useState<number>(factoryBackground.videoBlur ?? 22);
+  const [bgVideoSaturation, setBgVideoSaturation] = useState<number>(factoryBackground.videoSaturation ?? 1.15);
 
   // ─── ÁUDIO ────────────────────────────────────────────────
-  const [audioSrc, setAudioSrc] = useState<string>('');
-  const [audioStartSec, setAudioStartSec] = useState<number>(0);
-  const [audioVolume, setAudioVolume] = useState<number>(0.8);
-  const [audioFadeIn, setAudioFadeIn] = useState<number>(0.5);
-  const [audioFadeOut, setAudioFadeOut] = useState<number>(1);
+  const [audioSrc, setAudioSrc] = useState<string>(factoryBackground.audioSrc ?? '');
+  const [audioStartSec, setAudioStartSec] = useState<number>(factoryBackground.audioStartSec ?? 0);
+  const [audioVolume, setAudioVolume] = useState<number>(factoryBackground.audioVolume ?? 0.8);
+  const [audioFadeIn, setAudioFadeIn] = useState<number>(factoryBackground.audioFadeInSec ?? 0.5);
+  const [audioFadeOut, setAudioFadeOut] = useState<number>(factoryBackground.audioFadeOutSec ?? 1);
   // Audio do BG ligado por padrao. Toggle vira mute.
-  const [useVideoAudio, setUseVideoAudio] = useState<boolean>(true);
+  const [useVideoAudio, setUseVideoAudio] = useState<boolean>(factoryBackground.useVideoAudio ?? true);
   const [audioDuration, setAudioDuration] = useState<number>(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
 
   // ─── LOGOS CUSTOMIZADOS POR PLATAFORMA ────────────────────
-  const [customLogos, setCustomLogos] = useState<Record<string, string>>({});
-  const [platformLogoSize, setPlatformLogoSize] = useState<number>(58);
-  const [platformLogoGap, setPlatformLogoGap] = useState<number>(22);
-  const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>({});
+  const [customLogos, setCustomLogos] = useState<Record<string, string>>(factoryMotion.customLogos ?? {});
+  const [platformLogoSize, setPlatformLogoSize] = useState<number>(factoryMotion.platformLogoSize ?? 58);
+  const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 22);
+  const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
   const platformLogoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Overlays
@@ -372,22 +364,114 @@ export default function Home() {
   const [renderLog, setRenderLog] = useState('');
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [processingVideoClip, setProcessingVideoClip] = useState(false);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
+  const [bgTrimPreviewTime, setBgTrimPreviewTime] = useState(0);
+  const [bgTrimTimecodeInput, setBgTrimTimecodeInput] = useState('00:00.0');
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery'>('studio');
   const [studioMode, setStudioMode] = useState<StudioMode>('simple');
   const [typoSubTab, setTypoSubTab] = React.useState<'char'|'layout'>('char');
   const [textPanelTab, setTextPanelTab] = useState<'fontes' | 'entrada' | 'cor' | 'layout'>('fontes');
   const [showArtistModal, setShowArtistModal] = useState(false);
 
+  // ─── Gênero / IA / Template Builder ──────────────────────
+  type GenrePreset = {
+    id: string;
+    label: string;
+    description: string;
+    accentColor: string;
+    config: Record<string, any>;
+  };
+  type SavedTemplatePreset = {
+    id: string;
+    name: string;
+    config: Record<string, any>;
+    createdAt?: number;
+    thumbnail?: string;
+  };
+  const [genrePresets, setGenrePresets] = useState<GenrePreset[]>([]);
+  const [activeGenreId, setActiveGenreId] = useState<string | null>(null);
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplatePreset[]>([]);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+  const [aiBgBusy, setAiBgBusy] = useState(false);
+  const [aiBgMessage, setAiBgMessage] = useState('');
+  // Decisões da IA (mostradas no painel pra usuário ver o que foi aplicado)
+  type AiDecision = {
+    field: string;
+    label: string;
+    chosen: string;
+    applied: boolean;
+    reason?: string;
+  };
+  const [aiDecisions, setAiDecisions] = useState<AiDecision[]>([]);
+  const [aiRationale, setAiRationale] = useState('');
+  const [aiDecisionsOpen, setAiDecisionsOpen] = useState(false);
+  // Pipeline (cascata otimizada Gemini→GPT→Claude)
+  type PipelineStep = { stage: string; provider: string; durationMs: number; costEstimateUsd: number; cached: boolean; ok: boolean };
+  const [aiPipeline, setAiPipeline] = useState<PipelineStep[]>([]);
+  const [aiTotalCost, setAiTotalCost] = useState(0);
+  // Referência de motion (PNG/JPG)
+  const [aiReferenceUrl, setAiReferenceUrl] = useState<string>('');
+  const [aiReferenceAnalysis, setAiReferenceAnalysis] = useState<string>('');
+  const [aiReferenceBusy, setAiReferenceBusy] = useState(false);
+  const aiReferenceInputRef = useRef<HTMLInputElement | null>(null);
+  type AiProviderInfo = { id: string; label: string; available: boolean };
+  const [aiProviders, setAiProviders] = useState<AiProviderInfo[]>([]);
+  const aiConfigured = aiProviders.some((p) => p.available && p.id !== 'mock');
+  const [templateBuilderName, setTemplateBuilderName] = useState('');
+  const [templateBuilderBusy, setTemplateBuilderBusy] = useState(false);
+  const [templateBuilderMessage, setTemplateBuilderMessage] = useState('');
+  const [templatesMenuOpen, setTemplatesMenuOpen] = useState(false);
+
   const playerRef = useRef<any>(null);
-  const [txScale, setTxScale] = React.useState<Record<string,number>>({ headline:1, date:1, cta:1, cta1:1, cta2:1 });
-  const [txLS, setTxLS] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
-  const [txLH, setTxLH] = React.useState<Record<string,number>>({ headline:1.2, date:1.2, cta:1.3, cta1:1.3, cta2:1.3 });
-  const [txOX, setTxOX] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
-  const [txOY, setTxOY] = React.useState<Record<string,number>>({ headline:0 as number, date:0 as number, cta:0 as number, cta1:0 as number, cta2:0 as number });
-  const [txAlign, setTxAlign] = React.useState<Record<string,string>>({ headline:'center', date:'center', cta:'center' } as Record<string,string>);
+  const previewFrameRef = useRef<HTMLDivElement | null>(null);
+  const lastTextPreviewRoleRef = useRef<TextPreviewRole>('headline');
+  const previewDragRef = useRef<{
+    layerId: string;
+    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element';
+    role?: FontRole;
+    overlayId?: string;
+    mode?: 'move' | 'scale';
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    startOffsetX: number;
+    startOffsetY: number;
+    startScale?: number;
+    previewWidth: number;
+    previewHeight: number;
+    moved: boolean;
+  } | null>(null);
+  const suppressPreviewClickRef = useRef(false);
+  const [editPreviewLoop, setEditPreviewLoop] = useState<EditPreviewLoop | null>(null);
+  const [previewDraggingLayerId, setPreviewDraggingLayerId] = useState<string | null>(null);
+  const [editingPreviewTextRole, setEditingPreviewTextRole] = useState<FontRole | null>(null);
+  const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
+  const [txScale, setTxScale] = React.useState<Record<string,number>>(factoryTextMetrics.scale);
+  const [txLS, setTxLS] = React.useState<Record<string,number>>(factoryTextMetrics.letterSpacing);
+  const [txLH, setTxLH] = React.useState<Record<string,number>>(factoryTextMetrics.lineHeight);
+  const [txOX, setTxOX] = React.useState<Record<string,number>>(factoryTextMetrics.offsetX);
+  const [txOY, setTxOY] = React.useState<Record<string,number>>(factoryTextMetrics.offsetY);
+  const [txAlign, setTxAlign] = React.useState<Record<string,string>>({
+    headline: factoryStyleHeadline.textAlign ?? 'center',
+    date: factoryStyleDate.textAlign ?? 'center',
+    cta: factoryStyleCta.textAlign ?? 'center',
+    cta1: factoryStyleCta1.textAlign ?? 'center',
+    cta2: factoryStyleCta2.textAlign ?? 'center',
+  } as Record<string,string>);
   function updTxN(setter: React.Dispatch<React.SetStateAction<Record<string,number>>>, key: string, val: number) {
     setter(prev => ({ ...prev, [key]: val }));
+  }
+
+  function applyTextMetricsFromStyle(role: string, style?: Record<string, any>) {
+    if (!style) return;
+
+    if (typeof style.scale === 'number') setTxScale((prev) => ({ ...prev, [role]: style.scale }));
+    if (typeof style.letterSpacing === 'number') setTxLS((prev) => ({ ...prev, [role]: style.letterSpacing }));
+    if (typeof style.lineHeight === 'number') setTxLH((prev) => ({ ...prev, [role]: style.lineHeight }));
+    if (typeof style.offsetX === 'number') setTxOX((prev) => ({ ...prev, [role]: style.offsetX }));
+    if (typeof style.offsetY === 'number') setTxOY((prev) => ({ ...prev, [role]: style.offsetY }));
   }
   function updTxS(setter: React.Dispatch<React.SetStateAction<Record<string,string>>>, key: string, val: string) {
     setter(prev => ({ ...prev, [key]: val }));
@@ -454,12 +538,64 @@ export default function Home() {
 
 
   // ── Atalho Space: play/pause ──────────────────────────────
+  const releaseEditPreviewLoopAndPlayFull = useCallback(() => {
+    setEditPreviewLoop(null);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          playerRef.current?.seekTo?.(0);
+          playerRef.current?.play?.();
+        } catch {
+          // fallback silencioso
+        }
+      });
+    });
+  }, []);
+
+  function restartPlayerFromZero() {
+    setEditPreviewLoop(null);
+
+    requestAnimationFrame(() => {
+      try {
+        playerRef.current?.seekTo?.(0);
+      } catch {
+        // fallback silencioso
+      }
+    });
+  }
+
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
+      const key = e.key.toLowerCase();
+      const wantsEditorUndo = (e.metaKey || e.ctrlKey) && key === 'z';
+
+      if (wantsEditorUndo) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redoEditorAction();
+        } else {
+          undoEditorAction();
+        }
+        return;
+      }
+
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.code === 'Backslash' || e.key === '\\') {
+        e.preventDefault();
+        restartPlayerFromZero();
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
+        if (editPreviewLoop) {
+          releaseEditPreviewLoopAndPlayFull();
+          return;
+        }
+
         const player = playerRef.current as any;
         if (!player) return;
         if (player.isPlaying?.()) {
@@ -471,15 +607,33 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [editPreviewLoop, releaseEditPreviewLoopAndPlayFull]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const bgImageInputRef = useRef<HTMLInputElement | null>(null);
+  const bgTrimVideoRef = useRef<HTMLVideoElement | null>(null);
+  const bgTrimSelectionEndRef = useRef<number | null>(null);
   const photoMultiRef = useRef<HTMLInputElement | null>(null);
   const fontInputRef = useRef<HTMLInputElement | null>(null);
   const overlayInputRef = useRef<HTMLInputElement | null>(null);
 
   // ─── EFEITOS ─────────────────────────────────────────────
+  useEffect(() => {
+    setIsClientReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!bgVideo || bgVideoDuration <= 0) return;
+    const maxStart = Math.max(0, bgVideoNeedsTrim ? bgVideoDuration - Math.min(durationSeconds, 40) : bgVideoDuration);
+    setBgVideoStartSec((current) => Math.min(current, maxStart));
+  }, [bgVideo, bgVideoDuration, bgVideoNeedsTrim, durationSeconds]);
+
+  useEffect(() => {
+    setBgTrimTimecodeInput(formatTimecode(bgVideoStartSec));
+    if (bgVideoNeedsTrim) setBgTrimPreviewTime(bgVideoStartSec);
+  }, [bgVideoStartSec, bgVideoNeedsTrim]);
+
   // Carregar favoritos de fontes
   useEffect(() => {
     try {
@@ -528,6 +682,12 @@ export default function Home() {
     fetch('/api/upload-overlay')
       .then((r) => r.json())
       .then((d) => d.ok && setOverlayAssets(d.overlays));
+    loadSavedTemplates();
+    // AI providers disponíveis (Anthropic/OpenAI/Gemini com base nas env vars)
+    fetch('/api/ai/providers')
+      .then((r) => r.json())
+      .then((d) => d.ok && setAiProviders(d.providers))
+      .catch(() => {});
     // platform logos
     fetch('/api/platform-logos')
       .then((r) => r.json())
@@ -673,7 +833,7 @@ export default function Home() {
   const allFonts: FontDef[] = useMemo(
     () => {
       const user = userFonts.map(userFontToFontDef);
-      const merged = [...user, ...FONT_CATALOG];
+      const merged = [...FONT_CATALOG, ...user];
       const seen = new Set<string>();
       return merged.filter((f) => {
         if (seen.has(f.id)) return false;
@@ -728,6 +888,8 @@ export default function Home() {
   }
 
   async function applyFontTo(role: FontRole, id: string) {
+    stopTransitionPreviewLoopForManualEdit();
+
     if (role === 'headline') {
       setFontHeadline(id);
       return;
@@ -793,22 +955,323 @@ export default function Home() {
     opacity: 1,
     fillOpacity: 1,
   };
+  const textStrokeFromFactory = (stroke?: Record<string, any>) => ({ ...defaultTextStroke, ...(stroke ?? {}) });
 
-  const [strokeHeadline, setStrokeHeadline] = useState(defaultTextStroke);
-  const [strokeDate, setStrokeDate] = useState(defaultTextStroke);
-  const [strokeCta, setStrokeCta] = useState(defaultTextStroke);
-  const [strokeCta1, setStrokeCta1] = useState(defaultTextStroke);
-  const [strokeCta2, setStrokeCta2] = useState(defaultTextStroke);
-  const [textOpacity, setTextOpacity] = useState(1);
+  const [strokeHeadline, setStrokeHeadline] = useState(textStrokeFromFactory(factoryMotion.strokeHeadline));
+  const [strokeDate, setStrokeDate] = useState(textStrokeFromFactory(factoryMotion.strokeDate));
+  const [strokeCta, setStrokeCta] = useState(textStrokeFromFactory(factoryMotion.strokeCta));
+  const [strokeCta1, setStrokeCta1] = useState(textStrokeFromFactory(factoryMotion.strokeCta1 ?? factoryMotion.strokeCta));
+  const [strokeCta2, setStrokeCta2] = useState(textStrokeFromFactory(factoryMotion.strokeCta2 ?? factoryMotion.strokeCta));
+  const [textOpacity, setTextOpacity] = useState(factoryMotion.textOpacity ?? 1);
   const [previewNonce, setPreviewNonce] = useState(0);
+  const undoHistoryRef = useRef<EditorHistorySnapshot[]>([]);
+  const redoHistoryRef = useRef<EditorHistorySnapshot[]>([]);
+  const currentEditorSnapshotRef = useRef<EditorHistorySnapshot | null>(null);
+  const lastHistorySerializedRef = useRef('');
+  const historyTimerRef = useRef<number | null>(null);
+  const isRestoringHistoryRef = useRef(false);
+
+  function createEditorSnapshot(): EditorHistorySnapshot {
+    return cloneHistoryValue({
+      activeStudioTool,
+      activeTextRole,
+      template,
+      target,
+      showSafeArea,
+      releaseDate,
+      coverImage,
+      headline,
+      cta,
+      cta2,
+      showCta1,
+      showCta2,
+      channelName,
+      metricPrefix,
+      metricNumber,
+      metricLabel,
+      platformsSel,
+      fontHeadline,
+      fontDate,
+      fontCta,
+      fontCta1,
+      fontCta2,
+      coverSize,
+      coverY,
+      coverX,
+      coverMotion,
+      phoneSize,
+      phoneX,
+      phoneY,
+      phoneTilt,
+      phoneMotion,
+      phoneSpinTurns,
+      phoneWiggle,
+      phoneDynamicIsland,
+      spinTurns,
+      wiggleIntensity,
+      wiggleH,
+      wiggleD,
+      wiggleC,
+      wiggleCta1,
+      wiggleCta2,
+      particlesEnabled,
+      finalFlash,
+      glowColor,
+      trHeadline,
+      trDate,
+      trCta,
+      trCta1,
+      trCta2,
+      transitionTuning,
+      styleHeadline,
+      styleDate,
+      styleCta,
+      styleCta1,
+      styleCta2,
+      strokeHeadline,
+      strokeDate,
+      strokeCta,
+      strokeCta1,
+      strokeCta2,
+      textOpacity,
+      cta1InFrame,
+      ctaSwapFrame,
+      cta2InFrame,
+      textInFrames,
+      logosInFrame,
+      durationSeconds,
+      posterFrameEnabled,
+      posterFrameSec,
+      posterHoldSec,
+      posterOutroEnabled,
+      bgVideo,
+      bgVideoStartSec,
+      bgVideoDuration,
+      bgVideoOpacity,
+      bgColor,
+      bgVideoBlur,
+      bgVideoSaturation,
+      audioSrc,
+      audioStartSec,
+      audioVolume,
+      audioFadeIn,
+      audioFadeOut,
+      audioDuration,
+      useVideoAudio,
+      customLogos,
+      platformLogoSize,
+      platformLogoGap,
+      platformLogoScales,
+      overlays,
+      favoriteFontIds,
+      studioMode,
+      typoSubTab,
+      textPanelTab,
+      txScale,
+      txLS,
+      txLH,
+      txOX,
+      txOY,
+      txAlign,
+      textTarget,
+      headlineLS,
+      headlineLH,
+      headlineX,
+      headlineY,
+    });
+  }
+
+  function clearPendingHistoryTimer() {
+    if (historyTimerRef.current == null) return;
+    window.clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = null;
+  }
+
+  function restoreEditorSnapshot(snapshot: EditorHistorySnapshot) {
+    clearPendingHistoryTimer();
+    isRestoringHistoryRef.current = true;
+    currentEditorSnapshotRef.current = cloneHistoryValue(snapshot);
+    lastHistorySerializedRef.current = serializeEditorSnapshot(snapshot);
+
+    setEditPreviewLoop(null);
+    setActiveStudioTool((snapshot.activeStudioTool ?? 'cover') as StudioToolId);
+    setActiveTextRole((snapshot.activeTextRole ?? 'headline') as FontRole);
+    setTemplate((snapshot.template ?? 'available_now') as TemplateId);
+    setTarget((snapshot.target ?? 'story') as RenderTarget);
+    setShowSafeArea(Boolean(snapshot.showSafeArea));
+    setReleaseDate(snapshot.releaseDate ?? '');
+    setCoverImage(snapshot.coverImage ?? '');
+    setHeadline(snapshot.headline ?? '');
+    setCta(snapshot.cta ?? '');
+    setCta2(snapshot.cta2 ?? '');
+    setShowCta1(snapshot.showCta1 ?? true);
+    setShowCta2(snapshot.showCta2 ?? true);
+    setChannelName(snapshot.channelName ?? '');
+    setMetricPrefix(snapshot.metricPrefix ?? 'ULTRAPASSAMOS');
+    setMetricNumber(snapshot.metricNumber ?? '100.000');
+    setMetricLabel(snapshot.metricLabel ?? 'OUVINTES');
+    setPlatformsSel(cloneHistoryValue(snapshot.platformsSel ?? []));
+    setFontHeadline(snapshot.fontHeadline ?? DEFAULT_FONTS.headline);
+    setFontDate(snapshot.fontDate ?? DEFAULT_FONTS.date);
+    setFontCta(snapshot.fontCta ?? DEFAULT_FONTS.cta);
+    setFontCta1(snapshot.fontCta1 ?? DEFAULT_FONTS.cta);
+    setFontCta2(snapshot.fontCta2 ?? DEFAULT_FONTS.cta);
+    setCoverSize(snapshot.coverSize ?? 510);
+    setCoverY(snapshot.coverY ?? 0);
+    setCoverX(snapshot.coverX ?? 0);
+    setCoverMotion(normalizeCoverMotionId(snapshot.coverMotion));
+    setPhoneSize(snapshot.phoneSize ?? 520);
+    setPhoneX(snapshot.phoneX ?? 0);
+    setPhoneY(snapshot.phoneY ?? 0);
+    setPhoneTilt(snapshot.phoneTilt ?? -6);
+    setPhoneMotion((snapshot.phoneMotion ?? 'zoom_bounce') as typeof phoneMotion);
+    setPhoneSpinTurns(snapshot.phoneSpinTurns ?? 0);
+    setPhoneWiggle(snapshot.phoneWiggle ?? 0.7);
+    setPhoneDynamicIsland(snapshot.phoneDynamicIsland ?? true);
+    setSpinTurns(snapshot.spinTurns ?? 2);
+    setWiggleIntensity(snapshot.wiggleIntensity ?? 1);
+    setWiggleH(snapshot.wiggleH ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
+    setWiggleD(snapshot.wiggleD ?? DEFAULT_TEXT_WIGGLE_VALUES.date);
+    setWiggleC(snapshot.wiggleC ?? DEFAULT_TEXT_WIGGLE_VALUES.cta);
+    setWiggleCta1(snapshot.wiggleCta1 ?? snapshot.wiggleC ?? DEFAULT_TEXT_WIGGLE_VALUES.cta1);
+    setWiggleCta2(snapshot.wiggleCta2 ?? snapshot.wiggleC ?? DEFAULT_TEXT_WIGGLE_VALUES.cta2);
+    setParticlesEnabled(snapshot.particlesEnabled ?? true);
+    setFinalFlash(snapshot.finalFlash ?? true);
+    setGlowColor(snapshot.glowColor ?? GLOW_PRESETS[0].color);
+    setTrHeadline((snapshot.trHeadline ?? 'mask_reveal') as TextTransitionId);
+    setTrDate((snapshot.trDate ?? 'scale_pop') as TextTransitionId);
+    setTrCta((snapshot.trCta ?? 'split_letters') as TextTransitionId);
+    setTrCta1((snapshot.trCta1 ?? 'scale_pop') as TextTransitionId);
+    setTrCta2((snapshot.trCta2 ?? 'split_letters') as TextTransitionId);
+    setTransitionTuning(normalizeTransitionTuningState(snapshot.transitionTuning));
+    setStyleHeadline(cloneHistoryValue(snapshot.styleHeadline ?? HEADLINE_STYLE_DEFAULTS));
+    setStyleDate(cloneHistoryValue(snapshot.styleDate ?? DATE_STYLE_DEFAULTS));
+    setStyleCta(cloneHistoryValue(snapshot.styleCta ?? CTA_STYLE_DEFAULTS));
+    setStyleCta1(cloneHistoryValue(snapshot.styleCta1 ?? CTA_STYLE_DEFAULTS));
+    setStyleCta2(cloneHistoryValue(snapshot.styleCta2 ?? CTA_STYLE_DEFAULTS));
+    setStrokeHeadline(cloneHistoryValue(snapshot.strokeHeadline ?? defaultTextStroke));
+    setStrokeDate(cloneHistoryValue(snapshot.strokeDate ?? defaultTextStroke));
+    setStrokeCta(cloneHistoryValue(snapshot.strokeCta ?? defaultTextStroke));
+    setStrokeCta1(cloneHistoryValue(snapshot.strokeCta1 ?? defaultTextStroke));
+    setStrokeCta2(cloneHistoryValue(snapshot.strokeCta2 ?? defaultTextStroke));
+    setTextOpacity(snapshot.textOpacity ?? 1);
+    setCta1InFrame(snapshot.cta1InFrame ?? CTA_TIMING_DEFAULTS.cta1InFrame);
+    setCtaSwapFrame(snapshot.ctaSwapFrame ?? CTA_TIMING_DEFAULTS.ctaSwapFrame);
+    setCta2InFrame(snapshot.cta2InFrame ?? CTA_TIMING_DEFAULTS.cta2InFrame);
+    setTextInFrames(cloneHistoryValue(snapshot.textInFrames ?? {}));
+    setLogosInFrame(snapshot.logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
+    setDurationSeconds(snapshot.durationSeconds ?? 8);
+    setPosterFrameEnabled(Boolean(snapshot.posterFrameEnabled));
+    setPosterFrameSec(snapshot.posterFrameSec ?? 3);
+    setPosterHoldSec(snapshot.posterHoldSec ?? 1);
+    setPosterOutroEnabled(snapshot.posterOutroEnabled ?? true);
+    setBgVideo(snapshot.bgVideo ?? '');
+    setBgVideoStartSec(snapshot.bgVideoStartSec ?? 0);
+    setBgVideoDuration(snapshot.bgVideoDuration ?? 0);
+    setBgVideoOpacity(snapshot.bgVideoOpacity ?? 1);
+    setBgColor(snapshot.bgColor ?? '#030205');
+    setBgVideoBlur(snapshot.bgVideoBlur ?? 22);
+    setBgVideoSaturation(snapshot.bgVideoSaturation ?? 1.15);
+    setAudioSrc(snapshot.audioSrc ?? '');
+    setAudioStartSec(snapshot.audioStartSec ?? 0);
+    setAudioVolume(snapshot.audioVolume ?? 0.8);
+    setAudioFadeIn(snapshot.audioFadeIn ?? 0.5);
+    setAudioFadeOut(snapshot.audioFadeOut ?? 1);
+    setAudioDuration(snapshot.audioDuration ?? 0);
+    setUseVideoAudio(snapshot.useVideoAudio ?? true);
+    setCustomLogos(cloneHistoryValue(snapshot.customLogos ?? {}));
+    setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
+    setPlatformLogoGap(snapshot.platformLogoGap ?? 22);
+    setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
+    setOverlays(cloneHistoryValue(snapshot.overlays ?? []));
+    setFavoriteFontIds(cloneHistoryValue(snapshot.favoriteFontIds ?? []));
+    setStudioMode((snapshot.studioMode ?? 'simple') as StudioMode);
+    setTypoSubTab((snapshot.typoSubTab ?? 'char') as 'char' | 'layout');
+    setTextPanelTab((snapshot.textPanelTab ?? 'fontes') as 'fontes' | 'entrada' | 'cor' | 'layout');
+    setTxScale(cloneHistoryValue(snapshot.txScale ?? { headline: 1, date: 1, cta: 1, cta1: 1, cta2: 1 }));
+    setTxLS(cloneHistoryValue(snapshot.txLS ?? { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 }));
+    setTxLH(cloneHistoryValue(snapshot.txLH ?? { headline: 1.2, date: 1.2, cta: 1.3, cta1: 1.3, cta2: 1.3 }));
+    setTxOX(cloneHistoryValue(snapshot.txOX ?? { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 }));
+    setTxOY(cloneHistoryValue(snapshot.txOY ?? { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 }));
+    setTxAlign(cloneHistoryValue(snapshot.txAlign ?? { headline: 'center', date: 'center', cta: 'center' }));
+    setTextTarget((snapshot.textTarget ?? 'headline') as 'headline' | 'date' | 'cta');
+    setHeadlineLS(snapshot.headlineLS ?? 0);
+    setHeadlineLH(snapshot.headlineLH ?? 1.1);
+    setHeadlineX(snapshot.headlineX ?? 0);
+    setHeadlineY(snapshot.headlineY ?? 0);
+    setPreviewNonce((n) => n + 1);
+  }
+
+  function undoEditorAction() {
+    clearPendingHistoryTimer();
+    const currentSnapshot = currentEditorSnapshotRef.current ?? createEditorSnapshot();
+    const currentSerialized = serializeEditorSnapshot(currentSnapshot);
+    const lastSavedSnapshot = parseEditorSnapshot(lastHistorySerializedRef.current);
+
+    if (lastHistorySerializedRef.current && currentSerialized !== lastHistorySerializedRef.current && lastSavedSnapshot) {
+      pushHistorySnapshot(redoHistoryRef, currentSnapshot);
+      restoreEditorSnapshot(lastSavedSnapshot);
+      return;
+    }
+
+    const previous = undoHistoryRef.current.pop();
+    if (!previous) return;
+
+    pushHistorySnapshot(redoHistoryRef, currentSnapshot);
+    restoreEditorSnapshot(previous);
+  }
+
+  function redoEditorAction() {
+    clearPendingHistoryTimer();
+    const next = redoHistoryRef.current.pop();
+    if (!next) return;
+
+    const currentSnapshot = currentEditorSnapshotRef.current ?? createEditorSnapshot();
+    pushHistorySnapshot(undoHistoryRef, currentSnapshot);
+    restoreEditorSnapshot(next);
+  }
+
+  React.useEffect(() => {
+    const snapshot = createEditorSnapshot();
+    const serialized = serializeEditorSnapshot(snapshot);
+    currentEditorSnapshotRef.current = snapshot;
+
+    if (!lastHistorySerializedRef.current) {
+      lastHistorySerializedRef.current = serialized;
+      return;
+    }
+
+    if (isRestoringHistoryRef.current) {
+      lastHistorySerializedRef.current = serialized;
+      isRestoringHistoryRef.current = false;
+      return;
+    }
+
+    if (serialized === lastHistorySerializedRef.current) return;
+
+    clearPendingHistoryTimer();
+    historyTimerRef.current = window.setTimeout(() => {
+      const previous = parseEditorSnapshot(lastHistorySerializedRef.current);
+      if (previous && serialized !== lastHistorySerializedRef.current) {
+        pushHistorySnapshot(undoHistoryRef, previous);
+        redoHistoryRef.current = [];
+        lastHistorySerializedRef.current = serialized;
+      }
+      historyTimerRef.current = null;
+    }, 180);
+
+    return clearPendingHistoryTimer;
+  });
 
 
   function setTextOpacityLive(value: number) {
+    stopTransitionPreviewLoopForManualEdit();
     setTextOpacity(value);
     setPreviewNonce((n) => n + 1);
   }
 
   function changeTextStroke(role: FontRole, stroke: any) {
+    stopTransitionPreviewLoopForManualEdit();
     const nextStroke = {
       mode: stroke?.mode ?? stroke?.type ?? 'none',
       width: Number(stroke?.width ?? 0),
@@ -847,17 +1310,30 @@ export default function Home() {
       strokeHeadline: { ...strokeHeadline },
       strokeDate: { ...strokeDate },
       strokeCta: { ...strokeCta },
+      strokeCta1: { ...strokeCta1 },
+      strokeCta2: { ...strokeCta2 },
       textOpacity,
       previewNonce,
       coverMotion,
       coverSize,
       coverY,
       coverX,
+      // Phone (Spotify Print)
+      phoneSize,
+      phoneX,
+      phoneY,
+      phoneTilt,
+      phoneMotion,
+      phoneSpinTurns,
+      phoneWiggle,
+      phoneDynamicIsland,
       spinTurns,
       wiggleIntensity,
       wiggleHeadline: wiggleH,
       wiggleDate: wiggleD,
       wiggleCta: wiggleC,
+      wiggleCta1,
+      wiggleCta2,
       particlesEnabled,
       finalFlash,
       glowColor,
@@ -867,16 +1343,29 @@ export default function Home() {
       transitionCta: trCta,
       transitionCta1: trCta1,
       transitionCta2: trCta2,
+      headlineInFrame: effectiveTextInFrames.headline,
+      dateInFrame: effectiveTextInFrames.date,
+      transitionTuningHeadline: transitionTuning.headline,
+      transitionTuningDate: transitionTuning.date,
+      transitionTuningCta: transitionTuning.cta1,
+      transitionTuningCta1: transitionTuning.cta1,
+      transitionTuningCta2: transitionTuning.cta2,
       styleHeadline,
       styleDate,
       styleCta,
-      cta1InFrame,
+      styleCta1,
+      styleCta2,
+      cta1InFrame: effectiveTextInFrames.cta1,
       ctaSwapFrame,
-      cta2InFrame,
+      cta2InFrame: effectiveTextInFrames.cta2,
       logosInFrame,
       background: {
         videoSrc: bgVideo || undefined,
+        mediaType: bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo) ? 'image' : 'video',
         videoStartFrame: Math.floor(bgVideoStartSec * 30),
+        videoDurationSec: bgVideoDuration || undefined,
+        videoNeedsTrim: bgVideoNeedsTrim || undefined,
+        videoOriginalName: bgVideoOriginalName || undefined,
         videoOpacity: bgVideoOpacity,
         bgColor,
         videoBlur: bgVideoBlur,
@@ -892,20 +1381,22 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
-      overlays: overlays.map((overlay) => ({
-        ...overlay,
-        startSec: 0,
-        durationSec: durationSeconds,
-      })),
+      platformLogoWiggle: factoryMotion.platformLogoWiggle ?? 0.065,
+      platformLogoWiggleSpeed: factoryMotion.platformLogoWiggleSpeed ?? 1,
+      overlays,
     }),
     [
       fontHeadline,
       fontDate,
       fontCta,
+      fontCta1,
+      fontCta2,
       userFonts,
       strokeHeadline,
       strokeDate,
       strokeCta,
+      strokeCta1,
+      strokeCta2,
       textOpacity,
       previewNonce,
       coverMotion,
@@ -917,6 +1408,8 @@ export default function Home() {
       wiggleH,
       wiggleD,
       wiggleC,
+      wiggleCta1,
+      wiggleCta2,
       particlesEnabled,
       finalFlash,
       glowColor,
@@ -924,15 +1417,27 @@ export default function Home() {
       trHeadline,
       trDate,
       trCta,
+      trCta1,
+      trCta2,
+      effectiveTextInFrames.headline,
+      effectiveTextInFrames.date,
+      effectiveTextInFrames.cta1,
+      effectiveTextInFrames.cta2,
+      transitionTuning,
       styleHeadline,
       styleDate,
       styleCta,
+      styleCta1,
+      styleCta2,
       cta1InFrame,
       ctaSwapFrame,
       cta2InFrame,
       logosInFrame,
       bgVideo,
       bgVideoStartSec,
+      bgVideoDuration,
+      bgVideoNeedsTrim,
+      bgVideoOriginalName,
       bgVideoOpacity,
       bgColor,
       bgVideoBlur,
@@ -948,6 +1453,14 @@ export default function Home() {
       platformLogoGap,
       platformLogoSize,
       overlays,
+      phoneSize,
+      phoneX,
+      phoneY,
+      phoneTilt,
+      phoneMotion,
+      phoneSpinTurns,
+      phoneWiggle,
+      phoneDynamicIsland,
     ]
   );
 
@@ -962,54 +1475,7 @@ export default function Home() {
       return 'musical';
     }
     return 'custom';
-  }, [
-      fontHeadline,
-      fontDate,
-      fontCta,
-      userFonts,
-      strokeHeadline,
-      strokeDate,
-      strokeCta,
-      textOpacity,
-      previewNonce,
-      coverMotion,
-      coverSize,
-      coverY,
-      coverX,
-      spinTurns,
-      wiggleIntensity,
-      wiggleH,
-      wiggleD,
-      wiggleC,
-      particlesEnabled,
-      finalFlash,
-      glowColor,
-      durationSeconds,
-      trHeadline,
-      trDate,
-      trCta,
-      styleHeadline,
-      styleDate,
-      styleCta,
-      cta1InFrame,
-      ctaSwapFrame,
-      cta2InFrame,
-      logosInFrame,
-      bgVideo,
-      bgVideoStartSec,
-      bgVideoOpacity,
-      bgColor,
-      bgVideoBlur,
-      bgVideoSaturation,
-      audioSrc,
-      audioStartSec,
-      audioVolume,
-      audioFadeIn,
-      audioFadeOut,
-      useVideoAudio,
-      customLogos,
-      overlays,
-    ]);
+  }, [cta1InFrame, ctaSwapFrame, cta2InFrame, logosInFrame]);
 
   const motionWithStyles = React.useMemo(() => {
     const h: any = styleHeadline;
@@ -1027,43 +1493,43 @@ export default function Home() {
       strokeCta2: strokeCta2,
       styleHeadline: {
         ...styleHeadline,
-        scale: h.scale ?? txScale.headline ?? 1,
+        scale: txScale.headline ?? h.scale ?? 1,
         letterSpacing: txLS.headline ?? h.letterSpacing ?? 0,
-        lineHeight: h.lineHeight ?? txLH.headline ?? 1.2,
-        offsetX: h.offsetX ?? txOX.headline ?? 0,
-        offsetY: h.offsetY ?? txOY.headline ?? 0,
+        lineHeight: txLH.headline ?? h.lineHeight ?? 1.2,
+        offsetX: txOX.headline ?? h.offsetX ?? 0,
+        offsetY: txOY.headline ?? h.offsetY ?? 0,
       },
       styleDate: {
         ...styleDate,
-        scale: d.scale ?? txScale.date ?? 1,
+        scale: txScale.date ?? d.scale ?? 1,
         letterSpacing: txLS.date ?? d.letterSpacing ?? 0,
-        lineHeight: d.lineHeight ?? txLH.date ?? 1.2,
-        offsetX: d.offsetX ?? txOX.date ?? 0,
-        offsetY: d.offsetY ?? txOY.date ?? 0,
+        lineHeight: txLH.date ?? d.lineHeight ?? 1.2,
+        offsetX: txOX.date ?? d.offsetX ?? 0,
+        offsetY: txOY.date ?? d.offsetY ?? 0,
       },
       styleCta: {
         ...styleCta,
-        scale: c.scale ?? txScale.cta ?? 1,
+        scale: txScale.cta ?? c.scale ?? 1,
         letterSpacing: txLS.cta ?? c.letterSpacing ?? 0,
-        lineHeight: c.lineHeight ?? txLH.cta ?? 1.3,
-        offsetX: c.offsetX ?? txOX.cta ?? 0,
-        offsetY: c.offsetY ?? txOY.cta ?? 0,
+        lineHeight: txLH.cta ?? c.lineHeight ?? 1.3,
+        offsetX: txOX.cta ?? c.offsetX ?? 0,
+        offsetY: txOY.cta ?? c.offsetY ?? 0,
       },
       styleCta1: {
         ...styleCta1,
-        scale: c1.scale ?? txScale.cta1 ?? txScale.cta ?? 1,
+        scale: txScale.cta1 ?? txScale.cta ?? c1.scale ?? 1,
         letterSpacing: txLS.cta1 ?? c1.letterSpacing ?? 0,
-        lineHeight: c1.lineHeight ?? txLH.cta1 ?? 1.3,
-        offsetX: c1.offsetX ?? txOX.cta1 ?? 0,
-        offsetY: c1.offsetY ?? txOY.cta1 ?? 0,
+        lineHeight: txLH.cta1 ?? c1.lineHeight ?? 1.3,
+        offsetX: txOX.cta1 ?? c1.offsetX ?? 0,
+        offsetY: txOY.cta1 ?? c1.offsetY ?? 0,
       },
       styleCta2: {
         ...styleCta2,
-        scale: c2.scale ?? txScale.cta2 ?? txScale.cta ?? 1,
+        scale: txScale.cta2 ?? txScale.cta ?? c2.scale ?? 1,
         letterSpacing: txLS.cta2 ?? c2.letterSpacing ?? 0,
-        lineHeight: c2.lineHeight ?? txLH.cta2 ?? 1.3,
-        offsetX: c2.offsetX ?? txOX.cta2 ?? 0,
-        offsetY: c2.offsetY ?? txOY.cta2 ?? 0,
+        lineHeight: txLH.cta2 ?? c2.lineHeight ?? 1.3,
+        offsetX: txOX.cta2 ?? c2.offsetX ?? 0,
+        offsetY: txOY.cta2 ?? c2.offsetY ?? 0,
       },
     };
   }, [motion, fontHeadline, fontDate, fontCta, fontCta1, fontCta2, userFonts, styleHeadline, styleDate, styleCta, styleCta1, styleCta2, strokeHeadline, strokeDate, strokeCta, strokeCta1, strokeCta2, txScale, txLS, txLH, txOX, txOY]);
@@ -1100,7 +1566,12 @@ export default function Home() {
     return {
       ...project,
       durationSeconds,
-      motion: motionWithStyles,
+      motion: {
+        ...motionWithStyles,
+        // Studio Player SEMPRE em previewMode=true (textos não somem durante transição).
+        // Render REAL seta previewMode=false explicitamente em /api/render.
+        previewMode: true,
+      },
       renderTarget: target,
     };
   }, [project, durationSeconds, motionWithStyles, target]);
@@ -1109,27 +1580,232 @@ export default function Home() {
   const playerRemountKey = [
     template,
     target,
-    trHeadline,
-    trDate,
-    trCta,
-    trCta1,
-    trCta2,
-    fontHeadline,
-    fontDate,
-    fontCta,
-    fontCta1,
-    fontCta2,
-    previewNonce,
   ].join('|');
 
   const Component = componentByTemplate[template];
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
+  const bgIsImage = Boolean(bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo));
+  const bgClipDuration = Math.min(durationSeconds, 40);
+  const bgVideoStartMax = bgVideoNeedsTrim
+    ? Math.max(0, bgVideoDuration - bgClipDuration)
+    : Math.max(0.1, bgVideoDuration);
+  const bgTrimStartPct = bgVideoDuration > 0 ? Math.min(100, (bgVideoStartSec / bgVideoDuration) * 100) : 0;
+  const bgTrimWidthPct = bgVideoDuration > 0
+    ? Math.min(100 - bgTrimStartPct, (bgClipDuration / bgVideoDuration) * 100)
+    : 0;
+
+  function clampBgVideoStart(value: number) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(bgVideoStartMax, value));
+  }
+
+  function formatTimecode(seconds: number) {
+    const safe = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
+    const mins = Math.floor(safe / 60);
+    const secs = safe - mins * 60;
+    return `${String(mins).padStart(2, '0')}:${secs.toFixed(1).padStart(4, '0')}`;
+  }
+
+  function parseTimecode(value: string) {
+    const clean = value.trim().replace(',', '.');
+    if (!clean) return null;
+    if (/^\d+(\.\d+)?$/.test(clean)) return Number(clean);
+    const parts = clean.split(':').map((part) => Number(part));
+    if (parts.some((part) => !Number.isFinite(part))) return null;
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return null;
+  }
+
+  function setBgVideoStartAndPreview(value: number, shouldSeek = true) {
+    const next = clampBgVideoStart(value);
+    setBgVideoStartSec(next);
+    setBgTrimPreviewTime(next);
+    setBgTrimTimecodeInput(formatTimecode(next));
+    if (shouldSeek && bgTrimVideoRef.current) {
+      bgTrimVideoRef.current.currentTime = next;
+    }
+  }
+
+  function nudgeBgVideoStart(delta: number) {
+    setBgVideoStartAndPreview(bgVideoStartSec + delta);
+  }
+
+  function useCurrentBgPreviewTime() {
+    const current = bgTrimVideoRef.current?.currentTime ?? bgTrimPreviewTime;
+    bgTrimSelectionEndRef.current = null;
+    setBgVideoStartAndPreview(current, false);
+  }
+
+  function playBgTrimSelection() {
+    const video = bgTrimVideoRef.current;
+    if (!video) return;
+    bgTrimSelectionEndRef.current = bgVideoStartSec + bgClipDuration;
+    video.currentTime = bgVideoStartSec;
+    video.play().catch(() => {});
+  }
 
   // ─── HANDLERS ────────────────────────────────────────────
   function setPlatformScale(platform: string, value: number) {
     setPlatformLogoScales((prev) => ({ ...prev, [platform]: value }));
     setPreviewNonce((n) => n + 1);
+  }
+
+  function startEditPreviewLoop(range: EditPreviewLoop) {
+    setEditPreviewLoop(range);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          playerRef.current?.seekTo?.(range.startFrame);
+          playerRef.current?.play?.();
+        } catch {
+          // fallback silencioso
+        }
+      });
+    });
+  }
+
+  function stopTransitionPreviewLoopForManualEdit() {
+    if (!editPreviewLoop) return;
+
+    setEditPreviewLoop(null);
+
+    requestAnimationFrame(() => {
+      try {
+        playerRef.current?.pause?.();
+      } catch {
+        // fallback silencioso
+      }
+    });
+  }
+
+  function normalizeTextPreviewRole(role: FontRole | TextPreviewRole | string): TextPreviewRole {
+    if (role === 'date') return 'date';
+    if (role === 'cta2') return 'cta2';
+    if (role === 'cta' || role === 'cta1') return 'cta1';
+    return 'headline';
+  }
+
+  function getTextPreviewFrameRange(role: TextPreviewRole, frameOverride?: number): EditPreviewLoop {
+    const startFrame =
+      typeof frameOverride === 'number' ? frameOverride :
+      role === 'date' ? effectiveTextInFrames.date :
+      role === 'cta1' ? effectiveTextInFrames.cta1 :
+      role === 'cta2' ? effectiveTextInFrames.cta2 :
+      effectiveTextInFrames.headline;
+    const naturalEndFrame =
+      role === 'cta1'
+        ? Math.min(ctaSwapFrame - 2, startFrame + TEXT_TRANSITION_PREVIEW_LOOP_FRAMES)
+        : startFrame + TEXT_TRANSITION_PREVIEW_LOOP_FRAMES;
+    const maxFrame = Math.max(0, Math.round(durationSeconds * 30) - 1);
+    const safeStartFrame = Math.min(Math.max(0, maxFrame - 1), Math.max(0, startFrame - TEXT_TRANSITION_PREVIEW_LEAD_FRAMES));
+    const endFrame = Math.max(
+      safeStartFrame + 1,
+      Math.min(maxFrame, Math.max(startFrame + 12, naturalEndFrame))
+    );
+
+    return {
+      startFrame: safeStartFrame,
+      endFrame,
+      kind: 'text',
+      role,
+    };
+  }
+
+  function getCoverPreviewFrameRange(): EditPreviewLoop {
+    const maxFrame = Math.max(0, Math.round(durationSeconds * 30) - 1);
+    const startFrame = Math.max(0, COVER_TRANSITION_IN_FRAME - COVER_TRANSITION_PREVIEW_LEAD_FRAMES);
+    const naturalEndFrame =
+      COVER_TRANSITION_IN_FRAME +
+      COVER_TRANSITION_DURATION_FRAMES +
+      COVER_TRANSITION_PREVIEW_TAIL_FRAMES;
+
+    const safeStartFrame = Math.min(Math.max(0, maxFrame - 1), startFrame);
+    const endFrame = Math.max(
+      safeStartFrame + 1,
+      Math.min(maxFrame, naturalEndFrame)
+    );
+
+    return {
+      startFrame: safeStartFrame,
+      endFrame,
+      kind: 'cover',
+    };
+  }
+
+  function startCoverPreviewLoop() {
+    startEditPreviewLoop(getCoverPreviewFrameRange());
+  }
+
+  function startTextElementPreviewLoop(role: FontRole | TextPreviewRole | string) {
+    const previewRole = normalizeTextPreviewRole(role);
+    const range = getTextPreviewFrameRange(previewRole);
+
+    lastTextPreviewRoleRef.current = previewRole;
+    startEditPreviewLoop(range);
+  }
+
+  function changeTextInFrame(role: TextPreviewRole, nextFrame: number) {
+    const frame = Math.max(0, Math.min(Math.round(durationSeconds * 30) - 1, Math.round(nextFrame)));
+
+    setTextInFrames((prev) => ({ ...prev, [role]: frame }));
+    if (template === 'available_now') {
+      if (role === 'cta1') setCta1InFrame(frame);
+      if (role === 'cta2') setCta2InFrame(frame);
+    }
+
+    setPreviewNonce((n) => n + 1);
+    startEditPreviewLoop(getTextPreviewFrameRange(role, frame));
+  }
+
+  function changeTextTransition(role: 'headline' | 'date' | 'cta1' | 'cta2', next: TextTransitionId) {
+    if (role === 'headline') {
+      setTrHeadline(next);
+    }
+
+    if (role === 'date') {
+      setTrDate(next);
+    }
+
+    if (role === 'cta1') {
+      setTrCta1(next);
+    }
+
+    if (role === 'cta2') {
+      setTrCta2(next);
+    }
+
+    setPreviewNonce((n) => n + 1);
+    startTextElementPreviewLoop(role);
+  }
+
+  function changeTextTransitionTuning(role: TextPreviewRole, patch: Partial<TextTransitionTuning>) {
+    setTransitionTuning((prev) => ({
+      ...prev,
+      [role]: normalizeTextTransitionTuning({
+        ...prev[role],
+        ...patch,
+      }),
+    }));
+    setPreviewNonce((n) => n + 1);
+
+    if (editPreviewLoop?.kind === 'text' && editPreviewLoop.role === role) return;
+
+    startTextElementPreviewLoop(role);
+  }
+
+  function applyTextTransitionTuningPreset(role: TextPreviewRole, values: TextTransitionTuning) {
+    setTransitionTuning((prev) => ({
+      ...prev,
+      [role]: normalizeTextTransitionTuning(values),
+    }));
+    setPreviewNonce((n) => n + 1);
+
+    if (editPreviewLoop?.kind === 'text' && editPreviewLoop.role === role) return;
+
+    startTextElementPreviewLoop(role);
   }
 
 
@@ -1138,17 +1814,7 @@ export default function Home() {
   function previewCoverMotionChange(value: unknown) {
     const next = normalizeCoverMotionId(value);
     setCoverMotion(next);
-
-    // Só a troca da animação da capa volta para o início,
-    // porque a diferença está exatamente na entrada.
-    requestAnimationFrame(() => {
-      try {
-        playerRef.current?.seekTo?.(0);
-        playerRef.current?.play?.();
-      } catch {
-        // fallback silencioso
-      }
-    });
+    startCoverPreviewLoop();
   }
 
   function normalizeCoverMotionId(value: unknown): CoverMotionId {
@@ -1275,7 +1941,7 @@ export default function Home() {
         title,
         template,
         thumbnailPath: coverImage,
-        projectSnapshot: { ...project, motion },
+        projectSnapshot: { ...project, motion: motionWithStyles },
       }),
     });
     const d = await r.json();
@@ -1303,23 +1969,57 @@ export default function Home() {
       setFontHeadline(m.fontHeadline ?? DEFAULT_FONTS.headline);
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
+      setFontCta1(m.fontCta1 ?? m.fontCta ?? DEFAULT_FONTS.cta);
+      setFontCta2(m.fontCta2 ?? m.fontCta ?? DEFAULT_FONTS.cta);
       setCoverSize(m.coverSize ?? 510);
       setCoverY(m.coverY ?? 0);
       setCoverX(m.coverX ?? 0);
+      setPhoneSize(m.phoneSize ?? 520);
+      setPhoneX(m.phoneX ?? 0);
+      setPhoneY(m.phoneY ?? 0);
+      setPhoneTilt(m.phoneTilt ?? -6);
+      setPhoneMotion((m.phoneMotion ?? 'zoom_bounce') as typeof phoneMotion);
+      setPhoneSpinTurns(m.phoneSpinTurns ?? 0);
+      setPhoneWiggle(m.phoneWiggle ?? 0.7);
+      setPhoneDynamicIsland(m.phoneDynamicIsland ?? true);
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 22);
       setPlatformLogoScales(m.platformLogoScales ?? {});
       setCoverMotion(normalizeCoverMotionId(m.coverMotion));
       setSpinTurns(m.spinTurns ?? 2);
       setWiggleIntensity(m.wiggleIntensity ?? 1);
+      setWiggleH(m.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
+      setWiggleD(m.wiggleDate ?? DEFAULT_TEXT_WIGGLE_VALUES.date);
+      setWiggleC(m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta);
+      setWiggleCta1(m.wiggleCta1 ?? m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta1);
+      setWiggleCta2(m.wiggleCta2 ?? m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta2);
+      setTextInFrames({
+        headline: typeof m.headlineInFrame === 'number' ? m.headlineInFrame : undefined,
+        date: typeof m.dateInFrame === 'number' ? m.dateInFrame : undefined,
+        cta1: typeof m.cta1InFrame === 'number' ? m.cta1InFrame : undefined,
+        cta2: typeof m.cta2InFrame === 'number' ? m.cta2InFrame : undefined,
+      });
       setTrHeadline(m.transitionHeadline ?? 'mask_reveal');
       setTrDate(m.transitionDate ?? 'scale_pop');
       setTrCta(m.transitionCta ?? 'split_letters');
       setTrCta1(m.transitionCta1 ?? m.transitionCta ?? 'scale_pop');
       setTrCta2(m.transitionCta2 ?? m.transitionCta ?? 'split_letters');
+      setTransitionTuning(transitionTuningFromMotion(m));
       setStyleHeadline(mergeTextStyle(HEADLINE_STYLE_DEFAULTS, m.styleHeadline));
       setStyleDate(mergeTextStyle(DATE_STYLE_DEFAULTS, m.styleDate));
       setStyleCta(mergeTextStyle(CTA_STYLE_DEFAULTS, m.styleCta));
+      setStyleCta1(mergeTextStyle(CTA_STYLE_DEFAULTS, m.styleCta1 ?? m.styleCta));
+      setStyleCta2(mergeTextStyle(CTA_STYLE_DEFAULTS, m.styleCta2 ?? m.styleCta));
+      applyTextMetricsFromStyle('headline', m.styleHeadline);
+      applyTextMetricsFromStyle('date', m.styleDate);
+      applyTextMetricsFromStyle('cta', m.styleCta);
+      applyTextMetricsFromStyle('cta1', m.styleCta1 ?? m.styleCta);
+      applyTextMetricsFromStyle('cta2', m.styleCta2 ?? m.styleCta);
+      setStrokeHeadline(m.strokeHeadline ?? defaultTextStroke);
+      setStrokeDate(m.strokeDate ?? defaultTextStroke);
+      setStrokeCta(m.strokeCta ?? defaultTextStroke);
+      setStrokeCta1(m.strokeCta1 ?? m.strokeCta ?? defaultTextStroke);
+      setStrokeCta2(m.strokeCta2 ?? m.strokeCta ?? defaultTextStroke);
       setCta1InFrame(m.cta1InFrame ?? CTA_TIMING_DEFAULTS.cta1InFrame);
       setCtaSwapFrame(m.ctaSwapFrame ?? CTA_TIMING_DEFAULTS.ctaSwapFrame);
       setCta2InFrame(m.cta2InFrame ?? CTA_TIMING_DEFAULTS.cta2InFrame);
@@ -1329,6 +2029,9 @@ export default function Home() {
       if (m.background) {
         setBgVideo(m.background.videoSrc ?? '');
         setBgVideoStartSec((m.background.videoStartFrame ?? 0) / 30);
+        setBgVideoDuration(m.background.videoDurationSec ?? 0);
+        setBgVideoNeedsTrim(Boolean(m.background.videoNeedsTrim));
+        setBgVideoOriginalName(m.background.videoOriginalName ?? '');
         setBgVideoOpacity(m.background.videoOpacity ?? 1);
         setBgColor(m.background.bgColor ?? '#030205');
         setBgVideoBlur(m.background.videoBlur ?? 22);
@@ -1359,7 +2062,7 @@ export default function Home() {
   }
 
   async function deleteAllRenders() {
-    if (!confirm('Excluir TODOS os videos renderizados? Esta acao nao pode ser desfeita.')) return;
+    if (!confirm('Excluir TODOS os arquivos renderizados? Esta acao nao pode ser desfeita.')) return;
     const r = await fetch('/api/render-files?all=true', { method: 'DELETE' });
     if (r.ok) {
       setRenderFiles([]);
@@ -1372,39 +2075,165 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingVideo(true);
-    setVideoUploadMsg('Enviando…');
-    const videoUrl = URL.createObjectURL(file);
-    const tempVideo = document.createElement('video');
-    tempVideo.preload = 'metadata';
-    tempVideo.src = videoUrl;
-    await new Promise<void>((resolve) => {
-      tempVideo.onloadedmetadata = () => resolve();
-      tempVideo.onerror = () => resolve();
-    });
-    const totalDuration = tempVideo.duration || 0;
-    URL.revokeObjectURL(videoUrl);
-    const formData = new FormData();
-    formData.append('video', file);
-    const r = await fetch('/api/upload-video', { method: 'POST', body: formData });
-    const d = await r.json();
-    if (!d.ok) {
-      setVideoUploadMsg(`Erro: ${d.error}`);
+    setVideoUploadMsg('Enviando bruto pesado sem compactar na memória…');
+
+    try {
+      const videoUrl = URL.createObjectURL(file);
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.src = videoUrl;
+      await new Promise<void>((resolve) => {
+        tempVideo.onloadedmetadata = () => resolve();
+        tempVideo.onerror = () => resolve();
+      });
+      const browserDuration = Number.isFinite(tempVideo.duration) ? tempVideo.duration : 0;
+      URL.revokeObjectURL(videoUrl);
+
+      const uploadUrl = `/api/upload-video/raw?filename=${encodeURIComponent(file.name)}`;
+      const r = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+        body: file,
+      });
+      const d = await r.json();
+
+      if (!d.ok) {
+        setVideoUploadMsg(`Erro: ${d.error}`);
+        return;
+      }
+
+      const totalDuration = Number(d.durationSec) || browserDuration || 0;
+      setBgVideo(d.videoSrc);
+      setBgVideoStartSec(0);
+      setBgTrimPreviewTime(0);
+      setBgTrimTimecodeInput(formatTimecode(0));
+      setBgVideoDuration(totalDuration);
+      setBgVideoNeedsTrim(true);
+      setBgVideoOriginalName(file.name);
+      setVideoUploadMsg(
+        `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início e clique em cortar/otimizar.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha desconhecida';
+      setVideoUploadMsg(`Erro: ${message}`);
+    } finally {
       setUploadingVideo(false);
-      return;
+      if (videoInputRef.current) videoInputRef.current.value = '';
     }
-    setBgVideo(d.videoSrc);
-    setBgVideoStartSec(0);
-    setBgVideoDuration(totalDuration);
-    setVideoUploadMsg(`Vídeo carregado (${totalDuration.toFixed(1)}s)`);
-    setUploadingVideo(false);
-    if (videoInputRef.current) videoInputRef.current.value = '';
+  }
+
+  async function processBgVideoClip() {
+    if (!bgVideo || !bgVideoNeedsTrim) return;
+
+    const clipDuration = Math.min(durationSeconds, 40);
+    setProcessingVideoClip(true);
+    setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}…`);
+
+    try {
+      const r = await fetch('/api/video/trim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourcePath: bgVideo,
+          startSec: bgVideoStartSec,
+          durationSec: clipDuration,
+          target,
+          deleteSource: true,
+        }),
+      });
+      const d = await r.json();
+
+      if (!d.ok) {
+        setVideoUploadMsg(`Erro: ${d.error}`);
+        return;
+      }
+
+      setBgVideo(d.videoSrc);
+      setBgVideoStartSec(0);
+      setBgTrimPreviewTime(0);
+      setBgTrimTimecodeInput(formatTimecode(0));
+      setBgVideoDuration(d.durationSec ?? clipDuration);
+      setBgVideoNeedsTrim(false);
+      setBgVideoOriginalName('');
+      setVideoUploadMsg(
+        `Trecho otimizado pronto (${(d.size / 1024 / 1024).toFixed(1)} MB). O bruto foi descartado.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha desconhecida';
+      setVideoUploadMsg(`Erro: ${message}`);
+    } finally {
+      setProcessingVideoClip(false);
+    }
   }
 
   function clearBgVideo() {
     setBgVideo('');
     setBgVideoStartSec(0);
+    setBgTrimPreviewTime(0);
+    setBgTrimTimecodeInput(formatTimecode(0));
     setBgVideoDuration(0);
+    setBgVideoNeedsTrim(false);
+    setBgVideoOriginalName('');
     setVideoUploadMsg('');
+  }
+
+  async function handleBgImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingVideo(true);
+    setVideoUploadMsg('Enviando imagem de fundo…');
+
+    try {
+      const formData = new FormData();
+      formData.append('background', file);
+      const r = await fetch('/api/upload-background', { method: 'POST', body: formData });
+      const d = await r.json();
+
+      if (!d.ok) {
+        setVideoUploadMsg(`Erro: ${d.error}`);
+        return;
+      }
+
+      setBgVideo(d.backgroundSrc);
+      setBgVideoStartSec(0);
+      setBgTrimPreviewTime(0);
+      setBgTrimTimecodeInput(formatTimecode(0));
+      setBgVideoDuration(0);
+      setBgVideoNeedsTrim(false);
+      setBgVideoOriginalName(file.name);
+      setVideoUploadMsg(`Imagem de fundo pronta: ${file.name}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha desconhecida';
+      setVideoUploadMsg(`Erro: ${message}`);
+    } finally {
+      setUploadingVideo(false);
+      if (bgImageInputRef.current) bgImageInputRef.current.value = '';
+    }
+  }
+
+  function readVideoDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('video/')) {
+        resolve(0);
+        return;
+      }
+
+      const videoUrl = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.src = videoUrl;
+      video.onloadedmetadata = () => {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        URL.revokeObjectURL(videoUrl);
+        resolve(duration);
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(videoUrl);
+        resolve(0);
+      };
+    });
   }
 
   async function uploadFont(e: React.ChangeEvent<HTMLInputElement>) {
@@ -1450,10 +2279,12 @@ export default function Home() {
     if (!file) return;
     const label = prompt('Nome do overlay (ex: Film Burn 01):', file.name);
     if (!label) return;
+    const durationSec = await readVideoDuration(file);
     const formData = new FormData();
     formData.append('overlay', file);
     formData.append('label', label);
     formData.append('blendMode', 'screen');
+    if (durationSec > 0) formData.append('durationSec', String(durationSec));
     const r = await fetch('/api/upload-overlay', { method: 'POST', body: formData });
     const d = await r.json();
     if (d.ok) {
@@ -1465,19 +2296,49 @@ export default function Home() {
   }
 
   function addOverlayInstance(asset: OverlayAsset) {
+    const isElement = asset.type === 'image';
+    const id = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     setOverlays((arr) => [
       ...arr,
       {
-        id: `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id,
         src: asset.path,
         type: asset.type,
         startSec: 0,
         durationSec: durationSeconds,
-        opacity: 0.45,
-        blendMode: 'screen',
+        opacity: isElement ? 1 : 0.45,
+        blendMode: isElement ? 'normal' : 'screen',
+        loopMode: asset.type === 'video' ? 'pingpong' : 'normal',
+        sourceDurationSec: asset.type === 'video' ? asset.durationSec ?? Math.min(4, durationSeconds) : undefined,
+        layout: isElement ? 'element' : 'cover',
+        x: 0,
+        y: 0,
+        scale: isElement ? 0.42 : 1,
+        rotate: 0,
+        entryTransition: isElement ? 'bounce-left' : 'none',
+        entryDurationFrames: 18,
+        wigglePosition: isElement ? 8 : 0,
+        wiggleRotate: isElement ? 2.5 : 0,
+        wiggleSpeed: 1,
+        shadowBlur: 0,
+        shadowOpacity: 0,
+        shadowColor: '#000000',
+        outlineWidth: 0,
+        outlineColor: '#ffffff',
+        gradientEnabled: false,
+        gradientFrom: '#1ed760',
+        gradientTo: '#8b5cf6',
+        gradientOpacity: 0.35,
+        tintEnabled: false,
+        tintColor: '#ffffff',
+        tintOpacity: 1,
         label: asset.label,
       },
     ]);
+    if (isElement) {
+      setSelectedOverlayId(id);
+      selectStudioTool('overlay');
+    }
   }
 
   async function deleteOverlayAsset(id: string) {
@@ -1492,7 +2353,13 @@ export default function Home() {
 
   function removeOverlay(id: string) {
     setOverlays((arr) => arr.filter((o) => o.id !== id));
+    if (selectedOverlayId === id) setSelectedOverlayId(null);
   }
+
+  const selectedOverlay = overlays.find((overlay) => overlay.id === selectedOverlayId) ?? null;
+  const selectedElement = selectedOverlay?.type === 'image' && (selectedOverlay.layout ?? 'element') === 'element'
+    ? selectedOverlay
+    : null;
 
   async function uploadAudio(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -1556,37 +2423,85 @@ export default function Home() {
   }
 
   function resetMotion() {
-    setFontHeadline(DEFAULT_FONTS.headline);
-    setFontDate(DEFAULT_FONTS.date);
-    setFontCta(DEFAULT_FONTS.cta);
-    setCoverSize(510);
-    setCoverY(0);
-    setCoverX(0);
-    setSpinTurns(2);
-    setWiggleIntensity(1);
-    setWiggleH(0);
-    setWiggleD(0);
-    setWiggleC(0);
-    setParticlesEnabled(true);
-    setFinalFlash(true);
-    setGlowColor(GLOW_PRESETS[0].color);
-    setTrHeadline('mask_reveal');
-    setTrDate('scale_pop');
-    setTrCta('split_letters');
-    setStyleHeadline({ ...HEADLINE_STYLE_DEFAULTS });
-    setStyleDate({ ...DATE_STYLE_DEFAULTS });
-    setStyleCta({ ...CTA_STYLE_DEFAULTS });
-    setCta1InFrame(CTA_TIMING_DEFAULTS.cta1InFrame);
-    setCtaSwapFrame(CTA_TIMING_DEFAULTS.ctaSwapFrame);
-    setCta2InFrame(CTA_TIMING_DEFAULTS.cta2InFrame);
-    setLogosInFrame(CTA_TIMING_DEFAULTS.logosInFrame);
-    setOverlays([]);
-    setAudioSrc('');
-    setAudioStartSec(0);
-    setAudioVolume(0.8);
-    setAudioFadeIn(0.5);
-    setAudioFadeOut(1);
-    setUseVideoAudio(false);
+    const useFactory = template === 'available_now';
+    const m = useFactory ? factoryMotion : {};
+    const bg = ((m as any).background ?? {}) as Record<string, any>;
+    const poster = useFactory ? factoryPosterFrame : {};
+
+    setFontHeadline((m as any).fontHeadline ?? DEFAULT_FONTS.headline);
+    setFontDate((m as any).fontDate ?? DEFAULT_FONTS.date);
+    setFontCta((m as any).fontCta ?? DEFAULT_FONTS.cta);
+    setFontCta1((m as any).fontCta1 ?? (m as any).fontCta ?? DEFAULT_FONTS.cta);
+    setFontCta2((m as any).fontCta2 ?? (m as any).fontCta ?? DEFAULT_FONTS.cta);
+    setCoverSize((m as any).coverSize ?? 510);
+    setCoverY((m as any).coverY ?? 0);
+    setCoverX((m as any).coverX ?? 0);
+    setCoverMotion(normalizeCoverMotionId((m as any).coverMotion));
+    setSpinTurns((m as any).spinTurns ?? 2);
+    setWiggleIntensity((m as any).wiggleIntensity ?? 1);
+    setWiggleH((m as any).wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
+    setWiggleD((m as any).wiggleDate ?? DEFAULT_TEXT_WIGGLE_VALUES.date);
+    setWiggleC((m as any).wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta);
+    setWiggleCta1((m as any).wiggleCta1 ?? (m as any).wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta1);
+    setWiggleCta2((m as any).wiggleCta2 ?? (m as any).wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta2);
+    setParticlesEnabled((m as any).particlesEnabled ?? true);
+    setFinalFlash((m as any).finalFlash ?? true);
+    setGlowColor((m as any).glowColor ?? GLOW_PRESETS[0].color);
+    setTrHeadline((m as any).transitionHeadline ?? 'mask_reveal');
+    setTrDate((m as any).transitionDate ?? 'scale_pop');
+    setTrCta((m as any).transitionCta ?? 'split_letters');
+    setTrCta1((m as any).transitionCta1 ?? (m as any).transitionCta ?? 'scale_pop');
+    setTrCta2((m as any).transitionCta2 ?? (m as any).transitionCta ?? 'split_letters');
+    setTransitionTuning(useFactory ? transitionTuningFromMotion(m as any) : createDefaultTransitionTuningState());
+    setStyleHeadline(mergeTextStyle(HEADLINE_STYLE_DEFAULTS, (m as any).styleHeadline));
+    setStyleDate(mergeTextStyle(DATE_STYLE_DEFAULTS, (m as any).styleDate));
+    setStyleCta(mergeTextStyle(CTA_STYLE_DEFAULTS, (m as any).styleCta));
+    setStyleCta1(mergeTextStyle(CTA_STYLE_DEFAULTS, (m as any).styleCta1 ?? (m as any).styleCta));
+    setStyleCta2(mergeTextStyle(CTA_STYLE_DEFAULTS, (m as any).styleCta2 ?? (m as any).styleCta));
+    setTxScale(useFactory ? factoryTextMetrics.scale : { headline: 1, date: 1, cta: 1, cta1: 1, cta2: 1 });
+    setTxLS(useFactory ? factoryTextMetrics.letterSpacing : { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 });
+    setTxLH(useFactory ? factoryTextMetrics.lineHeight : { headline: 1.2, date: 1.2, cta: 1.3, cta1: 1.3, cta2: 1.3 });
+    setTxOX(useFactory ? factoryTextMetrics.offsetX : { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 });
+    setTxOY(useFactory ? factoryTextMetrics.offsetY : { headline: 0, date: 0, cta: 0, cta1: 0, cta2: 0 });
+    setStrokeHeadline(textStrokeFromFactory((m as any).strokeHeadline));
+    setStrokeDate(textStrokeFromFactory((m as any).strokeDate));
+    setStrokeCta(textStrokeFromFactory((m as any).strokeCta));
+    setStrokeCta1(textStrokeFromFactory((m as any).strokeCta1 ?? (m as any).strokeCta));
+    setStrokeCta2(textStrokeFromFactory((m as any).strokeCta2 ?? (m as any).strokeCta));
+    setTextOpacity((m as any).textOpacity ?? 1);
+    setCta1InFrame((m as any).cta1InFrame ?? CTA_TIMING_DEFAULTS.cta1InFrame);
+    setCtaSwapFrame((m as any).ctaSwapFrame ?? CTA_TIMING_DEFAULTS.ctaSwapFrame);
+    setCta2InFrame((m as any).cta2InFrame ?? CTA_TIMING_DEFAULTS.cta2InFrame);
+    setTextInFrames(useFactory ? {
+      headline: (m as any).headlineInFrame,
+      date: (m as any).dateInFrame,
+      cta1: (m as any).cta1InFrame,
+      cta2: (m as any).cta2InFrame,
+    } : {});
+    setLogosInFrame((m as any).logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
+    setCustomLogos((m as any).customLogos ?? {});
+    setPlatformLogoSize((m as any).platformLogoSize ?? 58);
+    setPlatformLogoGap((m as any).platformLogoGap ?? 22);
+    setPlatformLogoScales((m as any).platformLogoScales ?? {});
+    setDurationSeconds((factoryAvailableNow.durationSeconds ?? (m as any).durationSeconds) ?? 8);
+    setPosterFrameEnabled(poster.enabled ?? false);
+    setPosterFrameSec(poster.frameSec ?? 3);
+    setPosterHoldSec(poster.holdSec ?? 1);
+    setPosterOutroEnabled(poster.outroEnabled ?? true);
+    setBgVideo(bg.videoSrc ?? '');
+    setBgVideoStartSec(typeof bg.videoStartFrame === 'number' ? bg.videoStartFrame / 30 : 0);
+    setBgVideoDuration(bg.videoDurationSec ?? 0);
+    setBgVideoOpacity(bg.videoOpacity ?? 1);
+    setBgColor(bg.bgColor ?? '#030205');
+    setBgVideoBlur(bg.videoBlur ?? 22);
+    setBgVideoSaturation(bg.videoSaturation ?? 1.15);
+    setOverlays((m as any).overlays ?? []);
+    setAudioSrc(bg.audioSrc ?? '');
+    setAudioStartSec(bg.audioStartSec ?? 0);
+    setAudioVolume(bg.audioVolume ?? 0.8);
+    setAudioFadeIn(bg.audioFadeInSec ?? 0.5);
+    setAudioFadeOut(bg.audioFadeOutSec ?? 1);
+    setUseVideoAudio(bg.useVideoAudio ?? true);
   }
 
   function useCurrentPlayerFrameAsPoster() {
@@ -1599,22 +2514,564 @@ export default function Home() {
     setSaveMessage(`Frame ${frame} (${seconds}s) salvo como capa do vídeo.`);
   }
 
+  // ============================================================
+  // GÊNERO MUSICAL — aplica preset de estilo na config atual
+  // ============================================================
+  function applyGenrePreset(preset: GenrePreset) {
+    const c = preset.config ?? {};
+    const applyTextMetrics = (role: string, style?: Record<string, any>) => {
+      if (!style) return;
+
+      if (typeof style.scale === 'number') {
+        setTxScale((prev) => ({ ...prev, [role]: style.scale }));
+      }
+      if (typeof style.letterSpacing === 'number') {
+        setTxLS((prev) => ({ ...prev, [role]: style.letterSpacing }));
+      }
+      if (typeof style.lineHeight === 'number') {
+        setTxLH((prev) => ({ ...prev, [role]: style.lineHeight }));
+      }
+      if (typeof style.offsetX === 'number') {
+        setTxOX((prev) => ({ ...prev, [role]: style.offsetX }));
+      }
+      if (typeof style.offsetY === 'number') {
+        setTxOY((prev) => ({ ...prev, [role]: style.offsetY }));
+      }
+    };
+
+    if (typeof c.template === 'string' && templateOrder.includes(c.template as TemplateId)) {
+      setTemplate(c.template as TemplateId);
+    } else if (preset.id === 'brazu_phone_spotify') {
+      setTemplate('spotify_print');
+    }
+
+    if (typeof c.metricPrefix === 'string') setMetricPrefix(c.metricPrefix);
+    if (typeof c.metricNumber === 'string') setMetricNumber(c.metricNumber);
+    if (typeof c.metricLabel === 'string') setMetricLabel(c.metricLabel);
+    if (Array.isArray(c.platformsSel)) setPlatformsSel(c.platformsSel);
+
+    if (c.fontHeadline) setFontHeadline(c.fontHeadline);
+    if (c.fontDate) setFontDate(c.fontDate);
+    if (c.fontCta) setFontCta(c.fontCta);
+    if (c.fontCta1) setFontCta1(c.fontCta1);
+    if (c.fontCta2) setFontCta2(c.fontCta2);
+
+    if (c.trHeadline) setTrHeadline(c.trHeadline);
+    if (c.trDate) setTrDate(c.trDate);
+    if (c.trCta1) setTrCta1(c.trCta1);
+    if (c.trCta2) setTrCta2(c.trCta2);
+
+    if (c.coverMotion) setCoverMotion(c.coverMotion);
+    if (typeof c.coverSize === 'number') setCoverSize(c.coverSize);
+    if (typeof c.coverY === 'number') setCoverY(c.coverY);
+    if (typeof c.coverX === 'number') setCoverX(c.coverX);
+    if (typeof c.spinTurns === 'number') setSpinTurns(c.spinTurns);
+    if (typeof c.phoneSize === 'number') setPhoneSize(c.phoneSize);
+    if (typeof c.phoneX === 'number') setPhoneX(c.phoneX);
+    if (typeof c.phoneY === 'number') setPhoneY(c.phoneY);
+    if (typeof c.phoneTilt === 'number') setPhoneTilt(c.phoneTilt);
+    if (c.phoneMotion) setPhoneMotion(c.phoneMotion);
+    if (typeof c.phoneSpinTurns === 'number') setPhoneSpinTurns(c.phoneSpinTurns);
+    if (typeof c.phoneWiggle === 'number') setPhoneWiggle(c.phoneWiggle);
+    if (typeof c.phoneDynamicIsland === 'boolean') setPhoneDynamicIsland(c.phoneDynamicIsland);
+    if (typeof c.platformLogoSize === 'number') setPlatformLogoSize(c.platformLogoSize);
+    if (typeof c.platformLogoGap === 'number') setPlatformLogoGap(c.platformLogoGap);
+    if (c.platformLogoScales && typeof c.platformLogoScales === 'object') setPlatformLogoScales(c.platformLogoScales);
+    if (typeof c.wiggleIntensity === 'number') setWiggleIntensity(c.wiggleIntensity);
+    if (typeof c.particlesEnabled === 'boolean') setParticlesEnabled(c.particlesEnabled);
+    if (typeof c.finalFlash === 'boolean') setFinalFlash(c.finalFlash);
+    if (c.glowColor) setGlowColor(c.glowColor);
+    if (c.bgColor) setBgColor(c.bgColor);
+    if (typeof c.durationSeconds === 'number') setDurationSeconds(c.durationSeconds);
+
+    if (c.styleHeadline) setStyleHeadline((prev) => ({ ...prev, ...c.styleHeadline }));
+    if (c.styleCta) setStyleCta((prev) => ({ ...prev, ...c.styleCta }));
+    if (c.styleDate) setStyleDate((prev) => ({ ...prev, ...c.styleDate }));
+    if (c.styleCta1) setStyleCta1((prev) => ({ ...prev, ...c.styleCta1 }));
+    if (c.styleCta2) setStyleCta2((prev) => ({ ...prev, ...c.styleCta2 }));
+    applyTextMetrics('headline', c.styleHeadline);
+    applyTextMetrics('date', c.styleDate);
+    applyTextMetrics('cta', c.styleCta);
+    applyTextMetrics('cta1', c.styleCta1);
+    applyTextMetrics('cta2', c.styleCta2);
+    if (c.txScale) setTxScale((prev) => ({ ...prev, ...c.txScale }));
+    if (c.txLS) setTxLS((prev) => ({ ...prev, ...c.txLS }));
+    if (c.txLH) setTxLH((prev) => ({ ...prev, ...c.txLH }));
+    if (c.txOX) setTxOX((prev) => ({ ...prev, ...c.txOX }));
+    if (c.txOY) setTxOY((prev) => ({ ...prev, ...c.txOY }));
+
+    // Strokes (contorno) — característica visual forte de cada gênero
+    if (c.strokeHeadline) setStrokeHeadline((prev) => ({ ...prev, ...c.strokeHeadline }));
+    if (c.strokeDate) setStrokeDate((prev) => ({ ...prev, ...c.strokeDate }));
+    if (c.strokeCta) setStrokeCta((prev) => ({ ...prev, ...c.strokeCta }));
+    if (c.strokeCta1) {
+      setStrokeCta1((prev) => ({ ...prev, ...c.strokeCta1 }));
+      setStrokeCta2((prev) => ({ ...prev, ...c.strokeCta1 }));
+    }
+    if (c.strokeCta2) setStrokeCta2((prev) => ({ ...prev, ...c.strokeCta2 }));
+
+    setActiveGenreId(preset.id);
+    setSaveMessage(`Estilo "${preset.label}" aplicado · fontes, cores, contorno e motion atualizados.`);
+  }
+
+  // ============================================================
+  // AI AUTO-TEMPLATE — analisa capa + gera plano + aplica
+  // ============================================================
+  // AGENTE BG GENERATOR — OpenAI gpt-image-1 gera background cinematográfico
+  // AGENTE REFERENCE ANALYZER — sobe imagem de motion e Claude extrai estética
+  async function uploadReferenceImage(file: File) {
+    setAiReferenceBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('briefing', `Headline: ${headline}. Estilo desejado: extrair fielmente.`);
+      const res = await fetch('/api/ai/analyze-reference', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(`Falha ao analisar referência: ${data.error}`);
+        return;
+      }
+      setAiReferenceUrl(data.referenceUrl);
+      setAiReferenceAnalysis(data.analysis.motionDirectorBrief ?? '');
+    } catch (e) {
+      alert(`Erro: ${e instanceof Error ? e.message : 'desconhecido'}`);
+    } finally {
+      setAiReferenceBusy(false);
+    }
+  }
+
+  function clearReference() {
+    setAiReferenceUrl('');
+    setAiReferenceAnalysis('');
+  }
+
+  async function runAiGenerateBg() {
+    if (!coverImage) {
+      setAiBgMessage('Faça upload da capa primeiro.');
+      return;
+    }
+    setAiBgBusy(true);
+    setAiBgMessage('🎨 Gerando fundo cinematográfico (Claude analisa + DALL-E cria)…');
+    try {
+      const res = await fetch('/api/ai/generate-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coverUrl: coverImage,
+          briefing: `Motion graphic pra ${template}. Headline: "${headline}".`,
+          quality: 'medium',
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        setAiBgMessage(`❌ ${data.error}`);
+        return;
+      }
+      // Aplica o BG gerado — defaults otimizados pra IMAGEM (não vídeo borrado)
+      // URL absoluta funciona melhor no Remotion player
+      const bgFinalUrl = data.bg.url.startsWith('/') ? `${window.location.origin}${data.bg.url}` : data.bg.url;
+      setBgVideo(bgFinalUrl);
+      setBgVideoStartSec(0);
+      setBgVideoDuration(durationSeconds);
+      setBgVideoOpacity(1.0);     // 100% visível
+      setBgVideoBlur(2);           // blur mínimo (era 22 = manchão)
+      setBgVideoSaturation(1.05);  // saturação quase normal
+      setAiBgMessage(`✨ Fundo aplicado (mood: ${data.visual.mood?.[0] ?? 'auto'}) · ~$${data.bg.costEstimateUsd.toFixed(3)} · recarregue se não aparecer (Cmd+R)`);
+    } catch (e) {
+      setAiBgMessage(`❌ ${e instanceof Error ? e.message : 'erro'}`);
+    } finally {
+      setAiBgBusy(false);
+    }
+  }
+
+  async function runAiAutoTemplate() {
+    if (!coverImage) {
+      setAiMessage('Faça upload da capa antes de usar a IA.');
+      return;
+    }
+
+    setAiBusy(true);
+    setAiMessage('🎨 Analisando a capa…');
+
+    try {
+      const briefing = `Headline atual: "${headline}". CTA: "${cta}". Plataformas: ${platformsSel.join(', ')}. Template atual: ${template}.`;
+      const targetFormats = target === 'feed' ? ['square'] : ['story'];
+      const texts = { headline, cta, date: releaseDate, label: metricLabel, number: metricNumber, title: metricPrefix };
+
+      setAiMessage('🎨 Cascata IA: análise → decisão criativa…');
+      const res = await fetch('/api/ai/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coverUrl: coverImage,
+          texts,
+          briefing,
+          targetFormats,
+          referenceUrl: aiReferenceUrl || undefined,
+          referenceAnalysis: aiReferenceAnalysis || undefined,
+          noCache: true,
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        setAiMessage(`❌ Falha: ${data.error ?? 'erro desconhecido'}`);
+        return;
+      }
+
+      setAiMessage('🎨 Aplicando no Studio…');
+      const plan = data.plan;
+      const styleColors = plan.style ?? {};
+      // Payload completo retornado pelo Claude (com motion config rico)
+      const full = (plan as any)._fullMotion ?? {};
+      const fm = full.motion ?? {};
+
+      // ─── Template ────────────────────────────────────────
+      const newTemplate = full.template ?? plan.templateId;
+      if (newTemplate && ['available_now','watch_youtube','milestone','out_now','spotify_print'].includes(newTemplate)) {
+        setTemplate(newTemplate as TemplateId);
+      }
+
+      // ─── Duração ────────────────────────────────────────
+      if (typeof full.durationSeconds === 'number' && full.durationSeconds > 0 && full.durationSeconds <= 60) {
+        setDurationSeconds(full.durationSeconds);
+      } else if (typeof plan.durationSeconds === 'number' && plan.durationSeconds > 0) {
+        setDurationSeconds(plan.durationSeconds);
+      }
+
+      // ─── Textos ──────────────────────────────────────────
+      if (full.headline) setHeadline(full.headline);
+      if (full.cta) setCta(full.cta);
+      if (full.cta2) setCta2(full.cta2);
+      if (full.releaseDate) setReleaseDate(full.releaseDate);
+      if (full.channelName) setChannelName(full.channelName);
+      if (full.metricPrefix) setMetricPrefix(full.metricPrefix);
+      if (full.metricNumber) setMetricNumber(full.metricNumber);
+      if (full.metricLabel) setMetricLabel(full.metricLabel);
+
+      // ─── Plataformas ────────────────────────────────────
+      if (Array.isArray(full.platforms) && full.platforms.length > 0) {
+        const valid = full.platforms.filter((p: string) => allPlatforms.includes(p as PlatformName));
+        if (valid.length > 0) setPlatformsSel(valid as PlatformName[]);
+      }
+
+      // ─── Coleta DECISÕES da IA (valida IDs + registra pra UI) ──────
+      const decisions: AiDecision[] = [];
+      const validFontIds = new Set(allFonts.map((f) => f.id));
+      const validTransitions = ['mask_reveal','blur_focus','split_letters','type_writer','slide_stagger','glitch_rgb','scale_pop','rise_clean'];
+      const validCoverMotions = ['zoom_bounce','slide_up','slide_left','slide_right','flip_card','vinyl_reveal','slide_up_glow','flip_card_premium','zoom_bounce_intro'];
+
+      const applyFont = (field: string, label: string, value: string | undefined, setter: (v: string) => void) => {
+        if (!value) return;
+        if (validFontIds.has(value)) {
+          setter(value);
+          decisions.push({ field, label, chosen: value, applied: true });
+        } else {
+          decisions.push({ field, label, chosen: value, applied: false, reason: 'ID não existe no catálogo' });
+        }
+      };
+      const applyEnum = (field: string, label: string, value: string | undefined, allowed: string[], setter: (v: any) => void) => {
+        if (!value) return;
+        if (allowed.includes(value)) {
+          setter(value);
+          decisions.push({ field, label, chosen: value, applied: true });
+        } else {
+          decisions.push({ field, label, chosen: value, applied: false, reason: 'valor inválido' });
+        }
+      };
+
+      // ─── Fontes (escolhidas do catálogo real) ───────────
+      applyFont('fontHeadline', 'Fonte Headline', fm.fontHeadline, setFontHeadline);
+      applyFont('fontDate', 'Fonte Data', fm.fontDate, setFontDate);
+      applyFont('fontCta', 'Fonte CTA', fm.fontCta, setFontCta);
+      applyFont('fontCta1', 'Fonte CTA 1', fm.fontCta1, setFontCta1);
+      applyFont('fontCta2', 'Fonte CTA 2', fm.fontCta2, setFontCta2);
+
+      // ─── Cover motion + size + Y ────────────────────────
+      applyEnum('coverMotion', 'Cover motion', fm.coverMotion, validCoverMotions, setCoverMotion);
+      if (typeof fm.coverSize === 'number') {
+        const v = Math.max(200, Math.min(900, fm.coverSize));
+        setCoverSize(v);
+        decisions.push({ field: 'coverSize', label: 'Tamanho da capa', chosen: `${v}px`, applied: true });
+      }
+      if (typeof fm.coverY === 'number') {
+        const v = Math.max(-300, Math.min(300, fm.coverY));
+        setCoverY(v);
+        decisions.push({ field: 'coverY', label: 'Posição Y da capa', chosen: `${v}px`, applied: true });
+      }
+
+      // ─── Transições por elemento ────────────────────────
+      applyEnum('transitionHeadline', 'Transição Headline', fm.transitionHeadline, validTransitions, setTrHeadline);
+      applyEnum('transitionDate', 'Transição Data', fm.transitionDate, validTransitions, setTrDate);
+      applyEnum('transitionCta', 'Transição CTA', fm.transitionCta, validTransitions, setTrCta);
+      applyEnum('transitionCta1', 'Transição CTA 1', fm.transitionCta1, validTransitions, setTrCta1);
+      applyEnum('transitionCta2', 'Transição CTA 2', fm.transitionCta2, validTransitions, setTrCta2);
+
+      // ─── Wiggle, particles, flash, glow ─────────────────
+      if (typeof fm.wiggleIntensity === 'number') {
+        const v = Math.max(0, Math.min(2, fm.wiggleIntensity));
+        setWiggleIntensity(v);
+        decisions.push({ field: 'wiggleIntensity', label: 'Wiggle (intensidade)', chosen: v.toFixed(2), applied: true });
+      }
+      if (typeof fm.particlesEnabled === 'boolean') {
+        setParticlesEnabled(fm.particlesEnabled);
+        decisions.push({ field: 'particles', label: 'Partículas', chosen: fm.particlesEnabled ? 'ON' : 'OFF', applied: true });
+      }
+      if (typeof fm.finalFlash === 'boolean') {
+        setFinalFlash(fm.finalFlash);
+        decisions.push({ field: 'finalFlash', label: 'Flash final', chosen: fm.finalFlash ? 'ON' : 'OFF', applied: true });
+      }
+      if (typeof fm.spinTurns === 'number') {
+        setSpinTurns(fm.spinTurns);
+        decisions.push({ field: 'spinTurns', label: 'Spin turns', chosen: `${fm.spinTurns}`, applied: true });
+      }
+      if (fm.glowColor) {
+        setGlowColor(fm.glowColor);
+        decisions.push({ field: 'glow', label: 'Glow color', chosen: fm.glowColor, applied: true });
+      }
+
+      // ─── Estilo de cores por elemento (gradiente) ──────
+      const mergeStyle = (s: any) => {
+        if (!s) return null;
+        return {
+          color: s.color ?? '#ffffff',
+          useGradient: !!s.useGradient,
+          gradientColor1: s.gradientColor1 ?? s.gradientFrom ?? '#ffffff',
+          gradientColor2: s.gradientColor2 ?? s.gradientTo ?? '#cccccc',
+          gradientFrom: s.gradientColor1 ?? s.gradientFrom ?? '#ffffff',
+          gradientTo: s.gradientColor2 ?? s.gradientTo ?? '#cccccc',
+          gradientAngle: typeof s.gradientAngle === 'number' ? s.gradientAngle : 120,
+          letterSpacing: typeof s.letterSpacing === 'number' ? s.letterSpacing : undefined,
+        };
+      };
+      const h = mergeStyle(fm.styleHeadline); if (h) setStyleHeadline((prev) => ({ ...prev, ...h }));
+      const d = mergeStyle(fm.styleDate); if (d) setStyleDate((prev) => ({ ...prev, ...d }));
+      const c1 = mergeStyle(fm.styleCta1); if (c1) setStyleCta1((prev) => ({ ...prev, ...c1 }));
+      const c2 = mergeStyle(fm.styleCta2); if (c2) setStyleCta2((prev) => ({ ...prev, ...c2 }));
+
+      // ─── Strokes (contornos) ────────────────────────────
+      const mergeStroke = (s: any) => {
+        if (!s) return null;
+        return {
+          mode: s.mode ?? 'none',
+          width: typeof s.width === 'number' ? s.width : 2,
+          color: s.color ?? '#ffffff',
+          fillKind: s.fillKind ?? 'solid',
+          opacity: typeof s.opacity === 'number' ? s.opacity : 1,
+        };
+      };
+      const sh = mergeStroke(fm.strokeHeadline); if (sh) setStrokeHeadline((prev: any) => ({ ...prev, ...sh }));
+
+      // ─── Estilo headline (cor + gradient) ──────────────
+      if (fm.styleHeadline) {
+        const c = fm.styleHeadline.color || fm.styleHeadline.gradientColor1;
+        const grad = fm.styleHeadline.useGradient ? ` (gradient ${fm.styleHeadline.gradientColor1}→${fm.styleHeadline.gradientColor2})` : '';
+        decisions.push({ field: 'styleHeadline', label: 'Cor da headline', chosen: `${c}${grad}`, applied: true });
+      }
+      if (fm.styleDate?.color) decisions.push({ field: 'styleDate', label: 'Cor da data', chosen: fm.styleDate.color, applied: true });
+      if (fm.styleCta1?.color) decisions.push({ field: 'styleCta1', label: 'Cor CTA 1', chosen: fm.styleCta1.color, applied: true });
+      if (fm.styleCta2?.color) decisions.push({ field: 'styleCta2', label: 'Cor CTA 2', chosen: fm.styleCta2.color, applied: true });
+
+      // ─── BG color ───────────────────────────────────────
+      if (fm.background?.bgColor) {
+        setBgColor(fm.background.bgColor);
+        decisions.push({ field: 'bgColor', label: 'Cor de fundo', chosen: fm.background.bgColor, applied: true });
+      } else if (styleColors.backgroundColor && /^#[0-9a-fA-F]{3,8}$/.test(styleColors.backgroundColor)) {
+        setBgColor(styleColors.backgroundColor);
+        decisions.push({ field: 'bgColor', label: 'Cor de fundo', chosen: styleColors.backgroundColor, applied: true });
+      }
+
+      // ─── Textos ─────────────────────────────────────────
+      if (full.headline) decisions.push({ field: 'headline', label: 'Headline', chosen: `"${full.headline}"`, applied: true });
+      if (full.cta) decisions.push({ field: 'cta', label: 'CTA', chosen: `"${full.cta}"`, applied: true });
+      if (full.template) decisions.push({ field: 'template', label: 'Template', chosen: full.template, applied: true });
+      if (typeof full.durationSeconds === 'number') decisions.push({ field: 'duration', label: 'Duração', chosen: `${full.durationSeconds}s`, applied: true });
+
+      // SALVA decisões + rationale + pipeline no state pra UI mostrar
+      setAiDecisions(decisions);
+      setAiRationale(full.rationale ?? '');
+      setAiDecisionsOpen(true);
+      if (Array.isArray(data.pipeline)) setAiPipeline(data.pipeline);
+      if (typeof data.totalCostEstimateUsd === 'number') setAiTotalCost(data.totalCostEstimateUsd);
+
+      const okCount = decisions.filter((d) => d.applied).length;
+      const rejCount = decisions.filter((d) => !d.applied).length;
+      const costStr = data.totalCostEstimateUsd != null ? ` · custo ~$${data.totalCostEstimateUsd.toFixed(3)}` : '';
+      setAiMessage(`✨ ${okCount} mudanças aplicadas${rejCount > 0 ? ` · ${rejCount} rejeitadas` : ''}${costStr}`);
+      return;
+
+      // Mapeia mood -> genre preset (aplica fontes, transições, contorno)
+      const categoryToGenre: Record<string, string> = {
+        spotify_milestone: 'spotify_cover_plays_stage',
+        spotify_single: 'spotify_single_green_halftone',
+        spotify_print: 'brazu_phone_spotify',
+        spotify_listeners: 'spotify_artist_blue_listeners',
+      };
+      const moodToGenre: Record<string, string> = {
+        neon: 'spotify_single_green_halftone',
+        stage: 'spotify_cover_plays_stage',
+        premium: 'brazu_phone_spotify',
+        elegant: 'indie',
+        clean: 'indie',
+        gospel: 'gospel',
+        sertanejo: 'sertanejo',
+        romantic: 'sertanejo',
+        youtube: 'pop',
+      };
+      const detectedMood = String(styleColors.mood ?? '').toLowerCase();
+      const detectedCategory = String(plan.category ?? '').toLowerCase();
+      const wantsSpotify =
+        detectedCategory.includes('spotify') ||
+        template === 'spotify_print' ||
+        platformsSel.includes('Spotify');
+      const targetGenreId =
+        categoryToGenre[detectedCategory] ??
+        (wantsSpotify ? moodToGenre[detectedMood] : undefined) ??
+        moodToGenre[detectedMood] ??
+        'spotify_single_green_halftone';
+      const matchedGenre = genrePresets.find((g) => g.id === targetGenreId);
+
+      if (matchedGenre) {
+        applyGenrePreset(matchedGenre as GenrePreset);
+      }
+
+      // Sobrescreve cores/duração com o que a IA propôs (mais específico)
+      if (styleColors.backgroundColor && /^#[0-9a-fA-F]{3,8}$/.test(styleColors.backgroundColor)) {
+        setBgColor(styleColors.backgroundColor);
+      }
+      if (styleColors.primaryColor && /^#[0-9a-fA-F]{3,8}$/.test(styleColors.primaryColor)) {
+        setGlowColor(styleColors.primaryColor);
+      }
+      if (typeof plan.durationSeconds === 'number' && plan.durationSeconds > 0 && plan.durationSeconds <= 60) {
+        setDurationSeconds(plan.durationSeconds);
+      }
+
+      // Aplica textos sugeridos quando vierem da IA
+      const aiTexts = plan.texts ?? {};
+      if (typeof aiTexts.headline === 'string' && aiTexts.headline.trim()) setHeadline(aiTexts.headline);
+      if (typeof aiTexts.number === 'string' && aiTexts.number.trim()) setMetricNumber(aiTexts.number);
+      if (typeof aiTexts.label === 'string' && aiTexts.label.trim()) setMetricLabel(aiTexts.label);
+      if (typeof aiTexts.title === 'string' && aiTexts.title.trim()) setMetricPrefix(aiTexts.title);
+
+      setAiMessage(`✨ ${detectedCategory || detectedMood || 'auto'} detectado · estilo ${matchedGenre?.label ?? 'genérico'} aplicado`);
+    } catch (error) {
+      setAiMessage(`Erro: ${error instanceof Error ? error.message : 'desconhecido'}`);
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  // ============================================================
+  // TEMPLATE BUILDER — salva a config atual como preset reutilizável
+  // ============================================================
+  async function loadSavedTemplates() {
+    try {
+      const res = await fetch('/api/presets');
+      const data = await res.json();
+      setSavedTemplates(Array.isArray(data.presets) ? data.presets : []);
+    } catch {
+      setSavedTemplates([]);
+    }
+  }
+
+  async function saveAsTemplate() {
+    const name = templateBuilderName.trim();
+    if (!name) {
+      setTemplateBuilderMessage('Dê um nome ao template antes de salvar.');
+      return;
+    }
+
+    setTemplateBuilderBusy(true);
+    setTemplateBuilderMessage('Salvando…');
+
+    try {
+      const snapshot = createEditorSnapshot();
+      const res = await fetch('/api/presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          config: {
+            version: 'novacena-template-v1',
+            createdAt: new Date().toISOString(),
+            app: 'novacena-motion',
+            snapshot,
+          },
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setTemplateBuilderMessage(`✓ Template "${name}" salvo.`);
+        setTemplateBuilderName('');
+        await loadSavedTemplates();
+      } else {
+        setTemplateBuilderMessage(`Falha: ${data.error ?? 'erro desconhecido'}`);
+      }
+    } catch (error) {
+      setTemplateBuilderMessage(`Erro: ${error instanceof Error ? error.message : 'desconhecido'}`);
+    } finally {
+      setTemplateBuilderBusy(false);
+    }
+  }
+
+  async function deleteSavedTemplate(id: string) {
+    const ok = window.confirm('Excluir este template salvo?');
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/presets?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const data = await res.json();
+
+      if (data.success) {
+        setTemplateBuilderMessage('Template excluído.');
+        await loadSavedTemplates();
+      } else {
+        setTemplateBuilderMessage(`Falha ao excluir: ${data.error ?? 'erro desconhecido'}`);
+      }
+    } catch (error) {
+      setTemplateBuilderMessage(`Erro ao excluir: ${error instanceof Error ? error.message : 'desconhecido'}`);
+    }
+  }
+
+  function downloadSavedTemplate(preset: SavedTemplatePreset) {
+    const link = document.createElement('a');
+    link.href = `/api/presets?id=${encodeURIComponent(preset.id)}&download=1`;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
   function selectStudioTool(tool: StudioToolId) {
     setActiveStudioTool(tool);
 
     window.setTimeout(() => {
       const rightPanel = document.querySelector('[data-novacena-right-panel="true"]') as HTMLElement | null;
-      const target = document.querySelector(`[data-studio-section="${tool}"]`) as HTMLElement | null;
+
+      // Mapeia tool -> section title via STUDIO_TOOL_DOCK e acha a seção real
+      // pelo data-right-panel-section (que se move junto com a ordem drag/drop).
+      const dockEntry = STUDIO_TOOL_DOCK.find((entry) => entry.id === tool);
+      const sectionTitle = dockEntry?.section;
+      const target = tool === 'text'
+        ? (document.querySelector('[data-text-panel-anchor="fontes"]') as HTMLElement | null)
+        : sectionTitle
+          ? (document.querySelector(`[data-right-panel-section="${sectionTitle}"]`) as HTMLElement | null)
+          : null;
 
       if (!rightPanel || !target) {
         rightPanel?.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
+      // Desconta a altura do dock sticky pra evitar que ele cubra o título da seção.
+      const stickyDock = rightPanel.querySelector('[data-studio-tool-dock="right"]') as HTMLElement | null;
+      const dockHeight = stickyDock?.getBoundingClientRect().height ?? 0;
+
       const panelRect = rightPanel.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
       const currentScroll = rightPanel.scrollTop;
-      const nextTop = currentScroll + (targetRect.top - panelRect.top) - 10;
+      const nextTop = currentScroll + (targetRect.top - panelRect.top) - dockHeight - 8;
 
       rightPanel.scrollTo({
         top: Math.max(0, nextTop),
@@ -1623,35 +3080,357 @@ export default function Home() {
     }, 80);
   }
 
+  type PreviewLayerHotspot = {
+    id: string;
+    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element';
+    role?: FontRole;
+    overlayId?: string;
+    label: string;
+    rect: React.CSSProperties;
+  };
+
+  const previewLayerHotspots = React.useMemo<PreviewLayerHotspot[]>(() => {
+    const pct = (value: number) => `${Math.round(value * 10) / 10}%`;
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const visibleLogoPlatforms = platformsSel.filter((p) => Boolean(customLogos[p]));
+    const logoSizes = (visibleLogoPlatforms.length ? visibleLogoPlatforms : platformsSel).map((p) =>
+      Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))
+    );
+    const maxLogoSize = Math.max(44, ...logoSizes);
+    const totalLogoWidth = logoSizes.reduce((sum, size) => sum + size, 0) + Math.max(0, logoSizes.length - 1) * platformLogoGap;
+
+    const makeAvailableNowLogosRect = (): React.CSSProperties => {
+      const stageTop = target === 'story' ? 245 : 88;
+      const stageHeight = target === 'story' ? 1450 : 1220;
+      const stageGap = target === 'story' ? 42 : 34;
+      const headlineLines = Math.max(1, String(headline || 'LANÇAMENTO').split('\n').length);
+      const headlineFont = String(headline || '').length > 14 ? 76 : 92;
+      const headerHeight = headlineFont * 0.96 * headlineLines + 10 + (releaseDate ? 35 : 0);
+      const ctaBlockBeforeLogos = 44 + 52 + 16;
+      const totalStackHeight = headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + maxLogoSize;
+      const stackTop = stageTop + Math.max(0, (stageHeight - totalStackHeight) / 2);
+      const logoTopPx = stackTop + headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + 36;
+      const logoWidthPct = clamp(((totalLogoWidth + 56) / 1080) * 100, 24, 72);
+      const logoHeightPct = clamp(((maxLogoSize + 20) / compositionHeight) * 100, 5.2, 8.5);
+
+      return {
+        left: pct((100 - logoWidthPct) / 2),
+        top: pct(clamp((logoTopPx / compositionHeight) * 100, 65, 88)),
+        width: pct(logoWidthPct),
+        height: pct(logoHeightPct),
+      };
+    };
+
+    const elementHotspots: PreviewLayerHotspot[] = overlays
+      .filter((overlay) => overlay.type === 'image' && (overlay.layout ?? 'element') === 'element')
+      .map((overlay) => {
+        const scale = overlay.scale ?? 0.42;
+        const widthPct = clamp(((320 * scale) / 1080) * 100, 4, 80);
+        const heightPct = clamp(((320 * scale) / compositionHeight) * 100, 3, 80);
+        const centerXPct = 50 + (((overlay.x ?? 0) / 1080) * 100);
+        const centerYPct = 50 + (((overlay.y ?? 0) / compositionHeight) * 100);
+
+        return {
+          id: `element-${overlay.id}`,
+          kind: 'element',
+          overlayId: overlay.id,
+          label: overlay.label || 'Elemento',
+          rect: {
+            left: pct(clamp(centerXPct - widthPct / 2, -20, 116)),
+            top: pct(clamp(centerYPct - heightPct / 2, -20, 116)),
+            width: pct(widthPct),
+            height: pct(heightPct),
+          },
+        };
+      });
+
+    if (template === 'spotify_print') {
+      return [
+        { id: 'spotify-date', kind: 'text', role: 'date', label: 'Texto acima', rect: { left: '12%', top: '15%', width: '76%', height: '8%' } },
+        { id: 'spotify-number', kind: 'text', role: 'headline', label: 'Número', rect: { left: '7%', top: '22%', width: '86%', height: '16%' } },
+        { id: 'spotify-metric', kind: 'text', role: 'cta1', label: 'Métrica', rect: { left: '12%', top: '37%', width: '76%', height: '8%' } },
+        { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: { left: '18%', top: '42%', width: '64%', height: '38%' } },
+        { id: 'spotify-logo', kind: 'logos', label: 'Logos', rect: { left: '34%', top: '82%', width: '32%', height: '8%' } },
+        ...elementHotspots,
+      ];
+    }
+
+    if (template === 'milestone') {
+      return [
+        { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: { left: '12%', top: '12%', width: '76%', height: '8%' } },
+        { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: { left: '22%', top: '24%', width: '56%', height: '26%' } },
+        { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: { left: '6%', top: '52%', width: '88%', height: '16%' } },
+        { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: { left: '14%', top: '68%', width: '72%', height: '9%' } },
+        ...elementHotspots,
+      ];
+    }
+
+    return [
+      { id: 'headline', kind: 'text', role: 'headline', label: 'Headline', rect: { left: '8%', top: '13%', width: '84%', height: '13%' } },
+      { id: 'date', kind: 'text', role: 'date', label: 'Data', rect: { left: '22%', top: '25%', width: '56%', height: '7%' } },
+      { id: 'cover', kind: 'cover', label: 'Capa', rect: { left: '18%', top: '34%', width: '64%', height: '31%' } },
+      { id: 'cta1', kind: 'text', role: 'cta1', label: 'Chamada 1', rect: { left: '8%', top: '68%', width: '84%', height: '9%' } },
+      { id: 'cta2', kind: 'text', role: 'cta2', label: 'Chamada 2', rect: { left: '8%', top: '76%', width: '84%', height: '10%' } },
+      { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
+      ...elementHotspots,
+    ];
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, compositionHeight, overlays]);
+
+  function selectPreviewLayer(layer: PreviewLayerHotspot) {
+    stopTransitionPreviewLoopForManualEdit();
+
+    if (layer.kind === 'text' && layer.role) {
+      setActiveTextRole(layer.role);
+      selectStudioTool('text');
+      return;
+    }
+
+    setEditingPreviewTextRole(null);
+
+    if (layer.kind === 'phone') {
+      selectStudioTool('motion');
+      window.setTimeout(() => scrollToStudioSection('Celular'), 90);
+      return;
+    }
+
+    if (layer.kind === 'logos') {
+      selectStudioTool('logos');
+      return;
+    }
+
+    if (layer.kind === 'element' && layer.overlayId) {
+      setSelectedOverlayId(layer.overlayId);
+      selectStudioTool('overlay');
+      return;
+    }
+
+    selectStudioTool('cover');
+  }
+
+  function getPreviewLayerOffset(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'text' && layer.role) {
+      return {
+        x: Number(txOX[layer.role] ?? 0),
+        y: Number(txOY[layer.role] ?? 0),
+      };
+    }
+
+    if (layer.kind === 'phone') {
+      return { x: phoneX, y: phoneY };
+    }
+
+    if (layer.kind === 'cover') {
+      return { x: coverX, y: coverY };
+    }
+
+    if (layer.kind === 'element' && layer.overlayId) {
+      const overlay = overlays.find((item) => item.id === layer.overlayId);
+      return { x: overlay?.x ?? 0, y: overlay?.y ?? 0 };
+    }
+
+    return { x: 0, y: 0 };
+  }
+
+  function setPreviewLayerOffset(layer: PreviewLayerHotspot, x: number, y: number) {
+    if (layer.kind === 'text' && layer.role) {
+      updTxN(setTxOX, layer.role, x);
+      updTxN(setTxOY, layer.role, y);
+      return;
+    }
+
+    if (layer.kind === 'phone') {
+      setPhoneX(x);
+      setPhoneY(y);
+      return;
+    }
+
+    if (layer.kind === 'cover') {
+      setCoverX(x);
+      setCoverY(y);
+      return;
+    }
+
+    if (layer.kind === 'element' && layer.overlayId) {
+      updateOverlay(layer.overlayId, { x, y });
+    }
+  }
+
+  function getPreviewLayerScale(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'element' && layer.overlayId) {
+      return overlays.find((item) => item.id === layer.overlayId)?.scale ?? 0.42;
+    }
+
+    return 1;
+  }
+
+  function setPreviewLayerScale(layer: PreviewLayerHotspot, scale: number) {
+    if (layer.kind !== 'element' || !layer.overlayId) return;
+    updateOverlay(layer.overlayId, { scale: Math.max(0.05, Math.min(4, Math.round(scale * 100) / 100)) });
+  }
+
+  function beginPreviewLayerDrag(event: React.PointerEvent<HTMLButtonElement>, layer: PreviewLayerHotspot) {
+    if (event.button !== 0) return;
+
+    selectPreviewLayer(layer);
+    if (layer.kind === 'logos') return;
+
+    const previewRect = previewFrameRef.current?.getBoundingClientRect();
+    if (!previewRect?.width || !previewRect?.height) return;
+
+    const offset = getPreviewLayerOffset(layer);
+    previewDragRef.current = {
+      layerId: layer.id,
+      kind: layer.kind,
+      role: layer.role,
+      overlayId: layer.overlayId,
+      mode: layer.kind === 'element' && event.shiftKey ? 'scale' : 'move',
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startOffsetX: offset.x,
+      startOffsetY: offset.y,
+      startScale: getPreviewLayerScale(layer),
+      previewWidth: previewRect.width,
+      previewHeight: previewRect.height,
+      moved: false,
+    };
+    setPreviewDraggingLayerId(layer.id);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function movePreviewLayer(event: React.PointerEvent<HTMLButtonElement>, layer: PreviewLayerHotspot) {
+    const drag = previewDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.layerId !== layer.id) return;
+
+    const dxPreview = event.clientX - drag.startClientX;
+    const dyPreview = event.clientY - drag.startClientY;
+    if (Math.abs(dxPreview) + Math.abs(dyPreview) > 2) {
+      drag.moved = true;
+    }
+
+    const dx = dxPreview * (1080 / drag.previewWidth);
+    const dy = dyPreview * (compositionHeight / drag.previewHeight);
+
+    if (drag.mode === 'scale' && layer.kind === 'element') {
+      const delta = (dxPreview - dyPreview) / Math.max(120, drag.previewWidth * 0.35);
+      setPreviewLayerScale(layer, (drag.startScale ?? 1) + delta);
+    } else {
+      setPreviewLayerOffset(layer, Math.round((drag.startOffsetX + dx) * 10) / 10, Math.round((drag.startOffsetY + dy) * 10) / 10);
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function endPreviewLayerDrag(event: React.PointerEvent<HTMLButtonElement>) {
+    const drag = previewDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    if (drag.moved) {
+      suppressPreviewClickRef.current = true;
+      window.setTimeout(() => {
+        suppressPreviewClickRef.current = false;
+      }, 0);
+      setPreviewNonce((n) => n + 1);
+    }
+
+    previewDragRef.current = null;
+    setPreviewDraggingLayerId(null);
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function getPreviewTextValue(role: FontRole) {
+    if (template === 'spotify_print') {
+      if (role === 'headline') return metricNumber;
+      if (role === 'date') return metricPrefix;
+      if (role === 'cta' || role === 'cta1') return metricLabel;
+      return cta2;
+    }
+
+    if (role === 'date') return releaseDate;
+    if (role === 'cta2') return cta2;
+    if (role === 'cta' || role === 'cta1') return cta;
+    return headline;
+  }
+
+  function setPreviewTextValue(role: FontRole, value: string) {
+    if (template === 'spotify_print') {
+      if (role === 'headline') setMetricNumber(value);
+      else if (role === 'date') setMetricPrefix(value);
+      else if (role === 'cta' || role === 'cta1') setMetricLabel(value);
+      else setCta2(value);
+      return;
+    }
+
+    if (role === 'date') setReleaseDate(value);
+    else if (role === 'cta2') setCta2(value);
+    else if (role === 'cta' || role === 'cta1') setCta(value);
+    else setHeadline(value);
+  }
+
   async function renderScript(script: string, label: string) {
+    if (bgVideoNeedsTrim) {
+      setRenderMessage('Corte/otimize o trecho do vídeo antes de renderizar.');
+      return;
+    }
+
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
-    const renderPropsForServer = {
-      ...liveProject,
-      posterFrame: {
-        enabled: posterFrameEnabled,
-        frameSec: posterFrameSec,
-        holdSec: posterHoldSec,
-        outroEnabled: posterOutroEnabled,
-      },
-    };
+    try {
+      const motionSource = liveProject.motion ?? {};
+      const activeFontIds = new Set(
+        [
+          motionSource.fontHeadline,
+          motionSource.fontDate,
+          motionSource.fontCta,
+          motionSource.fontCta1,
+          motionSource.fontCta2,
+        ].filter((id): id is string => typeof id === 'string' && id.length > 0)
+      );
+      const customFontsForRender = Array.isArray(motionSource.customFonts)
+        ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
+        : [];
+      const renderPropsForServer = {
+        ...liveProject,
+        motion: {
+          ...motionSource,
+          customFonts: customFontsForRender,
+          previewMode: false,
+        },
+        posterFrame: {
+          enabled: posterFrameEnabled,
+          frameSec: posterFrameSec,
+          holdSec: posterHoldSec,
+          outroEnabled: posterOutroEnabled,
+        },
+      };
 
-    const response = await fetch('/api/render', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script, props: renderPropsForServer }),
-    });
-    const result = await response.json();
-    setRendering(false);
-    setRenderLog(result.output ?? '');
-    if (!result.ok) {
-      setRenderMessage(`Erro: ${result.error ?? 'falha'}`);
-      return;
+      const response = await fetch('/api/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, props: renderPropsForServer }),
+      });
+      const result = await response.json();
+      setRenderLog(result.output ?? '');
+      if (!result.ok) {
+        setRenderMessage(`Erro: ${result.error ?? 'falha'}`);
+        return;
+      }
+      setRenderMessage(`${label} gerado. ✓`);
+      // Atualizar lista de arquivos disponíveis para download
+      fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha';
+      setRenderMessage(`Erro: ${message}`);
+      setRenderLog(String(error));
+    } finally {
+      setRendering(false);
     }
-    setRenderMessage(`${label} gerado. ✓`);
-    // Atualizar lista de arquivos disponíveis para download
-    fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
   }
 
   async function openOutFolder() {
@@ -1689,23 +3468,45 @@ export default function Home() {
   // ============================================================
   // RENDER
   // ============================================================
-  
+
   const presetImportInputRefV1 = React.useRef<HTMLInputElement | null>(null);
   const [presetImportStatusV1, setPresetImportStatusV1] = React.useState('');
 
   const exportStudioPresetV1 = React.useCallback(() => {
+    if (bgVideoNeedsTrim) {
+      setPresetImportStatusV1('Corte/otimize o trecho do vídeo antes de exportar o preset.');
+      window.setTimeout(() => setPresetImportStatusV1(''), 3000);
+      return;
+    }
+
+    const timestamp = Date.now();
     const preset = {
       version: 'novacena-preset-v1',
       exportedAt: new Date().toISOString(),
       app: 'novacena-motion',
       project: {
         template,
+        target,
+        renderTarget: target,
+        durationSeconds,
         releaseDate,
         headline,
         cta,
         cta2,
         showCta1,
         showCta2,
+        coverImage,
+        channelName,
+        metricPrefix,
+        metricNumber,
+        metricLabel,
+        platforms: platformsSel,
+        posterFrame: {
+          enabled: posterFrameEnabled,
+          frameSec: posterFrameSec,
+          holdSec: posterHoldSec,
+          outroEnabled: posterOutroEnabled,
+        },
         motion: motionWithStyles,
       },
     };
@@ -1715,42 +3516,109 @@ export default function Home() {
       .replace(/^-|-$/g, '')
       .toLowerCase();
 
-    const fileName = `novacena-preset-${String(template || 'template')}-${safeHeadline || 'arte'}-${Date.now()}.json`;
+    const presetName = `novacena-preset-${String(template || 'template')}-${safeHeadline || 'arte'}-${timestamp}`;
+    const fileName = `${presetName}.json`;
+    const serializedPreset = JSON.stringify(preset, null, 2);
 
-    const blob = new Blob([JSON.stringify(preset, null, 2)], {
-      type: 'application/json',
-    });
+    const frameName = 'novacena-preset-download-frame';
+    let frame = document.querySelector<HTMLIFrameElement>(`iframe[name="${frameName}"]`);
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.name = frameName;
+      frame.style.display = 'none';
+      document.body.appendChild(frame);
+    }
 
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/presets/export';
+    form.target = frameName;
+    form.style.display = 'none';
 
-    URL.revokeObjectURL(url);
+    const payloadInput = document.createElement('input');
+    payloadInput.type = 'hidden';
+    payloadInput.name = 'payload';
+    payloadInput.value = serializedPreset;
+
+    const fileNameInput = document.createElement('input');
+    fileNameInput.type = 'hidden';
+    fileNameInput.name = 'fileName';
+    fileNameInput.value = fileName;
+
+    form.appendChild(payloadInput);
+    form.appendChild(fileNameInput);
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+
+    setPresetImportStatusV1('Download do preset JSON iniciado.');
+    window.setTimeout(() => setPresetImportStatusV1(''), 2200);
   }, [
     template,
+    target,
+    durationSeconds,
     releaseDate,
     headline,
     cta,
     cta2,
     showCta1,
     showCta2,
+    coverImage,
+    channelName,
+    metricPrefix,
+    metricNumber,
+    metricLabel,
+    platformsSel,
+    posterFrameEnabled,
+    posterFrameSec,
+    posterHoldSec,
+    posterOutroEnabled,
     motionWithStyles,
+    bgVideoNeedsTrim,
   ]);
 
 
   const applyStudioPresetV1 = React.useCallback((rawPreset: any) => {
-    const preset = rawPreset?.project ? rawPreset.project : rawPreset;
-    const m = preset?.motion ?? rawPreset?.motion ?? {};
+    const presetRoot = rawPreset?.config ?? rawPreset;
+    const preset = presetRoot?.project ? presetRoot.project : presetRoot;
+    const m = preset?.motion ?? presetRoot?.motion ?? {};
 
     if (!preset) {
       setPresetImportStatusV1('Preset inválido.');
       window.setTimeout(() => setPresetImportStatusV1(''), 3000);
       return;
+    }
+
+    const nextTemplate = preset.template ?? preset.type;
+    if (['available_now', 'watch_youtube', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
+      setTemplate(nextTemplate as TemplateId);
+    }
+
+    const nextTarget = preset.target ?? preset.renderTarget ?? m.renderTarget;
+    if (['story', 'feed'].includes(nextTarget)) {
+      setTarget(nextTarget as RenderTarget);
+    }
+
+    const nextDuration = preset.durationSeconds ?? m.durationSeconds;
+    if (typeof nextDuration === 'number' && Number.isFinite(nextDuration)) {
+      setDurationSeconds(Math.max(1, Math.min(60, nextDuration)));
+    }
+
+    if (typeof preset.coverImage === 'string') setCoverImage(preset.coverImage);
+    if (typeof preset.channelName === 'string') setChannelName(preset.channelName);
+    if (typeof preset.metricPrefix === 'string') setMetricPrefix(preset.metricPrefix);
+    if (typeof preset.metricNumber === 'string') setMetricNumber(preset.metricNumber);
+    if (typeof preset.metricLabel === 'string') setMetricLabel(preset.metricLabel);
+    if (Array.isArray(preset.platforms)) {
+      setPlatformsSel(preset.platforms.filter((p: any) => allPlatforms.includes(p)) as PlatformName[]);
+    }
+
+    if (preset.posterFrame && typeof preset.posterFrame === 'object') {
+      if (typeof preset.posterFrame.enabled === 'boolean') setPosterFrameEnabled(preset.posterFrame.enabled);
+      if (typeof preset.posterFrame.frameSec === 'number') setPosterFrameSec(preset.posterFrame.frameSec);
+      if (typeof preset.posterFrame.holdSec === 'number') setPosterHoldSec(preset.posterFrame.holdSec);
+      if (typeof preset.posterFrame.outroEnabled === 'boolean') setPosterOutroEnabled(preset.posterFrame.outroEnabled);
     }
 
     if (typeof preset.releaseDate === 'string') setReleaseDate(preset.releaseDate);
@@ -1772,12 +3640,18 @@ export default function Home() {
     if (m.styleCta) setStyleCta((s: any) => ({ ...s, ...m.styleCta }));
     if (m.styleCta1) setStyleCta1((s: any) => ({ ...s, ...m.styleCta1 }));
     if (m.styleCta2) setStyleCta2((s: any) => ({ ...s, ...m.styleCta2 }));
+    applyTextMetricsFromStyle('headline', m.styleHeadline);
+    applyTextMetricsFromStyle('date', m.styleDate);
+    applyTextMetricsFromStyle('cta', m.styleCta);
+    applyTextMetricsFromStyle('cta1', m.styleCta1 ?? m.styleCta);
+    applyTextMetricsFromStyle('cta2', m.styleCta2 ?? m.styleCta);
 
     if (m.strokeHeadline) setStrokeHeadline(m.strokeHeadline);
     if (m.strokeDate) setStrokeDate(m.strokeDate);
     if (m.strokeCta) setStrokeCta(m.strokeCta);
     if (m.strokeCta1) setStrokeCta1(m.strokeCta1);
     if (m.strokeCta2) setStrokeCta2(m.strokeCta2);
+    if (typeof m.textOpacity === 'number') setTextOpacity(m.textOpacity);
 
     if (m.transitionHeadline) setTrHeadline(m.transitionHeadline);
     if (m.transitionDate) setTrDate(m.transitionDate);
@@ -1785,19 +3659,65 @@ export default function Home() {
 
     if (typeof setTrCta1 === 'function' && m.transitionCta1) setTrCta1(m.transitionCta1);
     if (typeof setTrCta2 === 'function' && m.transitionCta2) setTrCta2(m.transitionCta2);
+    setTransitionTuning(transitionTuningFromMotion(m));
 
     if (typeof m.cta1InFrame === 'number') setCta1InFrame(m.cta1InFrame);
     if (typeof m.ctaSwapFrame === 'number') setCtaSwapFrame(m.ctaSwapFrame);
     if (typeof m.cta2InFrame === 'number') setCta2InFrame(m.cta2InFrame);
     if (typeof m.logosInFrame === 'number') setLogosInFrame(m.logosInFrame);
+    setTextInFrames({
+      headline: typeof m.headlineInFrame === 'number' ? m.headlineInFrame : undefined,
+      date: typeof m.dateInFrame === 'number' ? m.dateInFrame : undefined,
+      cta1: typeof m.cta1InFrame === 'number' ? m.cta1InFrame : undefined,
+      cta2: typeof m.cta2InFrame === 'number' ? m.cta2InFrame : undefined,
+    });
 
     if (typeof m.coverSize === 'number') setCoverSize(m.coverSize);
     if (typeof m.coverX === 'number') setCoverX(m.coverX);
     if (typeof m.coverY === 'number') setCoverY(m.coverY);
+    if (m.coverMotion) setCoverMotion(normalizeCoverMotionId(m.coverMotion));
+    if (typeof m.phoneSize === 'number') setPhoneSize(m.phoneSize);
+    if (typeof m.phoneX === 'number') setPhoneX(m.phoneX);
+    if (typeof m.phoneY === 'number') setPhoneY(m.phoneY);
+    if (typeof m.phoneTilt === 'number') setPhoneTilt(m.phoneTilt);
+    if (m.phoneMotion) setPhoneMotion(m.phoneMotion);
+    if (typeof m.phoneSpinTurns === 'number') setPhoneSpinTurns(m.phoneSpinTurns);
+    if (typeof m.phoneWiggle === 'number') setPhoneWiggle(m.phoneWiggle);
+    if (typeof m.phoneDynamicIsland === 'boolean') setPhoneDynamicIsland(m.phoneDynamicIsland);
+    if (typeof m.spinTurns === 'number') setSpinTurns(m.spinTurns);
+    if (typeof m.wiggleIntensity === 'number') setWiggleIntensity(m.wiggleIntensity);
+    if (typeof m.wiggleHeadline === 'number') setWiggleH(m.wiggleHeadline);
+    if (typeof m.wiggleDate === 'number') setWiggleD(m.wiggleDate);
+    if (typeof m.wiggleCta === 'number') setWiggleC(m.wiggleCta);
+    if (typeof m.wiggleCta1 === 'number') setWiggleCta1(m.wiggleCta1);
+    else if (typeof m.wiggleCta === 'number') setWiggleCta1(m.wiggleCta);
+    if (typeof m.wiggleCta2 === 'number') setWiggleCta2(m.wiggleCta2);
+    else if (typeof m.wiggleCta === 'number') setWiggleCta2(m.wiggleCta);
+    if (typeof m.particlesEnabled === 'boolean') setParticlesEnabled(m.particlesEnabled);
+    if (typeof m.finalFlash === 'boolean') setFinalFlash(m.finalFlash);
+    if (typeof m.glowColor === 'string') setGlowColor(m.glowColor);
+    if (typeof m.platformLogoSize === 'number') setPlatformLogoSize(m.platformLogoSize);
+    if (typeof m.platformLogoGap === 'number') setPlatformLogoGap(m.platformLogoGap);
+    if (m.platformLogoScales && typeof m.platformLogoScales === 'object') setPlatformLogoScales(m.platformLogoScales);
+    if (m.customLogos && typeof m.customLogos === 'object') setCustomLogos(m.customLogos);
+    if (Array.isArray(m.overlays)) setOverlays(m.overlays);
 
-    if (typeof m.videoOpacity === 'number') setBgVideoOpacity(m.videoOpacity);
-    if (typeof m.videoBlur === 'number') setBgVideoBlur(m.videoBlur);
-    if (typeof m.videoSaturation === 'number') setBgVideoSaturation(m.videoSaturation);
+    const background = m.background ?? m;
+    if (typeof background.videoSrc === 'string') setBgVideo(background.videoSrc);
+    if (typeof background.videoStartFrame === 'number') setBgVideoStartSec(background.videoStartFrame / 30);
+    if (typeof background.videoDurationSec === 'number') setBgVideoDuration(background.videoDurationSec);
+    if (typeof background.videoNeedsTrim === 'boolean') setBgVideoNeedsTrim(background.videoNeedsTrim);
+    if (typeof background.videoOriginalName === 'string') setBgVideoOriginalName(background.videoOriginalName);
+    if (typeof background.videoOpacity === 'number') setBgVideoOpacity(background.videoOpacity);
+    if (typeof background.bgColor === 'string') setBgColor(background.bgColor);
+    if (typeof background.videoBlur === 'number') setBgVideoBlur(background.videoBlur);
+    if (typeof background.videoSaturation === 'number') setBgVideoSaturation(background.videoSaturation);
+    if (typeof background.audioSrc === 'string') setAudioSrc(background.audioSrc);
+    if (typeof background.audioStartSec === 'number') setAudioStartSec(background.audioStartSec);
+    if (typeof background.audioVolume === 'number') setAudioVolume(background.audioVolume);
+    if (typeof background.audioFadeInSec === 'number') setAudioFadeIn(background.audioFadeInSec);
+    if (typeof background.audioFadeOutSec === 'number') setAudioFadeOut(background.audioFadeOutSec);
+    if (typeof background.useVideoAudio === 'boolean') setUseVideoAudio(background.useVideoAudio);
 
     setPresetImportStatusV1('Preset importado.');
     window.setTimeout(() => setPresetImportStatusV1(''), 2500);
@@ -1825,22 +3745,33 @@ export default function Home() {
     }
   }, [applyStudioPresetV1]);
 
+  function applySavedTemplate(preset: SavedTemplatePreset) {
+    const config = preset.config ?? {};
+    const snapshot = config.snapshot ?? config.config?.snapshot;
+
+    if (snapshot && typeof snapshot === 'object') {
+      restoreEditorSnapshot(snapshot);
+      setTemplateBuilderMessage(`✓ Template "${preset.name}" carregado.`);
+      window.setTimeout(() => setTemplateBuilderMessage(''), 2500);
+      return;
+    }
+
+    applyStudioPresetV1(config);
+    setTemplateBuilderMessage(`✓ Template "${preset.name}" carregado.`);
+    window.setTimeout(() => setTemplateBuilderMessage(''), 2500);
+  }
+
 
   const presetExportButtonV1 = (
     <div
       style={{
-        position: 'fixed',
-        left: 18,
-        bottom: 92,
-        zIndex: 9999,
         display: 'grid',
         gap: 8,
         padding: 10,
         borderRadius: 16,
-        background: 'rgba(10,10,14,0.78)',
+        width: '100%',
+        background: 'rgba(255,255,255,0.045)',
         border: '1px solid rgba(255,255,255,0.12)',
-        backdropFilter: 'blur(16px)',
-        boxShadow: '0 14px 40px rgba(0,0,0,0.35)',
       }}
     >
       <div
@@ -1924,10 +3855,8 @@ return (
         `,
       }}
     >
-      {presetExportButtonV1}
-
       {/* ─── TOPBAR ─── */}
-      <header style={topbarStyle}>
+      <header style={{ ...topbarStyle, position: 'relative', zIndex: 80 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <BrandSmall />
           <div style={separator} />
@@ -1937,6 +3866,134 @@ return (
             onSelect={setActiveSlug}
             onNew={() => setShowArtistModal(true)}
           />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 90,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setTemplatesMenuOpen((open) => !open)}
+            style={{
+              ...chip,
+              minWidth: 168,
+              height: 34,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              background: templatesMenuOpen ? 'var(--surface-active)' : 'var(--surface-1)',
+              color: 'var(--text-1)',
+            }}
+          >
+            <span>Templates</span>
+            <span style={{ color: 'var(--text-3)', fontSize: 11 }}>
+              {savedTemplates.length} {templatesMenuOpen ? '▲' : '▼'}
+            </span>
+          </button>
+
+          {templatesMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 42,
+                transform: 'translateX(-50%)',
+                width: 420,
+                maxWidth: 'calc(100vw - 48px)',
+                padding: 12,
+                borderRadius: 12,
+                background: 'rgba(14,14,18,0.98)',
+                border: '1px solid var(--border-1)',
+                boxShadow: '0 22px 60px rgba(0,0,0,0.46)',
+                backdropFilter: 'blur(18px)',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                <input
+                  value={templateBuilderName}
+                  onChange={(e) => setTemplateBuilderName(e.target.value)}
+                  placeholder="Nome do template"
+                  style={fieldInputStyle}
+                />
+                <button
+                  type="button"
+                  onClick={saveAsTemplate}
+                  disabled={templateBuilderBusy || !templateBuilderName.trim()}
+                  style={{
+                    ...ghostBtnStyle,
+                    height: 36,
+                    padding: '0 14px',
+                    opacity: (templateBuilderBusy || !templateBuilderName.trim()) ? 0.5 : 1,
+                    cursor: (templateBuilderBusy || !templateBuilderName.trim()) ? 'not-allowed' : 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {templateBuilderBusy ? 'Salvando…' : 'Salvar'}
+                </button>
+              </div>
+
+              {templateBuilderMessage && (
+                <div style={{ marginTop: 7, fontSize: 10, color: 'var(--text-3)' }}>
+                  {templateBuilderMessage}
+                </div>
+              )}
+
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 10 }}>
+                {savedTemplates.length === 0 ? (
+                  <div style={{ color: 'var(--text-3)', fontSize: 11 }}>
+                    Nenhum template salvo ainda.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
+                    {savedTemplates.map((preset) => (
+                      <div
+                        key={preset.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr auto auto 28px',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '8px 8px',
+                          borderRadius: 8,
+                          background: 'var(--surface-1)',
+                          border: '1px solid var(--border-1)',
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ color: 'var(--text-1)', fontSize: 12, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {preset.name}
+                          </div>
+                          <div style={{ color: 'var(--text-3)', fontSize: 9, marginTop: 2 }}>
+                            {preset.createdAt ? new Date(preset.createdAt).toLocaleDateString('pt-BR') : 'Sem data'}
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => applySavedTemplate(preset)} style={smallBtn}>
+                          Carregar
+                        </button>
+                        <button type="button" onClick={() => downloadSavedTemplate(preset)} style={smallBtn}>
+                          Baixar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteSavedTemplate(preset.id)}
+                          title="Excluir template"
+                          style={{ ...smallBtn, color: '#ff6b6b', padding: 0 }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -2067,15 +4124,27 @@ return (
 
 
         <Section title="Conteúdo">
-          <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
-          <TextAreaField label="Headline" value={headline} onChange={setHeadline} placeholder={"LANÇAMENTO"} rows={2} />
-          {template === 'available_now' ? (
+          {template === 'spotify_print' ? (
             <>
-              <TextAreaField label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder={"FAÇA O\nPRÉ-SAVE"} rows={2} />
-              <TextAreaField label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} placeholder="ULTRAPASSAMOS" />
+              <div style={gridTwoCols}>
+                <Field label="Número" value={metricNumber} onChange={setMetricNumber} placeholder="10.000" />
+                <Field label="Métrica" value={metricLabel} onChange={setMetricLabel} placeholder="OUVINTES MENSAIS" />
+              </div>
             </>
           ) : (
-            <TextAreaField label="Chamada / CTA" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+            <>
+              <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
+              <TextAreaField label="Headline" value={headline} onChange={setHeadline} placeholder={"LANÇAMENTO"} rows={2} />
+              {template === 'available_now' ? (
+                <>
+                  <TextAreaField label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder={"FAÇA O\nPRÉ-SAVE"} rows={2} />
+                  <TextAreaField label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+                </>
+              ) : (
+                <TextAreaField label="Chamada / CTA" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              )}
+            </>
           )}
           {template === 'watch_youtube' && (
             <Field label="Canal" value={channelName} onChange={setChannelName} />
@@ -2194,13 +4263,40 @@ return (
             </div>
 
 
-        <div style={{ marginTop: 'auto', padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 8,
+            marginTop: 'auto',
+            padding: '14px 22px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            background: 'linear-gradient(180deg, rgba(14,14,18,0.84), var(--bg-1) 28%)',
+            borderTop: '1px solid var(--border-1)',
+            backdropFilter: 'blur(14px)',
+          }}
+        >
+          {presetExportButtonV1}
           <button onClick={saveToGallery} style={primaryBtn} disabled={!activeSlug}>
             ★ Salvar na galeria
+          </button>
+          <button
+            disabled={rendering}
+            onClick={() => renderScript(renderScriptFor(template, target), `${templateLabels[template]} ${target}`)}
+            style={renderBtnStyle}
+          >
+            {rendering ? 'Renderizando…' : `Renderizar vídeo (${target})`}
           </button>
           <button onClick={saveProjectMain} disabled={saving} style={ghostBtnStyle}>
             {saving ? 'Salvando…' : 'Salvar projeto (render)'}
           </button>
+          {renderMessage && (
+            <div style={{ fontSize: 11, color: renderMessage.startsWith('Erro') ? 'var(--danger)' : 'var(--text-3)' }}>
+              {renderMessage}
+            </div>
+          )}
           {saveMessage && (
             <div style={{ fontSize: 11, color: saveMessage.startsWith('Erro') ? 'var(--danger)' : 'var(--text-3)' }}>
               {saveMessage}
@@ -2222,49 +4318,68 @@ return (
                 value={target}
                 onChange={(v) => setTarget(v as RenderTarget)}
               />
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {QUICK_ACTIONS.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    onClick={() => runQuickAction(action.id)}
-                    style={chip}
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </div>
 
               <button onClick={() => setShowSafeArea((s) => !s)} style={showSafeArea ? chipActive : chip}>
-                {showSafeArea ? '✓ ' : ''}Safe area
+                {showSafeArea ? '✓ ' : ''}Safe zone
               </button>
             </div>
 
             <div
               style={{
-                position: 'relative',
-                width: target === 'story' ? 380 : 460,
-                aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
-                borderRadius: 22,
-                overflow: 'hidden',
-                boxShadow: '0 30px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05)',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                gap: 16,
               }}
             >
-              <Player
-                key={playerRemountKey}
-      acknowledgeRemotionLicense
-                ref={playerRef}
-                component={Component}
-                inputProps={liveProject}
-                durationInFrames={durationSeconds * 30}
-                compositionWidth={1080}
-                compositionHeight={compositionHeight}
-                fps={30}
-                style={{ width: '100%', height: '100%' }}
-                controls
-                loop
-                initialFrame={0}
-              />
+              <div
+                ref={previewFrameRef}
+                onClickCapture={(event) => {
+                  const target = event.target as HTMLElement | null;
+                  if (target?.closest('[data-preview-layer-hit="true"]')) return;
+                  if (!editPreviewLoop) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  releaseEditPreviewLoopAndPlayFull();
+                }}
+                style={{
+                  position: 'relative',
+                  width: target === 'story' ? 380 : 460,
+                  flex: '0 0 auto',
+                  aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
+                  borderRadius: 22,
+                  overflow: 'hidden',
+                  boxShadow: '0 30px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.05)',
+                }}
+              >
+              {isClientReady ? (
+                <Player
+                  key={playerRemountKey}
+                  acknowledgeRemotionLicense
+                  ref={playerRef}
+                  component={Component}
+                  inputProps={liveProject}
+                  durationInFrames={durationSeconds * 30}
+                  compositionWidth={1080}
+                  compositionHeight={compositionHeight}
+                  fps={30}
+                  style={{ width: '100%', height: '100%' }}
+                  controls
+                  loop
+                  inFrame={editPreviewLoop?.startFrame ?? null}
+                  outFrame={editPreviewLoop?.endFrame ?? null}
+                  initialFrame={0}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: '#050507',
+                  }}
+                />
+              )}
               {showSafeArea && target === 'story' && (
                 <div
                   style={{
@@ -2278,15 +4393,122 @@ return (
                   }}
                 />
               )}
-            </div>
+              {previewLayerHotspots.map((layer) => {
+                const selected =
+                  (layer.kind === 'text' && layer.role === activeTextRole && activeStudioTool === 'text') ||
+                  (layer.kind === 'cover' && activeStudioTool === 'cover') ||
+                  (layer.kind === 'logos' && activeStudioTool === 'logos') ||
+                  (layer.kind === 'phone' && activeStudioTool === 'motion') ||
+                  (layer.kind === 'element' && layer.overlayId === selectedOverlayId);
+                const dragging = previewDraggingLayerId === layer.id;
 
-            {/* TIMELINE DE OVERLAYS */}
-            <OverlayTimeline
-              overlays={overlays}
-              durationSeconds={durationSeconds}
-              onUpdate={updateOverlay}
-              onRemove={removeOverlay}
-            />
+                return (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    data-preview-layer-hit="true"
+                    aria-label={`Selecionar ${layer.label}`}
+                    title={layer.kind === 'element' ? `${layer.label} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${layer.label}`}
+                    onPointerDown={(event) => beginPreviewLayerDrag(event, layer)}
+                    onPointerMove={(event) => movePreviewLayer(event, layer)}
+                    onPointerUp={endPreviewLayerDrag}
+                    onPointerCancel={endPreviewLayerDrag}
+                    onDoubleClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (layer.kind === 'text' && layer.role) {
+                        setActiveTextRole(layer.role);
+                        setEditingPreviewTextRole(layer.role);
+                        selectStudioTool('text');
+                      }
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      if (suppressPreviewClickRef.current) return;
+                      selectPreviewLayer(layer);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      zIndex: 15,
+                      padding: 0,
+                      borderRadius: 10,
+                      border: selected ? '1px dashed rgba(255, 80, 200, 0.9)' : '1px solid transparent',
+                      background: selected ? 'rgba(255, 80, 200, 0.07)' : 'transparent',
+                      boxShadow: dragging ? '0 0 0 2px rgba(255,80,200,0.35)' : 'none',
+                      cursor: layer.kind === 'logos' ? 'pointer' : dragging ? 'grabbing' : 'grab',
+                      outline: 'none',
+                      touchAction: 'none',
+                      ...layer.rect,
+                    }}
+                  />
+                );
+              })}
+              {editingPreviewTextRole && (() => {
+                const editingLayer = previewLayerHotspots.find((layer) => layer.kind === 'text' && layer.role === editingPreviewTextRole);
+                if (!editingLayer?.role) return null;
+
+                return (
+                  <textarea
+                    autoFocus
+                    data-preview-inline-editor="true"
+                    value={getPreviewTextValue(editingLayer.role)}
+                    onChange={(event) => setPreviewTextValue(editingLayer.role!, event.target.value)}
+                    onBlur={() => setEditingPreviewTextRole(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setEditingPreviewTextRole(null);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      zIndex: 40,
+                      ...editingLayer.rect,
+                      minHeight: 34,
+                      padding: 8,
+                      resize: 'none',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.55)',
+                      outline: '2px solid rgba(255,80,200,0.55)',
+                      background: 'rgba(10,10,14,0.72)',
+                      color: '#fff',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      lineHeight: 1.15,
+                      textAlign: 'center',
+                      boxShadow: '0 14px 36px rgba(0,0,0,0.42)',
+                    }}
+                  />
+                );
+              })()}
+              </div>
+
+              {overlays.length > 0 && (
+                <div
+                  style={{
+                    width: 304,
+                    flex: '0 0 304px',
+                    maxHeight: 'calc(100vh - 230px)',
+                    overflowY: 'auto',
+                    paddingRight: 2,
+                  }}
+                >
+                  {/* TIMELINE DE OVERLAYS */}
+                  <OverlayTimeline
+                    overlays={overlays}
+                    durationSeconds={durationSeconds}
+                    selectedId={selectedOverlayId}
+                    onSelect={(id) => {
+                      setSelectedOverlayId(id);
+                      selectStudioTool('overlay');
+                    }}
+                    onUpdate={updateOverlay}
+                    onRemove={removeOverlay}
+                  />
+                </div>
+              )}
+            </div>
 
             <div style={renderBarStyle}>
               <button
@@ -2322,17 +4544,34 @@ return (
             {renderMessage && (
               <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-2)' }}>{renderMessage}</div>
             )}
-            {renderLog && (
-              <details style={{ marginTop: 10, maxWidth: 520 }}>
-                <summary style={{ cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>Log</summary>
-                <pre style={logBoxStyle}>{renderLog.slice(-3000)}</pre>
-              </details>
+            {renderFiles[0] && (
+              <a
+                href={`/api/render-files?file=${encodeURIComponent(renderFiles[0].name)}`}
+                download={renderFiles[0].name}
+                style={downloadVideoWideBtnStyle}
+              >
+                Baixar vídeo
+              </a>
             )}
             {renderFiles.length > 0 && (
-              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div
+                style={{
+                  position: 'relative',
+                  zIndex: 70,
+                  marginTop: 12,
+                  width: 'min(520px, 100%)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  padding: 10,
+                  borderRadius: 12,
+                  border: '1px solid var(--border-1)',
+                  background: 'rgba(255,255,255,0.035)',
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                   <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Vídeos prontos ({renderFiles.length})
+                    Histórico de vídeos ({renderFiles.length})
                   </div>
 
                   <button
@@ -2355,74 +4594,82 @@ return (
                   </button>
                 </div>
 
-                {renderFiles.map(f => (
-                  <div
-                    key={f.name}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '7px 10px',
-                      borderRadius: 8,
-                      fontSize: 12,
-                      background: 'var(--bg-2)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-1)',
-                      gap: 8,
-                    }}
-                  >
-                    <a
-                      href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
-                      download={f.name}
+                <div style={{ display: 'grid', gap: 6, maxHeight: 170, overflowY: 'auto', paddingRight: 2 }}>
+                  {renderFiles.map(f => (
+                    <div
+                      key={f.name}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        flex: 1,
-                        gap: 8,
+                        padding: '7px 10px',
+                        borderRadius: 8,
+                        fontSize: 12,
+                        background: 'var(--bg-2)',
+                        border: '1px solid var(--border)',
                         color: 'var(--text-1)',
-                        textDecoration: 'none',
-                        minWidth: 0,
+                        gap: 8,
                       }}
                     >
-                      <span
+                      <a
+                        href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
+                        download={f.name}
                         style={{
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flex: 1,
+                          gap: 8,
+                          color: 'var(--text-1)',
+                          textDecoration: 'none',
+                          minWidth: 0,
                         }}
                       >
-                        {f.name}
-                      </span>
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {f.name}
+                        </span>
 
-                      <span style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
-                        {(f.size / 1024 / 1024).toFixed(1)} MB ↓
-                      </span>
-                    </a>
+                        <span style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                          {(f.size / 1024 / 1024).toFixed(1)} MB ↓
+                        </span>
+                      </a>
 
-                    <button
-                      type="button"
-                      onClick={() => deleteRender(f.name)}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: 'rgba(239,68,68,0.75)',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        fontSize: 18,
-                        cursor: 'pointer',
-                        lineHeight: 1,
-                        fontWeight: 300,
-                      }}
-                      title={`Excluir ${f.name}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                      <button
+                        type="button"
+                        onClick={() => deleteRender(f.name)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: 'rgba(239,68,68,0.75)',
+                          padding: '2px 6px',
+                          borderRadius: 4,
+                          fontSize: 18,
+                          cursor: 'pointer',
+                          lineHeight: 1,
+                          fontWeight: 300,
+                        }}
+                        title={`Excluir ${f.name}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+            {renderLog && (
+              <details style={{ marginTop: 10, maxWidth: 520 }}>
+                <summary style={{ cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>Log</summary>
+                <pre style={logBoxStyle}>{renderLog.slice(-3000)}</pre>
+              </details>
             )}
           </>
         ) : (
@@ -2497,7 +4744,6 @@ return (
         </div>
 
         {/* PROJETO */}
-        <div data-studio-section="motion" />
         <Section title="Projeto" draggablePanel>
           <div style={{ marginBottom: 12 }}>
             <div style={miniInputLabel}>Duração</div>
@@ -2519,19 +4765,495 @@ return (
               <span>Vídeo de fundo</span>
               {bgVideo && <button onClick={clearBgVideo} style={linkBtnDanger}>remover</button>}
             </div>
-            <button onClick={() => videoInputRef.current?.click()} disabled={uploadingVideo} style={dashedUpload}>
-              {uploadingVideo ? 'Enviando…' : bgVideo ? `✓ Vídeo (${bgVideoDuration.toFixed(1)}s)` : '+ Carregar MP4/MOV'}
+            <button onClick={() => videoInputRef.current?.click()} disabled={uploadingVideo || processingVideoClip} style={dashedUpload}>
+              {uploadingVideo
+                ? 'Enviando bruto…'
+                : bgVideo && !bgIsImage
+                  ? bgVideoNeedsTrim
+                    ? `✓ Bruto (${bgVideoDuration.toFixed(1)}s)`
+                    : `✓ Clip otimizado (${bgVideoDuration.toFixed(1)}s)`
+                  : bgIsImage
+                    ? `✓ Imagem BG${bgVideoOriginalName ? ` · ${bgVideoOriginalName}` : ''}`
+                  : '+ Carregar MP4/MOV/WEBM pesado'}
             </button>
             <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm"
               onChange={handleVideoUpload} style={{ display: 'none' }} />
+            <button
+              type="button"
+              onClick={() => bgImageInputRef.current?.click()}
+              disabled={uploadingVideo || processingVideoClip}
+              style={{ ...dashedUpload, marginTop: 8 }}
+            >
+              + Usar imagem externa como BG
+            </button>
+            <input ref={bgImageInputRef} type="file" accept="image/png,image/jpeg,image/webp"
+              onChange={handleBgImageUpload} style={{ display: 'none' }} />
+
+            <div style={{ marginTop: 12 }}>
+              <div style={miniLabel}>Áudio</div>
+              <button
+                onClick={() => audioInputRef.current?.click()}
+                disabled={uploadingAudio}
+                style={dashedUpload}
+              >
+                {uploadingAudio ? 'Enviando…' : audioSrc ? `✓ Áudio (${audioDuration.toFixed(1)}s)` : '+ Carregar MP3/WAV/M4A'}
+              </button>
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/mp3,audio/mpeg,audio/wav,audio/x-m4a,audio/mp4,audio/aac,audio/ogg"
+                onChange={uploadAudio}
+                style={{ display: 'none' }}
+              />
+              {audioSrc && (
+                <>
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                    <button onClick={clearAudio} style={linkBtnDanger}>remover áudio</button>
+                  </div>
+                  <SliderRow
+                    label="Início (refrão)"
+                    value={audioStartSec}
+                    min={0}
+                    step={0.1}
+                    onChange={setAudioStartSec}
+                    format={(v) => `${v.toFixed(1)}s`}
+                  />
+                  <SliderRow
+                    label="Volume"
+                    value={audioVolume}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    onChange={setAudioVolume}
+                    format={(v) => `${Math.round(v * 100)}%`}
+                  />
+                  <SliderRow
+                    label="Fade in"
+                    value={audioFadeIn}
+                    min={0}
+                    max={4}
+                    step={0.1}
+                    onChange={setAudioFadeIn}
+                    format={(v) => `${v.toFixed(1)}s`}
+                  />
+                  <SliderRow
+                    label="Fade out"
+                    value={audioFadeOut}
+                    min={0}
+                    max={4}
+                    step={0.1}
+                    onChange={setAudioFadeOut}
+                    format={(v) => `${v.toFixed(1)}s`}
+                  />
+                </>
+              )}
+              {bgVideo && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-1)' }}>
+                  <ToggleRow
+                    label="🔇 Mutar áudio do vídeo BG"
+                    value={!useVideoAudio}
+                    onChange={(v) => setUseVideoAudio(!v)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={miniLabel}>Overlays / elementos livres</div>
+              <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
+                + Subir overlay ou elemento
+              </button>
+              <input ref={overlayInputRef} type="file"
+                accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/svg+xml"
+                onChange={uploadOverlay} style={{ display: 'none' }} />
+
+              <div style={{ marginTop: 10, display: 'grid', gap: 4 }}>
+                <ToggleRow label="Partículas bokeh" value={particlesEnabled} onChange={setParticlesEnabled} />
+                <ToggleRow label="Flash final" value={finalFlash} onChange={setFinalFlash} />
+              </div>
+
+              {overlayAssets.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={miniLabel}>Biblioteca</div>
+                  {overlayAssets.map((ov) => (
+                    <div key={ov.id} style={overlayLibraryRow}>
+                      <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
+                      </span>
+                      <button onClick={() => addOverlayInstance(ov)} style={tinyAddBtn}>Aplicar</button>
+                      <button onClick={() => deleteOverlayAsset(ov.id)} style={tinyDelBtn} title="Remover da biblioteca">×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedElement && (
+                <div
+                  data-right-panel-section="Elemento selecionado"
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: '1px solid var(--border-1)',
+                    display: 'grid',
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={miniLabel}>Elemento selecionado</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {selectedElement.label}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOverlayId(null)}
+                      style={smallBtn}
+                    >
+                      limpar
+                    </button>
+                  </div>
+
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                    Arraste no preview para posicionar. Segure Shift e arraste para escalar.
+                  </div>
+
+                  <div>
+                    <div style={miniInputLabel}>Entrada</div>
+                    <select
+                      value={selectedElement.entryTransition ?? 'bounce-left'}
+                      onChange={(event) => updateOverlay(selectedElement.id, { entryTransition: event.target.value as OverlayPlacement['entryTransition'] })}
+                      style={{ ...fieldInputStyle, padding: '8px 10px', fontSize: 12 }}
+                    >
+                      <option value="none">Sem entrada</option>
+                      <option value="fade">Fade</option>
+                      <option value="slide-left">Slide da esquerda</option>
+                      <option value="slide-right">Slide da direita</option>
+                      <option value="slide-up">Slide de cima</option>
+                      <option value="slide-down">Slide de baixo</option>
+                      <option value="zoom-pop">Zoom pop</option>
+                      <option value="bounce-left">Slide bounce esquerda</option>
+                    </select>
+                  </div>
+
+                  <SliderRow
+                    label="Escala"
+                    value={selectedElement.scale ?? 0.42}
+                    min={0.05}
+                    max={3}
+                    step={0.01}
+                    onChange={(value) => updateOverlay(selectedElement.id, { scale: value })}
+                    format={(value) => `${Math.round(value * 100)}%`}
+                  />
+                  <SliderRow
+                    label="Rotação"
+                    value={selectedElement.rotate ?? 0}
+                    min={-180}
+                    max={180}
+                    step={1}
+                    onChange={(value) => updateOverlay(selectedElement.id, { rotate: value })}
+                    format={(value) => `${Math.round(value)}°`}
+                  />
+                  <SliderRow
+                    label="Wiggle posição"
+                    value={selectedElement.wigglePosition ?? 0}
+                    min={0}
+                    max={80}
+                    step={1}
+                    onChange={(value) => updateOverlay(selectedElement.id, { wigglePosition: value })}
+                    format={(value) => `${Math.round(value)}px`}
+                  />
+                  <SliderRow
+                    label="Wiggle rotação"
+                    value={selectedElement.wiggleRotate ?? 0}
+                    min={0}
+                    max={20}
+                    step={0.5}
+                    onChange={(value) => updateOverlay(selectedElement.id, { wiggleRotate: value })}
+                    format={(value) => `${value.toFixed(1)}°`}
+                  />
+                  <SliderRow
+                    label="Velocidade do wiggle"
+                    value={selectedElement.wiggleSpeed ?? 1}
+                    min={0}
+                    max={4}
+                    step={0.1}
+                    onChange={(value) => updateOverlay(selectedElement.id, { wiggleSpeed: value })}
+                    format={(value) => value.toFixed(1)}
+                  />
+                  <SliderRow
+                    label="Sombra"
+                    value={selectedElement.shadowBlur ?? 0}
+                    min={0}
+                    max={80}
+                    step={1}
+                    onChange={(value) => updateOverlay(selectedElement.id, { shadowBlur: value, shadowOpacity: value > 0 ? (selectedElement.shadowOpacity || 0.35) : selectedElement.shadowOpacity })}
+                    format={(value) => `${Math.round(value)}px`}
+                  />
+                  <SliderRow
+                    label="Contorno"
+                    value={selectedElement.outlineWidth ?? 0}
+                    min={0}
+                    max={24}
+                    step={1}
+                    onChange={(value) => updateOverlay(selectedElement.id, { outlineWidth: value })}
+                    format={(value) => `${Math.round(value)}px`}
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+                    <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                      recolorir
+                      <input
+                        type="checkbox"
+                        checked={Boolean(selectedElement.tintEnabled)}
+                        onChange={(event) => updateOverlay(selectedElement.id, { tintEnabled: event.target.checked })}
+                      />
+                    </label>
+                    <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                      cor png
+                      <input
+                        type="color"
+                        value={selectedElement.tintColor ?? '#ffffff'}
+                        onChange={(event) => updateOverlay(selectedElement.id, { tintColor: event.target.value, tintEnabled: true })}
+                        style={colorInputStyle}
+                      />
+                    </label>
+                    <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                      sombra
+                      <input
+                        type="color"
+                        value={selectedElement.shadowColor ?? '#000000'}
+                        onChange={(event) => updateOverlay(selectedElement.id, { shadowColor: event.target.value })}
+                        style={colorInputStyle}
+                      />
+                    </label>
+                    <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                      contorno
+                      <input
+                        type="color"
+                        value={selectedElement.outlineColor ?? '#ffffff'}
+                        onChange={(event) => updateOverlay(selectedElement.id, { outlineColor: event.target.value })}
+                        style={colorInputStyle}
+                      />
+                    </label>
+                  </div>
+
+                  {selectedElement.tintEnabled && (
+                    <SliderRow
+                      label="Força da cor"
+                      value={selectedElement.tintOpacity ?? 1}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      onChange={(value) => updateOverlay(selectedElement.id, { tintOpacity: value })}
+                      format={(value) => `${Math.round(value * 100)}%`}
+                    />
+                  )}
+
+                  <ToggleRow
+                    label="Halo / degradê atrás"
+                    value={Boolean(selectedElement.gradientEnabled)}
+                    onChange={(value) => updateOverlay(selectedElement.id, { gradientEnabled: value })}
+                  />
+
+                  {selectedElement.gradientEnabled && (
+                    <>
+                      <SliderRow
+                        label="Opacidade do halo"
+                        value={selectedElement.gradientOpacity ?? 0.35}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(value) => updateOverlay(selectedElement.id, { gradientOpacity: value })}
+                        format={(value) => `${Math.round(value * 100)}%`}
+                      />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                          halo 1
+                          <input
+                            type="color"
+                            value={selectedElement.gradientFrom ?? '#1ed760'}
+                            onChange={(event) => updateOverlay(selectedElement.id, { gradientFrom: event.target.value })}
+                            style={colorInputStyle}
+                          />
+                        </label>
+                        <label style={{ display: 'grid', gap: 5, fontSize: 10, color: 'var(--text-3)' }}>
+                          halo 2
+                          <input
+                            type="color"
+                            value={selectedElement.gradientTo ?? '#8b5cf6'}
+                            onChange={(event) => updateOverlay(selectedElement.id, { gradientTo: event.target.value })}
+                            style={colorInputStyle}
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             {videoUploadMsg && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>{videoUploadMsg}</div>}
+            {bgVideoNeedsTrim && (
+              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                <video
+                  ref={bgTrimVideoRef}
+                  src={bgVideo}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  onLoadedMetadata={(event) => {
+                    const duration = event.currentTarget.duration;
+                    if (Number.isFinite(duration) && duration > 0) setBgVideoDuration(duration);
+                    event.currentTarget.currentTime = bgVideoStartSec;
+                  }}
+                  onTimeUpdate={(event) => {
+                    const current = event.currentTarget.currentTime;
+                    setBgTrimPreviewTime(current);
+                    const selectionEnd = bgTrimSelectionEndRef.current;
+                    if (selectionEnd !== null && current >= selectionEnd) {
+                      bgTrimSelectionEndRef.current = null;
+                      event.currentTarget.pause();
+                    }
+                  }}
+                  onPlay={() => {
+                    setBgTrimPreviewTime(bgTrimVideoRef.current?.currentTime ?? bgTrimPreviewTime);
+                  }}
+                  onPause={() => {
+                    bgTrimSelectionEndRef.current = null;
+                  }}
+                  onSeeking={() => {
+                    bgTrimSelectionEndRef.current = null;
+                  }}
+                  style={{
+                    width: '100%',
+                    aspectRatio: target === 'story' ? '9 / 16' : '4 / 5',
+                    maxHeight: 260,
+                    borderRadius: 10,
+                    background: '#000',
+                    objectFit: 'contain',
+                    border: '1px solid var(--border-1)',
+                  }}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                    {bgVideoOriginalName ? `${bgVideoOriginalName} · ` : ''}
+                    Janela: {formatTimecode(bgVideoStartSec)} até {formatTimecode(bgVideoStartSec + bgClipDuration)}
+                  </div>
+                  <button type="button" onClick={useCurrentBgPreviewTime} style={smallBtn}>
+                    Marcar início aqui
+                  </button>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 5 }}>
+                    <span style={{ color: 'var(--text-3)' }}>Timeline do bruto</span>
+                    <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>
+                      {formatTimecode(bgTrimPreviewTime)} / {formatTimecode(bgVideoDuration)}
+                    </span>
+                  </div>
+                  <div style={{ position: 'relative', height: 28, display: 'grid', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        right: 0,
+                        height: 8,
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.10)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `${bgTrimStartPct}%`,
+                          width: `${bgTrimWidthPct}%`,
+                          height: '100%',
+                          borderRadius: 999,
+                          background: 'linear-gradient(90deg, rgba(168,85,247,0.95), rgba(249,115,22,0.95))',
+                          boxShadow: '0 0 18px rgba(249,115,22,0.35)',
+                        }}
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={bgVideoStartMax}
+                      step={0.05}
+                      value={bgVideoStartSec}
+                      onChange={(event) => setBgVideoStartAndPreview(parseFloat(event.target.value))}
+                      style={{ position: 'relative', width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5 }}>
+                  {[-5, -1, 0, 1, 5].map((delta) => (
+                    <button
+                      key={delta}
+                      type="button"
+                      onClick={() => delta === 0 ? playBgTrimSelection() : nudgeBgVideoStart(delta)}
+                      style={smallBtn}
+                    >
+                      {delta === 0 ? 'Play trecho' : delta > 0 ? `+${delta}s` : `${delta}s`}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <label style={{ display: 'grid', gap: 5 }}>
+                    <span style={miniInputLabel}>Início exato</span>
+                    <input
+                      value={bgTrimTimecodeInput}
+                      onChange={(event) => setBgTrimTimecodeInput(event.target.value)}
+                      onBlur={() => {
+                        const parsed = parseTimecode(bgTrimTimecodeInput);
+                        setBgVideoStartAndPreview(parsed ?? bgVideoStartSec);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        const parsed = parseTimecode(bgTrimTimecodeInput);
+                        setBgVideoStartAndPreview(parsed ?? bgVideoStartSec);
+                      }}
+                      placeholder="01:23.4"
+                      style={fieldInputStyle}
+                    />
+                  </label>
+                  <label style={{ display: 'grid', gap: 5 }}>
+                    <span style={miniInputLabel}>Duração final</span>
+                    <input readOnly value={`${bgClipDuration}s`} style={{ ...fieldInputStyle, opacity: 0.78 }} />
+                  </label>
+                </div>
+
+                <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                  Escolha ouvindo/vendo o bruto. Depois o sistema corta só esse trecho, centraliza em {target === 'story' ? '1080×1920' : '1080×1350'} e exclui o restante.
+                </div>
+                <button
+                  type="button"
+                  onClick={processBgVideoClip}
+                  disabled={processingVideoClip || uploadingVideo}
+                  style={{
+                    ...dashedUpload,
+                    borderStyle: 'solid',
+                    background: processingVideoClip ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, rgba(168,85,247,0.95), rgba(249,115,22,0.95))',
+                    color: '#fff',
+                  }}
+                >
+                  {processingVideoClip ? 'Otimizando trecho…' : `Cortar/otimizar ${bgClipDuration}s`}
+                </button>
+              </div>
+            )}
           </div>
 
-          {bgVideo && bgVideoDuration > 0 && (
+          {bgVideo && !bgVideoNeedsTrim && (
             <>
-              <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={Math.max(0.1, bgVideoDuration)} step={0.1}
-                onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
-              <SliderRow label="Opacidade do vídeo" value={bgVideoOpacity} min={0} max={1} step={0.05}
+              {!bgIsImage && bgVideoDuration > 0 && (
+                <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
+                  onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
+              )}
+              <SliderRow label={bgIsImage ? 'Opacidade da imagem' : 'Opacidade do vídeo'} value={bgVideoOpacity} min={0} max={1} step={0.05}
                 onChange={setBgVideoOpacity} format={(v) => `${Math.round(v * 100)}%`} />
               <SliderRow label="Blur" value={bgVideoBlur} min={0} max={60} step={1}
                 onChange={setBgVideoBlur} format={(v) => `${v}px`} />
@@ -2555,76 +5277,7 @@ return (
           </div>
         </Section>
 
-        {/* ÁUDIO */}
-        <Section title="Áudio" draggablePanel>
-          <button
-            onClick={() => audioInputRef.current?.click()}
-            disabled={uploadingAudio}
-            style={dashedUpload}
-          >
-            {uploadingAudio ? 'Enviando…' : audioSrc ? `✓ Áudio (${audioDuration.toFixed(1)}s)` : '+ Carregar MP3/WAV/M4A'}
-          </button>
-          <input
-            ref={audioInputRef}
-            type="file"
-            accept="audio/mp3,audio/mpeg,audio/wav,audio/x-m4a,audio/mp4,audio/aac,audio/ogg"
-            onChange={uploadAudio}
-            style={{ display: 'none' }}
-          />
-          {audioSrc && (
-            <>
-              <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
-                <button onClick={clearAudio} style={linkBtnDanger}>remover áudio</button>
-              </div>
-              <SliderRow
-                label="Início (refrão)"
-                value={audioStartSec}
-                min={0}
-                step={0.1}
-                onChange={setAudioStartSec}
-                format={(v) => `${v.toFixed(1)}s`}
-              />
-              <SliderRow
-                label="Volume"
-                value={audioVolume}
-                min={0}
-                max={1}
-                step={0.05}
-                onChange={setAudioVolume}
-                format={(v) => `${Math.round(v * 100)}%`}
-              />
-              <SliderRow
-                label="Fade in"
-                value={audioFadeIn}
-                min={0}
-                max={4}
-                step={0.1}
-                onChange={setAudioFadeIn}
-                format={(v) => `${v.toFixed(1)}s`}
-              />
-              <SliderRow
-                label="Fade out"
-                value={audioFadeOut}
-                min={0}
-                max={4}
-                step={0.1}
-                onChange={setAudioFadeOut}
-                format={(v) => `${v.toFixed(1)}s`}
-              />
-            </>
-          )}
-          {bgVideo && (
-            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-1)' }}>
-              <ToggleRow
-                label="🔇 Mutar áudio do vídeo BG"
-                value={!useVideoAudio}
-                onChange={(v) => setUseVideoAudio(!v)}
-              />
-            </div>
-          )}
-        </Section>
         {/* LOGOS DAS PLATAFORMAS */}
-        <div data-studio-section="logos" />
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
             Substitua o ícone padrão de cada plataforma pelo seu próprio PNG/SVG.
@@ -2711,51 +5364,13 @@ return (
 
         </Section>
 
-        <div data-studio-section="text" />
                                         <Section title="Texto">
-          
-          <div style={{
-            marginBottom: 14,
-            padding: '10px 12px',
-            background: 'var(--surface-1)',
-            border: '1px solid var(--border-1)',
-            borderRadius: 10,
-          }}>
-            <div style={{
-              fontSize: 11,
-              letterSpacing: 1.8,
-              textTransform: 'uppercase',
-              color: 'var(--text-muted)',
-              fontWeight: 800,
-              marginBottom: 10,
-            }}>
-              Transições de texto
-            </div>
-
-            <TransitionPicker label="Headline" value={trHeadline} onChange={setTrHeadline} />
-            <TransitionPicker label="Data" value={trDate} onChange={setTrDate} />
-            <TransitionPicker label="CTA 1" value={trCta1} onChange={setTrCta1} />
-            <TransitionPicker label="CTA 2" value={trCta2} onChange={setTrCta2} />
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              <button
-                type="button"
-                onClick={() => setShowCta1((v) => !v)}
-                style={showCta1 ? segBtnActive : segBtn}
-              >
-                {showCta1 ? 'CTA 1 ligado' : 'CTA 1 oculto'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowCta2((v) => !v)}
-                style={showCta2 ? segBtnActive : segBtn}
-              >
-                {showCta2 ? 'CTA 2 ligado' : 'CTA 2 oculto'}
-              </button>
-            </div>
-          </div>
-
           <FontsPanel
+            activeRole={activeTextRole}
+            onActiveRoleChange={(role) => {
+              setActiveTextRole(role);
+              setActiveStudioTool('text');
+            }}
             allFonts={allFonts}
             fontHeadline={fontHeadline} fontDate={fontDate} fontCta={fontCta} fontCta1={fontCta1} fontCta2={fontCta2}
             onChangeFont={applyFontTo}
@@ -2768,6 +5383,8 @@ return (
             styleCta1={styleCta1}
             styleCta2={styleCta2}
             onChangeTextStyle={(role, next) => {
+              stopTransitionPreviewLoopForManualEdit();
+
               if (role === 'headline') setStyleHeadline(next);
               if (role === 'date') setStyleDate(next);
               if (role === 'cta') {
@@ -2780,19 +5397,52 @@ return (
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={headline} sampleDate={releaseDate} sampleCta={cta} sampleCta2={cta2}
+            sampleHeadline={template === 'spotify_print' ? metricNumber : headline}
+            sampleDate={template === 'spotify_print' ? metricPrefix : releaseDate}
+            sampleCta={template === 'spotify_print' ? metricLabel : cta}
+            sampleCta2={cta2}
             txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}
-            onTxScale={(r,v) => updTxN(setTxScale,r,v)}
-            onTxLS={(r,v)    => updTxN(setTxLS,r,v)}
-            onTxLH={(r,v)    => updTxN(setTxLH,r,v)}
-            onTxOX={(r,v)    => updTxN(setTxOX,r,v)}
-            onTxOY={(r,v)    => updTxN(setTxOY,r,v)}
+            txWiggle={{ headline: wiggleH, date: wiggleD, cta: wiggleC, cta1: wiggleCta1, cta2: wiggleCta2 }}
+            transitionByRole={{ headline: trHeadline, date: trDate, cta1: trCta1, cta2: trCta2 }}
+            transitionTuningByRole={transitionTuning}
+            transitionInFrameByRole={effectiveTextInFrames}
+            maxTransitionFrame={Math.max(1, durationSeconds * 30 - 1)}
+            transitionPresets={TRANSITION_TUNING_PRESETS}
+            onChangeTransition={changeTextTransition}
+            onChangeTransitionTuning={changeTextTransitionTuning}
+            onChangeTransitionInFrame={changeTextInFrame}
+            onApplyTransitionPreset={applyTextTransitionTuningPreset}
+            roleLabels={template === 'spotify_print'
+              ? { headline: 'Número', date: 'Texto acima', cta1: 'Métrica' }
+              : { headline: 'Headline', date: 'Data', cta1: 'Chamada 1', cta2: 'Chamada 2' }}
+            visibleRoles={template === 'spotify_print' ? ['headline', 'date', 'cta1'] : undefined}
+            showCtaToggles={template === 'available_now'}
+            showCta1={showCta1}
+            showCta2={showCta2}
+            onToggleCta1={() => setShowCta1((v) => !v)}
+            onToggleCta2={() => setShowCta2((v) => !v)}
+            onTxScale={(r,v) => { stopTransitionPreviewLoopForManualEdit(); updTxN(setTxScale,r,v); }}
+            onTxLS={(r,v)    => { stopTransitionPreviewLoopForManualEdit(); updTxN(setTxLS,r,v); }}
+            onTxLH={(r,v)    => { stopTransitionPreviewLoopForManualEdit(); updTxN(setTxLH,r,v); }}
+            onTxOX={(r,v)    => { stopTransitionPreviewLoopForManualEdit(); updTxN(setTxOX,r,v); }}
+            onTxOY={(r,v)    => { stopTransitionPreviewLoopForManualEdit(); updTxN(setTxOY,r,v); }}
+            onTxWiggle={(r,v) => {
+              stopTransitionPreviewLoopForManualEdit();
+              if (r === 'headline') setWiggleH(v);
+              else if (r === 'date') setWiggleD(v);
+              else if (r === 'cta1') setWiggleCta1(v);
+              else if (r === 'cta2') setWiggleCta2(v);
+              else {
+                setWiggleC(v);
+                setWiggleCta1(v);
+                setWiggleCta2(v);
+              }
+            }}
           />
 
 
         </Section>
 
-        <div data-studio-section="cta" />
         {template === 'available_now' && (
           <Section title="Ritmo CTA (Disponível)" draggablePanel>
             <div style={{ marginBottom: 10 }}>
@@ -2876,33 +5526,7 @@ return (
           </Section>
         )}
 
-        <div data-studio-section="overlay" />
-        {/* OVERLAYS */}
-        <Section title="Overlays (filmburn / película)" draggablePanel>
-          <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
-            + Subir overlay
-          </button>
-          <input ref={overlayInputRef} type="file"
-            accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp"
-            onChange={uploadOverlay} style={{ display: 'none' }} />
-
-          {overlayAssets.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <div style={miniLabel}>Biblioteca</div>
-              {overlayAssets.map((ov) => (
-                <div key={ov.id} style={overlayLibraryRow}>
-                  <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
-                  </span>
-                  <button onClick={() => addOverlayInstance(ov)} style={tinyAddBtn}>Aplicar</button>
-                  <button onClick={() => deleteOverlayAsset(ov.id)} style={tinyDelBtn} title="Remover da biblioteca">×</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
         {/* CAPA */}
-        <div data-studio-section="cover" />
         <Section title="Capa" draggablePanel>
               <div style={{ marginTop: 12 }}>
                 <div
@@ -2919,7 +5543,7 @@ return (
                 </div>
                 <select
                   value={coverMotion}
-                  onChange={(e) => setCoverMotion(e.target.value as CoverMotionId)}
+                  onChange={(e) => previewCoverMotionChange(e.target.value)}
                   style={{
                     width: '100%',
                     height: 42,
@@ -2941,25 +5565,134 @@ return (
 
 
           <SliderRow label="Tamanho / Escala" value={coverSize} min={120} max={1200} step={5}
-            onChange={setCoverSize} format={(v) => `${v}px`} />
+            onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setCoverSize(v); }} format={(v) => `${v}px`} />
           <SliderRow label="Posição Y da capa" value={coverY} min={-500} max={500} step={1}
-            onChange={setCoverY} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
+            onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setCoverY(v); }} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
           <SliderRow label="Posição X da capa" value={coverX} min={-500} max={500} step={1}
-            onChange={setCoverX} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
+            onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setCoverX(v); }} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
           <SliderRow label="Voltas Y" value={spinTurns} min={0} max={4} step={0.5}
-            onChange={setSpinTurns} format={(v) => `${v}×`} />
+            onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setSpinTurns(v); }} format={(v) => `${v}×`} />
           <SliderRow label="Wiggle (global)" value={wiggleIntensity} min={0} max={2} step={0.1}
-            onChange={setWiggleIntensity} format={(v) => v.toFixed(1)} />
+            onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setWiggleIntensity(v); }} format={(v) => v.toFixed(1)} />
         </Section>
 
-        <Section title="Wiggle por elemento" draggablePanel>
-          <SliderRow label="Wiggle headline" value={wiggleH} min={0} max={2} step={0.1}
-            onChange={setWiggleH} format={(v) => v.toFixed(1)} />
-          <SliderRow label="Wiggle data" value={wiggleD} min={0} max={2} step={0.1}
-            onChange={setWiggleD} format={(v) => v.toFixed(1)} />
-          <SliderRow label="Wiggle CTA" value={wiggleC} min={0} max={2} step={0.1}
-            onChange={setWiggleC} format={(v) => v.toFixed(1)} />
-        </Section>
+        {/* CELULAR — só aparece quando template é spotify_print */}
+        {template === 'spotify_print' && (
+          <Section title="Celular" draggablePanel>
+            <div style={{ marginBottom: 12 }}>
+              <div style={miniInputLabel}>Entrada do celular</div>
+              <select
+                value={phoneMotion}
+                onChange={(e) => setPhoneMotion(e.target.value as typeof phoneMotion)}
+                style={{ ...fieldInputStyle, padding: '8px 10px', fontSize: 12 }}
+              >
+                <option value="zoom_bounce">Zoom Bounce — intro impacto</option>
+                <option value="slide_up">Slide Up — vem de baixo</option>
+                <option value="slide_down">Slide Down — vem de cima</option>
+                <option value="slide_left">Slide Left — vem da esquerda</option>
+                <option value="slide_right">Slide Right — vem da direita</option>
+                <option value="diagonal_tl">Diagonal Top-Left — canto superior esq</option>
+                <option value="diagonal_tr">Diagonal Top-Right — canto superior dir</option>
+                <option value="flip_card">Flip Card — virada 3D</option>
+                <option value="tilt_in_left">Tilt In Left — gira da esquerda</option>
+                <option value="tilt_in_right">Tilt In Right — gira da direita</option>
+                <option value="drop_in">Drop In — cai de cima</option>
+                <option value="stamp">Stamp — bate como carimbo</option>
+              </select>
+            </div>
+
+            <SliderRow label="Tamanho / Escala" value={phoneSize} min={280} max={780} step={5}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneSize(v); }}
+              format={(v) => `${v}px`} />
+            <SliderRow label="Posição Y" value={phoneY} min={-500} max={500} step={1}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneY(v); }}
+              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
+            <SliderRow label="Posição X" value={phoneX} min={-500} max={500} step={1}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneX(v); }}
+              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />
+            <SliderRow label="Inclinação (tilt)" value={phoneTilt} min={-25} max={25} step={0.5}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneTilt(v); }}
+              format={(v) => `${v > 0 ? '+' : ''}${v.toFixed(1)}°`} />
+            <SliderRow label="Voltas Y (spin 3D)" value={phoneSpinTurns} min={0} max={4} step={0.5}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneSpinTurns(v); }}
+              format={(v) => `${v}×`} />
+            <SliderRow label="Wiggle do celular" value={phoneWiggle} min={0} max={2} step={0.05}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneWiggle(v); }}
+              format={(v) => v.toFixed(2)} />
+
+            <ToggleRow
+              label="Dynamic Island (iPhone 15/16 Pro)"
+              value={phoneDynamicIsland}
+              onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setPhoneDynamicIsland(v); }}
+            />
+
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-1)' }}>
+              <div style={miniInputLabel}>Presets rápidos</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('zoom_bounce');
+                    setPhoneTilt(-6);
+                    setPhoneSpinTurns(0);
+                    setPhoneSize(520);
+                    setPhoneWiggle(0.7);
+                  }}
+                  style={segBtn}
+                >Reto sutil</button>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('tilt_in_left');
+                    setPhoneTilt(-14);
+                    setPhoneSpinTurns(0);
+                    setPhoneSize(540);
+                    setPhoneWiggle(1.0);
+                  }}
+                  style={segBtn}
+                >Torto esquerda</button>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('tilt_in_right');
+                    setPhoneTilt(14);
+                    setPhoneSpinTurns(0);
+                    setPhoneSize(540);
+                    setPhoneWiggle(1.0);
+                  }}
+                  style={segBtn}
+                >Torto direita</button>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('flip_card');
+                    setPhoneTilt(0);
+                    setPhoneSpinTurns(1);
+                    setPhoneSize(520);
+                    setPhoneWiggle(0.5);
+                  }}
+                  style={segBtn}
+                >Flip 3D</button>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('drop_in');
+                    setPhoneTilt(-3);
+                    setPhoneSpinTurns(0);
+                    setPhoneSize(540);
+                    setPhoneWiggle(0.8);
+                  }}
+                  style={segBtn}
+                >Cai de cima</button>
+                <button
+                  onClick={() => {
+                    setPhoneMotion('stamp');
+                    setPhoneTilt(0);
+                    setPhoneSpinTurns(0);
+                    setPhoneSize(560);
+                    setPhoneWiggle(0.4);
+                  }}
+                  style={segBtn}
+                >Carimbo</button>
+              </div>
+            </div>
+          </Section>
+        )}
 
 <Section title="Brilho" draggablePanel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
@@ -2974,10 +5707,6 @@ return (
           </div>
         </Section>
 
-        <Section title="Efeitos" draggablePanel>
-          <ToggleRow label="Partículas bokeh" value={particlesEnabled} onChange={setParticlesEnabled} />
-          <ToggleRow label="Flash final" value={finalFlash} onChange={setFinalFlash} />
-        </Section>
       </aside>
 
       {/* MODAL NOVO ARTISTA */}
@@ -3034,1111 +5763,3 @@ return (
 </main>
   );
 }
-
-// ============================================================
-// COMPONENTES AUXILIARES
-// ============================================================
-
-
-// ── DragSlider: slider de arrastar (sem input numérico) ─────
-function DragSlider({
-  label, value, min, max, step, onChange, format, accent
-}: {
-  label: string; value: number; min: number; max: number;
-  step: number; onChange: (v: number) => void;
-  format?: (v: number) => string; accent?: string;
-}) {
-  const trackRef = React.useRef<HTMLDivElement>(null);
-  const dragging = React.useRef(false);
-  const pct = Math.max(0, Math.min(1, (value - min) / (max - min)));
-  const accentColor = accent ?? 'rgba(168,85,247,0.9)';
-
-  function calcValue(clientX: number) {
-    const rect = trackRef.current!.getBoundingClientRect();
-    const raw = (clientX - rect.left) / rect.width;
-    const clamped = Math.max(0, Math.min(1, raw));
-    const raw_val = min + clamped * (max - min);
-    const snapped = Math.round(raw_val / step) * step;
-    return Math.max(min, Math.min(max, snapped));
-  }
-
-  function onMouseDown(e: React.MouseEvent) {
-    e.preventDefault();
-    dragging.current = true;
-    onChange(calcValue(e.clientX));
-    function onMove(ev: MouseEvent) { if (dragging.current) onChange(calcValue(ev.clientX)); }
-    function onUp() { dragging.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-  }
-
-  return (
-    <div style={{ userSelect: 'none' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5 }}>
-        <span style={{ fontSize:11, color:'var(--text-3)', textTransform:'uppercase', letterSpacing:0.5 }}>{label}</span>
-        <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.75)', fontVariantNumeric:'tabular-nums', minWidth:38, textAlign:'right' }}>
-          {format ? format(value) : String(value)}
-        </span>
-      </div>
-      <div
-        ref={trackRef}
-        onMouseDown={onMouseDown}
-        style={{
-          position:'relative', height:20, cursor:'ew-resize',
-          display:'flex', alignItems:'center',
-        }}
-      >
-        {/* Track fundo */}
-        <div style={{ position:'absolute', left:0, right:0, height:3, borderRadius:2, background:'rgba(255,255,255,0.08)' }} />
-        {/* Track preenchido */}
-        <div style={{ position:'absolute', left:0, width:`${pct*100}%`, height:3, borderRadius:2, background: accentColor, transition:'width 0ms' }} />
-        {/* Thumb */}
-        <div style={{
-          position:'absolute', left:`calc(${pct*100}% - 8px)`,
-          width:16, height:16, borderRadius:'50%',
-          background: '#fff',
-          boxShadow:`0 0 0 3px ${accentColor}, 0 2px 8px rgba(0,0,0,0.5)`,
-          cursor:'grab', transition:'box-shadow 120ms ease',
-          zIndex:2,
-        }} />
-      </div>
-    </div>
-  );
-}
-
-function BrandSmall() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: 8,
-        background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: 800, fontSize: 14, boxShadow: '0 4px 14px var(--brand-glow)',
-      }}>N</div>
-      <div style={{ fontSize: 13, fontWeight: 700 }}>NovaCena</div>
-    </div>
-  );
-}
-
-function ArtistSelector({
-  artists, activeSlug, onSelect, onNew,
-}: {
-  artists: ArtistRecord[]; activeSlug: string | null;
-  onSelect: (slug: string) => void; onNew: () => void;
-}) {
-  const active = artists.find((a) => a.slug === activeSlug);
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen((o) => !o)} style={{
-        padding: '6px 14px', background: 'var(--surface-1)',
-        border: '1px solid var(--border-1)', borderRadius: 8,
-        display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-1)',
-      }}>
-        <span style={{ color: 'var(--text-3)' }}>Artista:</span>
-        <strong>{active?.name ?? 'Nenhum'}</strong>
-        <span style={{ color: 'var(--text-3)' }}>⌄</span>
-      </button>
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, marginTop: 4,
-          minWidth: 220, background: 'var(--bg-2)',
-          border: '1px solid var(--border-1)', borderRadius: 8,
-          padding: 4, zIndex: 100, maxHeight: 320, overflow: 'auto',
-        }}>
-          {artists.map((a) => (
-            <button
-              key={a.slug}
-              onClick={() => { onSelect(a.slug); setOpen(false); }}
-              style={{
-                width: '100%', textAlign: 'left', padding: '8px 10px',
-                background: a.slug === activeSlug ? 'var(--surface-active)' : 'transparent',
-                border: 'none', borderRadius: 6, fontSize: 13, color: 'var(--text-1)',
-              }}
-            >
-              {a.name}
-            </button>
-          ))}
-          <div style={{ height: 1, background: 'var(--border-1)', margin: '4px 0' }} />
-          <button onClick={() => { onNew(); setOpen(false); }} style={{
-            width: '100%', textAlign: 'left', padding: '8px 10px',
-            background: 'transparent', border: 'none', borderRadius: 6,
-            color: 'var(--brand)', fontSize: 13, fontWeight: 600,
-          }}>
-            + Novo artista
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ArtistModal({ onCreate, onClose }: { onCreate: (name: string) => void; onClose: () => void }) {
-  const [name, setName] = useState('');
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200,
-    }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        background: 'var(--bg-1)', padding: 24, borderRadius: 14,
-        border: '1px solid var(--border-2)', minWidth: 340,
-      }}>
-        <h3 style={{ margin: '0 0 14px', fontSize: 17 }}>Novo artista</h3>
-        <input autoFocus value={name} onChange={(e) => setName(e.target.value)}
-          placeholder="Nome do artista" style={{
-            width: '100%', padding: '10px 12px', background: 'var(--surface-1)',
-            border: '1px solid var(--border-1)', borderRadius: 8, color: 'var(--text-1)',
-            fontSize: 14, marginBottom: 14, outline: 'none',
-          }} onKeyDown={(e) => e.key === 'Enter' && name && onCreate(name)} />
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{
-            padding: '8px 14px', background: 'transparent', border: '1px solid var(--border-1)',
-            borderRadius: 8, color: 'var(--text-2)', fontSize: 13,
-          }}>Cancelar</button>
-          <button disabled={!name} onClick={() => onCreate(name)} style={{
-            padding: '8px 18px', background: 'linear-gradient(135deg,var(--brand),var(--brand-2))',
-            border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 13,
-          }}>Criar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GalleryView({
-  artist, items, driveFolderPath, onDriveChange, onDriveSave, onLoad, onDelete,
-}: {
-  artist?: ArtistRecord; items: GalleryItem[]; driveFolderPath: string;
-  onDriveChange: (s: string) => void; onDriveSave: () => void;
-  onLoad: (item: GalleryItem) => void; onDelete: (id: string) => void;
-}) {
-  if (!artist) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>
-        Selecione um artista pra ver a galeria.
-      </div>
-    );
-  }
-  return (
-    <div style={{ padding: '20px 40px', width: '100%', maxWidth: 980 }}>
-      <h2 style={{ fontSize: 22, margin: '0 0 6px' }}>{artist.name}</h2>
-      <div style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 24 }}>
-        Galeria · {items.length} {items.length === 1 ? 'arte salva' : 'artes salvas'}
-      </div>
-
-      {/* Drive folder */}
-      <div style={{
-        padding: 14, background: 'var(--surface-1)', border: '1px solid var(--border-1)',
-        borderRadius: 10, marginBottom: 24,
-      }}>
-        <div style={miniLabel}>Pasta do Drive (sincronizada via Google Drive Desktop)</div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <input
-            value={driveFolderPath}
-            onChange={(e) => onDriveChange(e.target.value)}
-            placeholder="/Users/voce/Google Drive/Artistas/Nome"
-            style={{
-              flex: 1, padding: '8px 12px', background: 'var(--bg-2)',
-              border: '1px solid var(--border-1)', borderRadius: 8,
-              color: 'var(--text-1)', fontSize: 13, outline: 'none',
-            }}
-          />
-          <button onClick={onDriveSave} style={{
-            padding: '8px 14px', background: 'var(--text-1)', color: 'var(--bg-0)',
-            border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13,
-          }}>Salvar</button>
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
-          Cole o caminho local da pasta sincronizada. Os vídeos renderizados ficam disponíveis pra
-          download nesse caminho do Drive Desktop.
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-3)' }}>
-          Nenhuma arte salva ainda. Crie uma no Studio e clique em <strong>★ Salvar na galeria</strong>.
-        </div>
-      ) : (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14,
-        }}>
-          {items.map((item) => (
-            <div key={item.id} style={{
-              borderRadius: 12, overflow: 'hidden',
-              background: 'var(--surface-1)', border: '1px solid var(--border-1)',
-            }}>
-              <div style={{
-                aspectRatio: '9 / 16', background: 'var(--bg-2)', position: 'relative', cursor: 'pointer',
-              }} onClick={() => onLoad(item)}>
-                {item.thumbnailPath && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={item.thumbnailPath} alt={item.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                )}
-              </div>
-              <div style={{ padding: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{item.title}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                  {new Date(item.createdAt).toLocaleDateString('pt-BR')}
-                </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                  <button onClick={() => onLoad(item)} style={{
-                    flex: 1, padding: '5px 8px', background: 'var(--surface-2)',
-                    border: '1px solid var(--border-1)', borderRadius: 6,
-                    color: 'var(--text-2)', fontSize: 11, fontWeight: 600,
-                  }}>Carregar</button>
-                  <button onClick={() => onDelete(item.id)} style={{
-                    padding: '5px 8px', background: 'transparent',
-                    border: '1px solid var(--border-1)', borderRadius: 6,
-                    color: 'var(--danger)', fontSize: 11,
-                  }}>×</button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function OverlayTimeline({
-  overlays, durationSeconds, onUpdate, onRemove,
-}: {
-  overlays: OverlayPlacement[]; durationSeconds: number;
-  onUpdate: (id: string, patch: Partial<OverlayPlacement>) => void;
-  onRemove: (id: string) => void;
-}) {
-  if (overlays.length === 0) return null;
-  return (
-    <div style={{
-      width: '100%', maxWidth: 720, padding: 14,
-      background: 'var(--surface-1)', border: '1px solid var(--border-1)', borderRadius: 12,
-    }}>
-      <div style={{ fontSize: 11, letterSpacing: 1.4, textTransform: 'uppercase',
-        color: 'var(--text-3)', fontWeight: 600, marginBottom: 10 }}>
-        Timeline · {durationSeconds}s · {overlays.length} overlay{overlays.length > 1 ? 's' : ''}
-      </div>
-      {overlays.map((ov) => (
-        <div key={ov.id} style={{
-          padding: '8px 10px', marginBottom: 8,
-          background: 'var(--bg-2)', borderRadius: 8,
-          display: 'grid', gridTemplateColumns: '1fr auto auto auto auto auto',
-          gap: 8, alignItems: 'center', fontSize: 11,
-        }}>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
-          </span>
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
-            
-            <input type="number" step="0.1" min={0} max={durationSeconds - 0.1}
-              value={ov.startSec.toFixed(1)}
-              onChange={(e) => onUpdate(ov.id, { startSec: 0})}
-              style={tinyNumInput} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
-            
-            <input type="number" step="0.1" min={0.1}
-              value={ov.durationSec.toFixed(1)}
-              onChange={(e) => onUpdate(ov.id, { durationSec: durationSeconds})}
-              style={tinyNumInput} />
-          </label>
-          <label style={{ display: 'flex', flexDirection: 'column', fontSize: 9, color: 'var(--text-3)' }}>
-            opacidade
-            <input type="range" min={0} max={1} step={0.05} value={ov.opacity}
-              onChange={(e) => onUpdate(ov.id, { opacity: parseFloat(e.target.value) })}
-              style={{ width: 60 }} />
-          </label>
-          <select value={ov.blendMode}
-            onChange={(e) => onUpdate(ov.id, { blendMode: e.target.value as OverlayPlacement['blendMode'] })}
-            style={tinySelect}>
-            <option value="screen">screen</option>
-            <option value="overlay">overlay</option>
-            <option value="lighten">lighten</option>
-            <option value="soft-light">soft</option>
-            <option value="normal">normal</option>
-          </select>
-          <button onClick={() => onRemove(ov.id)} style={linkBtnDanger}>×</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function TextColorEditor({
-  label, value, onChange,
-}: { label: string; value: TextStyleState; onChange: (s: TextStyleState) => void }) {
-  return (
-    <div style={{ marginBottom: 14, padding: '10px 12px',
-      background: 'var(--surface-1)', border: '1px solid var(--border-1)', borderRadius: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>{label}</span>
-        <button onClick={() => onChange({ ...value, useGradient: !value.useGradient })}
-          style={{
-            padding: '3px 9px', fontSize: 10, fontWeight: 600,
-            background: value.useGradient ? 'linear-gradient(135deg,' + value.gradientColor1 + ',' + value.gradientColor2 + ')' : 'var(--bg-2)',
-            color: '#fff', border: '1px solid var(--border-2)', borderRadius: 6,
-          }}>
-          {value.useGradient ? 'GRADIENTE' : 'COR SÓLIDA'}
-        </button>
-      </div>
-      {!value.useGradient ? (
-        <input type="color" value={value.color}
-          onChange={(e) => onChange({ ...value, color: e.target.value })}
-          style={colorInputStyle} />
-      ) : (
-        <div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-            <input type="color" value={value.gradientColor1}
-              onChange={(e) => onChange({ ...value, gradientColor1: e.target.value })}
-              style={{ ...colorInputStyle, flex: 1 }} />
-            <input type="color" value={value.gradientColor2}
-              onChange={(e) => onChange({ ...value, gradientColor2: e.target.value })}
-              style={{ ...colorInputStyle, flex: 1 }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>Ângulo</span>
-            <input type="range" min={0} max={360} step={5} value={value.gradientAngle}
-              onChange={(e) => onChange({ ...value, gradientAngle: parseInt(e.target.value) })}
-              style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, color: 'var(--text-2)', fontWeight: 600, width: 30, textAlign: 'right' }}>
-              {value.gradientAngle}°
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TextLayoutEditor({
-  label, value, onChange,
-}: { label: string; value: TextStyleState; onChange: (s: TextStyleState) => void }) {
-  const setNum = (key: keyof TextStyleState, next: number) => onChange({ ...value, [key]: next });
-  const textAlign = value.textAlign ?? 'center';
-
-  return (
-    <div style={{ marginBottom: 14, padding: '10px 12px',
-      background: 'var(--surface-1)', border: '1px solid var(--border-1)', borderRadius: 8 }}>
-      <div style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>{label}</div>
-
-      <SliderRow
-        label="Espaçamento entre letras"
-        value={value.letterSpacing ?? 0}
-        min={-20}
-        max={30}
-        step={0.5}
-        onChange={(v) => setNum('letterSpacing', v)}
-        format={(v) => `${v.toFixed(1)}px`}
-      />
-
-      <div style={{ marginBottom: 10 }}>
-        <div style={miniInputLabel}>Alinhamento / justificado</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-          {(['left', 'center', 'right', 'justify'] as const).map((align) => (
-            <button
-              key={align}
-              onClick={() => onChange({ ...value, textAlign: align })}
-              style={textAlign === align ? segBtnActive : segBtn}
-            >
-              {align === 'left' ? 'Esq' : align === 'center' ? 'Centro' : align === 'right' ? 'Dir' : 'Just'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 8 }}>
-        <div style={miniInputLabel}>Padding interno (px)</div>
-        <div style={textBoxGridStyle}>
-          <NumberBox label="Top" value={value.paddingTop ?? 0} onChange={(v) => setNum('paddingTop', v)} />
-          <NumberBox label="Right" value={value.paddingRight ?? 0} onChange={(v) => setNum('paddingRight', v)} />
-          <NumberBox label="Bottom" value={value.paddingBottom ?? 0} onChange={(v) => setNum('paddingBottom', v)} />
-          <NumberBox label="Left" value={value.paddingLeft ?? 0} onChange={(v) => setNum('paddingLeft', v)} />
-        </div>
-      </div>
-
-      <div>
-        <div style={miniInputLabel}>Padding externo / margem (px)</div>
-        <div style={textBoxGridStyle}>
-          <NumberBox label="Top" value={value.marginTop ?? 0} onChange={(v) => setNum('marginTop', v)} />
-          <NumberBox label="Right" value={value.marginRight ?? 0} onChange={(v) => setNum('marginRight', v)} />
-          <NumberBox label="Bottom" value={value.marginBottom ?? 0} onChange={(v) => setNum('marginBottom', v)} />
-          <NumberBox label="Left" value={value.marginLeft ?? 0} onChange={(v) => setNum('marginLeft', v)} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NumberBox({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (next: number) => void;
-}) {
-  return (
-    <label style={{ display: 'block' }}>
-      <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{label}</span>
-      <input
-        type="number"
-        min={-200}
-        max={200}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
-        style={miniNumberInputStyle}
-      />
-    </label>
-  );
-}
-
-function TransitionPicker({
-  label, value, onChange,
-}: { label: string; value: TextTransitionId; onChange: (id: TextTransitionId) => void }) {
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={miniInputLabel}>{label}</div>
-      <select value={value} onChange={(e) => onChange(e.target.value as TextTransitionId)}
-        style={{
-          width: '100%', padding: '8px 10px', background: 'var(--surface-1)',
-          border: '1px solid var(--border-1)', borderRadius: 8, color: 'var(--text-1)',
-          fontSize: 12, outline: 'none',
-        }}>
-        {TEXT_TRANSITIONS.map((t) => (
-          <option key={t.id} value={t.id}>{t.label} — {t.description}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-
-const RIGHT_PANEL_SECTION_ORDER_KEY = 'novacena:right-panel-section-order-v1';
-
-const DEFAULT_RIGHT_PANEL_SECTION_ORDER = [
-  'Projeto',
-  'Áudio',
-  'Logos das plataformas',
-  'Texto',
-  'Ritmo CTA (Disponível)',
-  'Overlays (filmburn / película)',
-  'Capa',
-  'Wiggle por elemento',
-  'Brilho',
-  'Efeitos',
-];
-
-function getRightPanelSectionOrder(): string[] {
-  if (typeof window === 'undefined') return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
-
-  try {
-    const saved = window.localStorage.getItem(RIGHT_PANEL_SECTION_ORDER_KEY);
-    const parsed = saved ? JSON.parse(saved) : [];
-
-    if (!Array.isArray(parsed)) return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
-
-    return [
-      ...parsed.filter((item) => DEFAULT_RIGHT_PANEL_SECTION_ORDER.includes(item)),
-      ...DEFAULT_RIGHT_PANEL_SECTION_ORDER.filter((item) => !parsed.includes(item)),
-    ];
-  } catch {
-    return DEFAULT_RIGHT_PANEL_SECTION_ORDER;
-  }
-}
-
-function getRightPanelSectionIndex(title: string): number {
-  return getRightPanelSectionOrder().indexOf(title);
-}
-
-function saveRightPanelSectionOrder(order: string[]) {
-  if (typeof window === 'undefined') return;
-
-  window.localStorage.setItem(RIGHT_PANEL_SECTION_ORDER_KEY, JSON.stringify(order));
-  window.dispatchEvent(new CustomEvent('novacena:right-panel-section-order-changed'));
-}
-
-function moveRightPanelSection(sourceTitle: string, targetTitle: string) {
-  if (!sourceTitle || !targetTitle || sourceTitle === targetTitle) return;
-
-  const order = getRightPanelSectionOrder();
-  const from = order.indexOf(sourceTitle);
-  const to = order.indexOf(targetTitle);
-
-  if (from === -1 || to === -1) return;
-
-  const next = [...order];
-  const [item] = next.splice(from, 1);
-  next.splice(to, 0, item);
-
-  saveRightPanelSectionOrder(next);
-}
-
-
-function Section({
-  title,
-  children,
-  draggablePanel = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  draggablePanel?: boolean;
-}) {
-  const fixedPanelOrder = draggablePanel ? RIGHT_PANEL_PRESET_ORDER[title] ?? 999 : undefined;
-  const hiddenByMode = false;
-
-  const sectionRef = React.useRef<HTMLElement | null>(null);
-  const [orderIndex, setOrderIndex] = React.useState<number | undefined>(undefined);
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [isDragOver, setIsDragOver] = React.useState(false);
-  const canDrag = draggablePanel && DEFAULT_RIGHT_PANEL_SECTION_ORDER.includes(title);
-
-  React.useEffect(() => {
-    if (!canDrag) return;
-
-    const updateOrder = () => {
-      setOrderIndex(getRightPanelSectionIndex(title));
-    };
-
-    updateOrder();
-
-    window.addEventListener('novacena:right-panel-section-order-changed', updateOrder);
-    window.addEventListener('storage', updateOrder);
-
-    return () => {
-      window.removeEventListener('novacena:right-panel-section-order-changed', updateOrder);
-      window.removeEventListener('storage', updateOrder);
-    };
-  }, [canDrag, title]);
-
-  React.useEffect(() => {
-    if (!canDrag) return;
-
-    const parent = sectionRef.current?.parentElement;
-    if (!parent) return;
-
-    parent.style.display = 'flex';
-    parent.style.flexDirection = 'column';
-  }, [canDrag]);
-
-  return (
-    <section
-      ref={sectionRef}
-      data-right-panel-section={canDrag ? title : undefined}
-      onDragOver={(event) => {
-        if (!canDrag) return;
-        event.preventDefault();
-        setIsDragOver(true);
-      }}
-      onDragLeave={() => {
-        if (!canDrag) return;
-        setIsDragOver(false);
-      }}
-      onDrop={(event) => {
-        if (!canDrag) return;
-        event.preventDefault();
-        setIsDragOver(false);
-
-        const sourceTitle = event.dataTransfer.getData('text/plain');
-        moveRightPanelSection(sourceTitle, title);
-      }}
-      style={{
-        order: canDrag && typeof orderIndex === 'number' && orderIndex >= 0 ? orderIndex : fixedPanelOrder,
-        opacity: isDragging ? 0.45 : 1,
-        transform: isDragging ? 'scale(0.985)' : undefined,
-        borderTop: isDragOver ? '1px solid rgba(168, 85, 247, 0.75)' : undefined,
-        transition: 'opacity 160ms ease, transform 160ms ease, border-color 160ms ease',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 12,
-        }}
-      >
-        {canDrag ? (
-          <span
-            draggable
-            title="Arrastar seção"
-            onDragStart={(event) => {
-              setIsDragging(true);
-              event.dataTransfer.effectAllowed = 'move';
-              event.dataTransfer.setData('text/plain', title);
-            }}
-            onDragEnd={() => setIsDragging(false)}
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 8,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'grab',
-              userSelect: 'none',
-              color: 'var(--text-muted)',
-              border: '1px solid var(--border-1)',
-              background: 'rgba(255,255,255,0.04)',
-              fontSize: 14,
-              lineHeight: 1,
-            }}
-          >
-            ⋮⋮
-          </span>
-        ) : null}
-
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 11,
-            letterSpacing: 2,
-            textTransform: 'uppercase',
-            color: 'var(--text-muted)',
-            fontWeight: 800,
-          }}
-        >
-          {title}
-        </h3>
-      </div>
-
-      {children}
-    </section>
-  );
-}
-
-function TextAreaField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  rows = 2,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  rows?: number;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6 }}>
-      <span style={miniInputLabel}>{label}</span>
-      <textarea
-        value={value}
-        placeholder={placeholder}
-        rows={rows}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          ...fieldInputStyle,
-          minHeight: Math.max(50, rows * 30),
-          lineHeight: 1.35,
-          resize: 'vertical',
-          whiteSpace: 'pre-wrap',
-          fontFamily: 'inherit',
-        }}
-      />
-    </label>
-  );
-}
-
-function Field({ label, value, onChange, placeholder }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string;
-}) {
-  return (
-    <label style={{ display: 'block', marginBottom: 10 }}>
-      <span style={miniInputLabel}>{label}</span>
-      <input value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)}
-        style={fieldInputStyle} />
-    </label>
-  );
-}
-
-function TemplateButton({ active, onClick, children }: {
-  active: boolean; onClick: () => void; children: React.ReactNode;
-}) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '10px 12px',
-      background: active ? 'var(--surface-active)' : 'var(--surface-1)',
-      border: active ? '1px solid var(--border-3)' : '1px solid var(--border-1)',
-      borderRadius: 10, color: active ? 'var(--text-1)' : 'var(--text-2)',
-      fontSize: 12, fontWeight: 600,
-    }}>{children}</button>
-  );
-}
-
-function ChipButton({ active, onClick, children }: {
-  active: boolean; onClick: () => void; children: React.ReactNode;
-}) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '6px 12px',
-      background: active ? 'var(--surface-active)' : 'var(--surface-1)',
-      border: active ? '1px solid var(--border-3)' : '1px solid var(--border-1)',
-      borderRadius: 999, color: active ? 'var(--text-1)' : 'var(--text-2)',
-      fontSize: 12, fontWeight: 500,
-    }}>{children}</button>
-  );
-}
-
-function SegmentedControl({ options, value, onChange }: {
-  options: { id: string; label: string }[]; value: string; onChange: (id: string) => void;
-}) {
-  return (
-    <div style={{ display: 'inline-flex', background: 'var(--bg-2)',
-      border: '1px solid var(--border-1)', borderRadius: 10, padding: 3 }}>
-      {options.map((opt) => (
-        <button key={opt.id} onClick={() => onChange(opt.id)} style={{
-          padding: '7px 14px',
-          background: value === opt.id ? 'var(--surface-active)' : 'transparent',
-          border: 'none', borderRadius: 7,
-          color: value === opt.id ? 'var(--text-1)' : 'var(--text-3)',
-          fontSize: 12, fontWeight: 600,
-        }}>{opt.label}</button>
-      ))}
-    </div>
-  );
-}
-
-function SliderRow({
-  label, value, min, max, step, onChange, format,
-}: {
-  label: string; value: number; min: number; max?: number; step: number;
-  onChange: (v: number) => void; format?: (v: number) => string;
-}) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-        <span style={{ color: 'var(--text-3)' }}>{label}</span>
-        <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>
-          {format ? format(value) : value}
-        </span>
-      </div>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))} />
-    </div>
-  );
-}
-
-function ToggleRow({ label, value, onChange }: {
-  label: string; value: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{label}</span>
-      <button onClick={() => onChange(!value)} style={{
-        width: 32, height: 18, borderRadius: 999,
-        background: value ? 'var(--brand)' : 'var(--border-2)',
-        border: 'none', position: 'relative',
-      }}>
-        <div style={{
-          position: 'absolute', top: 2, left: value ? 16 : 2,
-          width: 14, height: 14, borderRadius: 999, background: '#fff',
-          transition: 'left 0.2s ease',
-        }} />
-      </button>
-    </div>
-  );
-}
-
-function FontPicker({
-  label, sampleText, value, onChange, fonts,
-}: {
-  label: string; sampleText: string; value: string;
-  onChange: (id: string) => void; fonts: FontDef[];
-}) {
-  const [open, setOpen] = useState(false);
-  const selected = fonts.find((f) => f.id === value) ?? fonts[0];
-  return (
-    <div style={{ marginBottom: 10 }}>
-      <div style={miniInputLabel}>{label}</div>
-      <button onClick={() => setOpen((o) => !o)} style={{
-        width: '100%', textAlign: 'left', padding: '8px 10px',
-        background: 'var(--surface-1)', border: '1px solid var(--border-1)', borderRadius: 8,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div>
-          <div style={{
-            fontFamily: `'${selected.family}', sans-serif`,
-            fontSize: 16, fontWeight: selected.weight, lineHeight: 1.1, color: 'var(--text-1)',
-          }}>{sampleText.slice(0, 14) || 'Aa'}</div>
-          <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>{selected.label}</div>
-        </div>
-        <span style={{ color: 'var(--text-3)' }}>{open ? '×' : '⌄'}</span>
-      </button>
-      {open && (
-        <div style={{
-          marginTop: 6, maxHeight: 280, overflow: 'auto', background: 'var(--bg-2)',
-          border: '1px solid var(--border-1)', borderRadius: 8, padding: 4,
-        }}>
-          {(['display', 'sans', 'special'] as const).map((cat) => (
-            <div key={cat}>
-              <div style={{
-                padding: '6px 8px 2px', fontSize: 9, letterSpacing: 1.4,
-                color: 'var(--text-4)', textTransform: 'uppercase', fontWeight: 700,
-              }}>
-                {cat}
-              </div>
-              {fonts.filter((f) => f.category === cat).map((f) => (
-                <button key={f.id} onClick={() => { onChange(f.id); setOpen(false); }} style={{
-                  width: '100%', textAlign: 'left', padding: '8px 10px',
-                  background: f.id === value ? 'var(--surface-active)' : 'transparent',
-                  border: 'none', borderRadius: 6,
-                }}>
-                  <div style={{
-                    fontFamily: `'${f.family}', sans-serif`,
-                    fontSize: 18, fontWeight: f.weight, lineHeight: 1, color: 'var(--text-1)',
-                  }}>{sampleText.slice(0, 18) || f.label}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 3 }}>{f.label}</div>
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================
-// HELPERS
-// ============================================================
-function renderScriptFor(template: TemplateId, target: RenderTarget): string {
-  const suffix = target === 'feed' ? ':feed' : '';
-  if (template === 'available_now') return `render:available${suffix}`;
-  if (template === 'watch_youtube') return `render:youtube${suffix}`;
-  if (template === 'milestone') return `render:milestone${suffix}`;
-  return `render:outnow${suffix}`;
-}
-
-// ============================================================
-// STYLES INLINE
-// ============================================================
-const topbarStyle: React.CSSProperties = {
-  gridArea: 'topbar',
-  background: 'var(--bg-1)', borderBottom: '1px solid var(--border-1)',
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '0 22px', gap: 12,
-};
-
-const separator: React.CSSProperties = {
-  width: 1, height: 22, background: 'var(--border-2)',
-};
-
-const topTab: React.CSSProperties = {
-  padding: '6px 14px', background: 'transparent', border: 'none',
-  color: 'var(--text-3)', fontSize: 13, fontWeight: 600, borderRadius: 6,
-};
-
-const topTabActive: React.CSSProperties = {
-  ...topTab, background: 'var(--surface-active)', color: 'var(--text-1)',
-};
-
-const leftSidebar: React.CSSProperties = {
-  gridArea: 'left', background: 'var(--bg-1)',
-  borderRight: '1px solid var(--border-1)',
-  display: 'flex', flexDirection: 'column',
-  overflowY: 'auto', overflowX: 'hidden',
-  height: '100%', minHeight: 0,
-};
-
-const rightSidebar: React.CSSProperties = {
-  gridArea: 'right', background: 'var(--bg-1)',
-  borderLeft: '1px solid var(--border-1)',
-  display: 'flex', flexDirection: 'column',
-  overflowY: 'auto', overflowX: 'hidden',
-  height: '100%', minHeight: 0,
-};
-
-const centerStyle: React.CSSProperties = {
-  gridArea: 'center', background: 'var(--bg-0)',
-  padding: '24px 30px',
-  display: 'flex', flexDirection: 'column',
-  alignItems: 'center', gap: 16,
-  overflowY: 'auto', overflowX: 'hidden',
-  height: '100%', minHeight: 0,
-};
-
-const previewToolbarStyle: React.CSSProperties = {
-  display: 'flex', gap: 12, alignItems: 'center',
-};
-
-const renderBarStyle: React.CSSProperties = {
-  display: 'flex', gap: 8,
-};
-
-const gridTwoCols: React.CSSProperties = {
-  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8,
-};
-
-const uploadCardStyle: React.CSSProperties = {
-  width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: 10,
-  background: 'var(--surface-1)', border: '1px solid var(--border-1)', borderRadius: 12,
-};
-
-const uploadCardStyleSmall: React.CSSProperties = {
-  width: '100%', padding: '8px 12px',
-  background: 'var(--surface-1)', border: '1px dashed var(--border-2)',
-  borderRadius: 8, color: 'var(--text-2)', fontSize: 12, textAlign: 'center',
-};
-
-const uploadThumbStyle: React.CSSProperties = {
-  width: 46, height: 46, borderRadius: 8, background: 'var(--bg-2)',
-  overflow: 'hidden', flexShrink: 0,
-};
-
-const primaryBtn: React.CSSProperties = {
-  width: '100%', padding: '11px 16px',
-  background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
-  border: 'none', borderRadius: 10, color: '#fff', fontSize: 13,
-  fontWeight: 700, boxShadow: '0 8px 24px var(--brand-glow)',
-};
-
-const renderBtnStyle: React.CSSProperties = {
-  padding: '10px 18px', background: 'var(--text-1)', color: 'var(--bg-0)',
-  border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13,
-};
-
-const ghostBtnStyle: React.CSSProperties = {
-  padding: '10px 14px', background: 'var(--surface-1)',
-  color: 'var(--text-2)', border: '1px solid var(--border-1)',
-  borderRadius: 10, fontWeight: 600, fontSize: 13,
-};
-
-const chip: React.CSSProperties = {
-  padding: '7px 14px', background: 'var(--bg-2)',
-  border: '1px solid var(--border-1)', borderRadius: 10,
-  color: 'var(--text-3)', fontSize: 12, fontWeight: 600,
-};
-
-const chipActive: React.CSSProperties = {
-  ...chip, background: 'var(--surface-active)',
-  border: '1px solid var(--border-3)', color: 'var(--text-1)',
-};
-
-const resetBtnStyle: React.CSSProperties = {
-  width: 32, height: 32, background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)', borderRadius: 8,
-  color: 'var(--text-2)', fontSize: 16,
-};
-
-const miniLabel: React.CSSProperties = {
-  fontSize: 10, letterSpacing: 1.4, color: 'var(--text-3)',
-  textTransform: 'uppercase', fontWeight: 600, marginBottom: 8,
-};
-
-const miniInputLabel: React.CSSProperties = {
-  fontSize: 11, color: 'var(--text-3)', marginBottom: 5, fontWeight: 500, display: 'block',
-};
-
-const fieldInputStyle: React.CSSProperties = {
-  width: '100%', padding: '8px 11px', background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)', borderRadius: 8,
-  color: 'var(--text-1)', fontSize: 12, outline: 'none',
-};
-
-const segBtn: React.CSSProperties = {
-  padding: '7px 0', fontSize: 11, fontWeight: 600,
-  border: '1px solid var(--border-1)', background: 'var(--surface-1)',
-  color: 'var(--text-3)', borderRadius: 7,
-};
-
-const segBtnActive: React.CSSProperties = {
-  ...segBtn, background: 'var(--surface-active)',
-  border: '1px solid var(--border-3)', color: 'var(--text-1)',
-};
-
-const dashedUpload: React.CSSProperties = {
-  width: '100%', padding: '9px 12px',
-  background: 'var(--surface-1)', border: '1px dashed var(--border-2)',
-  borderRadius: 8, color: 'var(--text-2)', fontSize: 12, textAlign: 'left',
-};
-
-const linkBtnDanger: React.CSSProperties = {
-  background: 'transparent', border: 'none', color: 'var(--danger)',
-  fontSize: 11, cursor: 'pointer', padding: 0,
-};
-
-const userFontRow: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '6px 8px', background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)', borderRadius: 6, marginBottom: 4,
-};
-
-const overlayLibraryRow: React.CSSProperties = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-  padding: '6px 8px', background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)', borderRadius: 6, marginBottom: 4,
-};
-
-const tinyAddBtn: React.CSSProperties = {
-  padding: '3px 8px', background: 'var(--brand)', color: '#fff',
-  border: 'none', borderRadius: 5, fontSize: 10, fontWeight: 600,
-};
-
-const tinyDelBtn: React.CSSProperties = {
-  padding: '3px 7px', background: 'transparent',
-  border: '1px solid var(--border-2)', color: 'var(--danger)',
-  borderRadius: 5, fontSize: 11, fontWeight: 700, marginLeft: 4,
-};
-
-const platformLogoRow: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8,
-  padding: '8px 10px', marginBottom: 6,
-  background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)',
-  borderRadius: 8,
-};
-
-const colorInputStyle: React.CSSProperties = {
-  width: '100%', height: 32, background: 'transparent',
-  border: '1px solid var(--border-1)', borderRadius: 6,
-  padding: 0, cursor: 'pointer',
-};
-
-const textBoxGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
-  gap: 6,
-};
-
-const miniNumberInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '6px 7px',
-  marginTop: 2,
-  background: 'var(--bg-2)',
-  border: '1px solid var(--border-1)',
-  borderRadius: 6,
-  color: 'var(--text-1)',
-  fontSize: 11,
-  outline: 'none',
-};
-
-const tinyNumInput: React.CSSProperties = {
-  width: 56, padding: '4px 6px',
-  background: 'var(--surface-1)', border: '1px solid var(--border-1)',
-  borderRadius: 4, color: 'var(--text-1)', fontSize: 11, outline: 'none',
-};
-
-const tinySelect: React.CSSProperties = {
-  padding: '4px 6px', background: 'var(--surface-1)',
-  border: '1px solid var(--border-1)', borderRadius: 4,
-  color: 'var(--text-1)', fontSize: 11, outline: 'none',
-};
-
-const photoDelBtn: React.CSSProperties = {
-  position: 'absolute', top: 2, right: 2, width: 18, height: 18,
-  border: 'none', background: 'rgba(0,0,0,0.7)', color: '#fff',
-  borderRadius: 999, fontSize: 11, cursor: 'pointer',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-};
-
-const logBoxStyle: React.CSSProperties = {
-  marginTop: 8, padding: 14, background: 'var(--bg-2)',
-  border: '1px solid var(--border-1)', borderRadius: 10,
-  color: 'var(--text-2)', fontSize: 11, maxHeight: 220,
-  overflow: 'auto', lineHeight: 1.5,
-};

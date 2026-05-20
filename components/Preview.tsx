@@ -7,17 +7,37 @@ import { useLazyFonts } from '../hooks/useLazyFonts';
 import { useRenderCache } from '../hooks/useRenderCache';
 import type { TemplateId, MotionProject } from '../remotion/types';
 
-// Lazy load componentes
-const AvailableNow = React.lazy(() => import('../remotion/AvailableNow').then((m) => ({ default: m.AvailableNow })));
-const WatchOnYouTube = React.lazy(() => import('../remotion/WatchOnYouTube').then((m) => ({ default: m.WatchOnYouTube })));
-const Milestone = React.lazy(() => import('../remotion/Milestone').then((m) => ({ default: m.Milestone })));
-const OutNow = React.lazy(() => import('../remotion/OutNow').then((m) => ({ default: m.OutNow })));
+// Lazy load componentes — mas PRECARREGA TODOS no boot pra troca instantânea
+const importAvailableNow = () => import('../remotion/AvailableNow').then((m) => ({ default: m.AvailableNow }));
+const importWatchOnYouTube = () => import('../remotion/WatchOnYouTube').then((m) => ({ default: m.WatchOnYouTube }));
+const importMilestone = () => import('../remotion/Milestone').then((m) => ({ default: m.Milestone }));
+const importOutNow = () => import('../remotion/OutNow').then((m) => ({ default: m.OutNow }));
+const importSpotifyPrint = () => import('../remotion/SpotifyPrint').then((m) => ({ default: m.SpotifyPrint }));
+
+const AvailableNow = React.lazy(importAvailableNow);
+const WatchOnYouTube = React.lazy(importWatchOnYouTube);
+const Milestone = React.lazy(importMilestone);
+const OutNow = React.lazy(importOutNow);
+const SpotifyPrint = React.lazy(importSpotifyPrint);
+
+// Dispara o download de TODOS os templates em paralelo no boot.
+// Quando o user trocar de template, o módulo já está em memória → instantâneo.
+if (typeof window !== 'undefined') {
+  void Promise.all([
+    importAvailableNow(),
+    importWatchOnYouTube(),
+    importMilestone(),
+    importOutNow(),
+    importSpotifyPrint(),
+  ]).catch(() => {/* network/dev errors são silenciosos */});
+}
 
 const COMPONENTS: Record<TemplateId, React.LazyExoticComponent<any>> = {
   available_now: AvailableNow,
   watch_youtube: WatchOnYouTube,
   milestone: Milestone,
   out_now: OutNow,
+  spotify_print: SpotifyPrint,
 };
 
 export interface PreviewProps {

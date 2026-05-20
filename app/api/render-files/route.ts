@@ -3,16 +3,26 @@ import { readdir, readFile, stat, unlink } from 'fs/promises';
 import path from 'path';
 import { existsSync } from 'fs';
 
-const OUT_DIR = path.join(process.cwd(), 'out');
+const GENERATED_FILE_EXTENSIONS = ['.mp4', '.png', '.json', '.txt'];
+
+function getOutDir() {
+  return path.join(/* turbopackIgnore: true */ process.cwd(), 'out');
+}
+
+function isGeneratedRenderFile(fileName: string): boolean {
+  const safeName = path.basename(fileName);
+  return GENERATED_FILE_EXTENSIONS.some((ext) => safeName.endsWith(ext));
+}
 
 export async function GET(request: NextRequest) {
+  const outDir = getOutDir();
   const file = request.nextUrl.searchParams.get('file');
 
   // Download de um arquivo específico
   if (file) {
     const safeName = path.basename(file);
-    const filePath = path.join(OUT_DIR, safeName);
-    if (!filePath.startsWith(OUT_DIR) || !existsSync(filePath)) {
+    const filePath = path.join(outDir, safeName);
+    if (!filePath.startsWith(outDir) || !existsSync(filePath)) {
       return new NextResponse('Not found', { status: 404 });
     }
     const buffer = await readFile(filePath);
@@ -26,15 +36,15 @@ export async function GET(request: NextRequest) {
   }
 
   // Listar todos os arquivos renderizados
-  if (!existsSync(OUT_DIR)) {
+  if (!existsSync(outDir)) {
     return NextResponse.json({ files: [] });
   }
-  const entries = await readdir(OUT_DIR);
+  const entries = await readdir(outDir);
   const files = await Promise.all(
     entries
       .filter(f => f.endsWith('.mp4'))
       .map(async f => {
-        const s = await stat(path.join(OUT_DIR, f));
+        const s = await stat(path.join(outDir, f));
         return { name: f, size: s.size, mtime: s.mtime.toISOString() };
       })
   );
@@ -44,21 +54,22 @@ export async function GET(request: NextRequest) {
 
 
 export async function DELETE(request: NextRequest) {
+  const outDir = getOutDir();
   const file = request.nextUrl.searchParams.get('file');
   const all = request.nextUrl.searchParams.get('all');
 
-  if (!existsSync(OUT_DIR)) {
+  if (!existsSync(outDir)) {
     return NextResponse.json({ error: 'OUT_DIR nao existe' }, { status: 404 });
   }
 
   try {
     if (all === 'true') {
-      const entries = await readdir(OUT_DIR);
-      const videos = entries.filter(f => f.endsWith('.mp4'));
+      const entries = await readdir(outDir);
+      const files = entries.filter(isGeneratedRenderFile);
       await Promise.all(
-        videos.map(f => unlink(path.join(OUT_DIR, f)))
+        files.map(f => unlink(path.join(outDir, f)))
       );
-      return NextResponse.json({ deleted: videos.length });
+      return NextResponse.json({ deleted: files.length });
     }
 
     if (!file) {
@@ -66,8 +77,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const safeName = path.basename(file);
-    const filePath = path.join(OUT_DIR, safeName);
-    if (!filePath.startsWith(OUT_DIR) || !existsSync(filePath)) {
+    const filePath = path.join(outDir, safeName);
+    if (!filePath.startsWith(outDir) || !existsSync(filePath)) {
       return NextResponse.json({ error: 'arquivo nao encontrado' }, { status: 404 });
     }
     await unlink(filePath);

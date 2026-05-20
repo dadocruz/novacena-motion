@@ -8,9 +8,33 @@ import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 
 const execAsync = promisify(exec);
+const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 
 function shQuote(value: string) {
   return JSON.stringify(value);
+}
+
+function toAppAssetUrl(value: string) {
+  if (!value) return value;
+  if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://')) return value;
+
+  let fixed = value;
+  if (fixed.startsWith('/uploads/')) fixed = fixed.replace('/uploads/', '/api/uploads/');
+  if (fixed.startsWith('/')) return `${APP_ORIGIN}${fixed}`;
+
+  return fixed;
+}
+
+function activeFontIdsFromMotion(motion: any) {
+  return new Set(
+    [
+      motion?.fontHeadline,
+      motion?.fontDate,
+      motion?.fontCta,
+      motion?.fontCta1,
+      motion?.fontCta2,
+    ].filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
 }
 
 
@@ -18,7 +42,7 @@ export const runtime = 'nodejs';
 
 const RenderRequestSchema = z.object({
   project: z.object({
-    type: z.enum(['available_now', 'watch_youtube', 'milestone', 'out_now', 'collaborator']),
+    type: z.enum(['available_now', 'watch_youtube', 'milestone', 'out_now', 'spotify_print', 'collaborator']),
     artistName: z.string().min(1),
     songTitle: z.string().min(1),
     formats: z.array(z.enum(['story', 'feed'])),
@@ -40,6 +64,8 @@ const ALLOWED_RENDER_SCRIPTS = new Set([
   'render:milestone:feed',
   'render:outnow',
   'render:outnow:feed',
+  'render:spotifyprint',
+  'render:spotifyprint:feed',
   'render:all',
   'render:all:v2',
 ]);
@@ -98,6 +124,8 @@ export async function POST(request: NextRequest) {
         'render:milestone:feed': { id: 'MilestoneFeed',      out: 'out/milestone-feed.mp4',      target: 'feed'  },
         'render:outnow':         { id: 'OutNow',             out: 'out/out-now-story.mp4',       target: 'story' },
         'render:outnow:feed':    { id: 'OutNowFeed',         out: 'out/out-now-feed.mp4',        target: 'feed'  },
+        'render:spotifyprint':      { id: 'SpotifyPrint',     out: 'out/spotify-print-story.mp4', target: 'story' },
+        'render:spotifyprint:feed': { id: 'SpotifyPrintFeed', out: 'out/spotify-print-feed.mp4',  target: 'feed'  },
       };
 
       const comp = scriptToComposition[script];
@@ -107,37 +135,21 @@ export async function POST(request: NextRequest) {
 
         const renderProps = JSON.parse(JSON.stringify(props));
 
-        // Cover image → base64 (evita 404 do Remotion CLI na porta 3001)
+        // Assets locais precisam virar URL absoluta do app. Evita 404 no servidor
+        // do Remotion sem explodir o JSON com base64 gigante.
         if (renderProps?.coverImage && typeof renderProps.coverImage === 'string' && renderProps.coverImage.startsWith('/')) {
-          const dataUrl = await pathToDataUrl(renderProps.coverImage);
-          if (dataUrl) renderProps.coverImage = dataUrl;
+          renderProps.coverImage = toAppAssetUrl(renderProps.coverImage);
         }
 
         // Audio/Video de fundo → continua HTTP (arquivos grandes)
         const bg = renderProps?.motion?.background;
         if (bg?.audioSrc && typeof bg.audioSrc === 'string' && bg.audioSrc.startsWith('/')) {
-          bg.audioSrc = `http://localhost:3000${bg.audioSrc}`;
+          bg.audioSrc = toAppAssetUrl(bg.audioSrc);
         }
         if (bg?.videoSrc && typeof bg.videoSrc === 'string' && bg.videoSrc.startsWith('/')) {
-          bg.videoSrc = `http://localhost:3000${bg.videoSrc}`;
+          bg.videoSrc = toAppAssetUrl(bg.videoSrc);
         }
 
-        // Custom logos → base64 inline
-        if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
-          for (const key of Object.keys(renderProps.motion.customLogos)) {
-            const val = renderProps.motion.customLogos[key];
-            if (typeof val === 'string' && val.startsWith('/')) {
-              const dataUrl = await pathToDataUrl(val);
-              if (dataUrl) {
-                renderProps.motion.customLogos[key] = dataUrl;
-              } else {
-                delete renderProps.motion.customLogos[key];
-              }
-            }
-          }
-        }
-
-        
         // Normaliza logos customizados dentro de motion.customLogos.
         // O frontend envia customLogos dentro de motion, não na raiz.
         if (renderProps?.motion?.customLogos && typeof renderProps.motion.customLogos === 'object') {
@@ -145,30 +157,64 @@ export async function POST(request: NextRequest) {
             const val = renderProps.motion.customLogos[key];
 
             if (typeof val === 'string') {
-              let fixed = val;
-
-              if (fixed.startsWith('/uploads/')) {
-                fixed = fixed.replace('/uploads/', '/api/uploads/');
-              }
-
-              if (fixed.startsWith('/')) {
-                fixed = `http://localhost:3000${fixed}`;
-              }
-
-              renderProps.motion.customLogos[key] = fixed;
+              renderProps.motion.customLogos[key] = toAppAssetUrl(val);
             }
           }
         }
 
+        // Normaliza overlays — cada um tem um .src apontando pra /api/uploads/overlays/...
+        // Sem isso, o Remotion render tenta baixar do próprio servidor (porta 3001) e dá 404.
+        if (renderProps?.motion?.overlays && Array.isArray(renderProps.motion.overlays)) {
+          renderProps.motion.overlays = renderProps.motion.overlays.map((overlay: any) => {
+            if (overlay && typeof overlay.src === 'string') {
+              return { ...overlay, src: toAppAssetUrl(overlay.src) };
+            }
+            return overlay;
+          });
+        }
+
+        // CAMADA EXTRA: varre o JSON inteiro procurando qualquer string que ainda começa
+        // com /uploads/ ou /api/uploads/ (asset relativo que escapou das normalizações
+        // específicas acima). Converte tudo pra URL absoluta automaticamente.
+        function normalizeRelativeAssets(obj: any): any {
+          if (obj == null) return obj;
+          if (typeof obj === 'string') {
+            if (obj.startsWith('/uploads/') || obj.startsWith('/api/uploads/')) {
+              return toAppAssetUrl(obj);
+            }
+            return obj;
+          }
+          if (Array.isArray(obj)) {
+            return obj.map(normalizeRelativeAssets);
+          }
+          if (typeof obj === 'object') {
+            const out: any = Array.isArray(obj) ? [] : {};
+            for (const key of Object.keys(obj)) {
+              out[key] = normalizeRelativeAssets(obj[key]);
+            }
+            return out;
+          }
+          return obj;
+        }
+        Object.assign(renderProps, normalizeRelativeAssets(renderProps));
+
 
         if (renderProps?.motion?.customFonts && Array.isArray(renderProps.motion.customFonts)) {
+          const activeFontIds = activeFontIdsFromMotion(renderProps.motion);
+          const activeCustomFonts = renderProps.motion.customFonts.filter((font: any) => {
+            if (!font || typeof font.id !== 'string' || typeof font.file !== 'string') return false;
+            return activeFontIds.size === 0 || activeFontIds.has(font.id);
+          });
+
           const userFontsDir = join(process.cwd(), 'public', 'uploads', 'user-fonts');
+          renderProps.motion.customFonts = [];
 
-          for (let i = 0; i < renderProps.motion.customFonts.length; i++) {
-            const font = renderProps.motion.customFonts[i];
-
+          for (const font of activeCustomFonts) {
             if (!font || typeof font.file !== 'string' || !font.file) continue;
-            if (font.file.startsWith('data:')) continue;
+            if (font.file.startsWith('data:')) {
+              renderProps.motion.customFonts.push(font);
+              continue;
+            }
 
             try {
               const filename = font.file.replace(/^\/+/, '').split('/').pop();
@@ -185,10 +231,10 @@ export async function POST(request: NextRequest) {
                 ext === 'woff' ? 'font/woff' :
                 'application/octet-stream';
 
-              renderProps.motion.customFonts[i] = {
+              renderProps.motion.customFonts.push({
                 ...font,
                 file: `data:${mime};base64,${buffer.toString('base64')}`,
-              };
+              });
             } catch (error) {
               console.warn('[render] Não consegui embutir fonte custom:', font.file, error);
             }
@@ -243,10 +289,8 @@ export async function POST(request: NextRequest) {
             const posterFrame = Math.max(0, Math.min(maxFrame, Math.round(posterFrameSec * fps)));
 
             const posterPng = outputFileForRender.replace(/\.mp4$/, `-poster-${posterFrame}f.png`);
-            const posterIntroMp4 = outputFileForRender.replace(/\.mp4$/, `.poster-intro.mp4`);
-            const posterOutroMp4 = outputFileForRender.replace(/\.mp4$/, `.poster-outro.mp4`);
-            const concatList = outputFileForRender.replace(/\.mp4$/, `.concat.txt`);
 
+            // Gera o still do poster
             const stillCmd = `npx remotion still remotion-entry/index.ts ${comp.id} ${posterPng} --props=${tmpFile} --frame=${posterFrame}`;
             const { stdout: stillStdout, stderr: stillStderr } = await execAsync(stillCmd, {
               cwd: process.cwd(),
@@ -255,60 +299,112 @@ export async function POST(request: NextRequest) {
 
             output += '\n' + [stillStdout, stillStderr].filter(Boolean).join('\n');
 
-            const makePosterClip = async (file: string) => {
-              const ffmpegCmd = [
-                'ffmpeg -y',
-                '-loop 1',
-                `-t ${posterHoldSec}`,
-                `-i ${shQuote(posterPng)}`,
-                `-f lavfi -t ${posterHoldSec} -i anullsrc=channel_layout=stereo:sample_rate=48000`,
-                '-vf "format=yuv420p"',
-                '-r 30',
-                '-c:v libx264',
-                '-c:a aac',
-                '-shortest',
-                shQuote(file),
-              ].join(' ');
+            // Probe o vídeo principal pra usar EXATAMENTE os mesmos parâmetros no poster.
+            // Sem isso, o concat com -c copy quebra timestamps e o vídeo final fica em câmera lenta.
+            let mainWidth = 1080;
+            let mainHeight = 1920;
+            let mainAudioRate = 48000;
+            let mainAudioChannels = 2;
+            try {
+              const probeCmd = `ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0 ${shQuote(normalOutputFile)}`;
+              const { stdout: probeOut } = await execAsync(probeCmd, { cwd: process.cwd() });
+              const [w, h] = probeOut.trim().split(',').map((s) => parseInt(s, 10));
+              if (Number.isFinite(w) && w > 0) mainWidth = w;
+              if (Number.isFinite(h) && h > 0) mainHeight = h;
+            } catch {}
+            try {
+              const probeACmd = `ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate,channels -of csv=p=0 ${shQuote(normalOutputFile)}`;
+              const { stdout: probeAOut } = await execAsync(probeACmd, { cwd: process.cwd() });
+              const [sr, ch] = probeAOut.trim().split(',').map((s) => parseInt(s, 10));
+              if (Number.isFinite(sr) && sr > 0) mainAudioRate = sr;
+              if (Number.isFinite(ch) && ch > 0) mainAudioChannels = ch;
+            } catch {}
 
-              return execAsync(ffmpegCmd, {
-                cwd: process.cwd(),
-                maxBuffer: 1024 * 1024 * 100,
-              });
-            };
+            // Usa o concat FILTER (não demuxer) com re-encode de TUDO usando os mesmos
+            // parâmetros. Concat filter trabalha no nível decodificado, eliminando drift
+            // de PTS/DTS que o -c copy causa quando streams têm timebase diferente.
+            const channelLayout = mainAudioChannels >= 2 ? 'stereo' : 'mono';
+            const introDuration = posterHoldSec;
+            const outroDuration = posterOutroEnabled ? posterHoldSec : 0;
 
-            await makePosterClip(posterIntroMp4);
+            // Constrói filter complex: cada entrada é normalizada (formato, fps, sar)
+            // e os 3 segmentos são concatenados.
+            const videoFilters: string[] = [];
+            const audioFilters: string[] = [];
+            const inputs: string[] = [];
+
+            // INPUT 0: poster intro (still loopado)
+            inputs.push(`-loop 1 -framerate ${fps} -t ${introDuration} -i ${shQuote(posterPng)}`);
+            // INPUT 1: silêncio do intro
+            inputs.push(`-f lavfi -t ${introDuration} -i anullsrc=channel_layout=${channelLayout}:sample_rate=${mainAudioRate}`);
+            // INPUT 2: vídeo principal
+            inputs.push(`-i ${shQuote(normalOutputFile)}`);
+            // INPUTs 3+4: outro (opcional)
             if (posterOutroEnabled) {
-              await makePosterClip(posterOutroMp4);
+              inputs.push(`-loop 1 -framerate ${fps} -t ${outroDuration} -i ${shQuote(posterPng)}`);
+              inputs.push(`-f lavfi -t ${outroDuration} -i anullsrc=channel_layout=${channelLayout}:sample_rate=${mainAudioRate}`);
             }
 
-            const concatContent = posterOutroEnabled
-              ? `file '${basename(posterIntroMp4).replace(/'/g, "'\\''")}'\nfile '${basename(normalOutputFile).replace(/'/g, "'\\''")}'\nfile '${basename(posterOutroMp4).replace(/'/g, "'\\''")}'\n`
-              : `file '${basename(posterIntroMp4).replace(/'/g, "'\\''")}'\nfile '${basename(normalOutputFile).replace(/'/g, "'\\''")}'\n`;
+            // Normaliza cada vídeo (scale, fps, format, sar)
+            const normalize = (idx: number, label: string) =>
+              `[${idx}:v]scale=${mainWidth}:${mainHeight}:force_original_aspect_ratio=decrease,pad=${mainWidth}:${mainHeight}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p[${label}]`;
+            const normalizeAudio = (idx: number, label: string) =>
+              `[${idx}:a]aresample=${mainAudioRate},aformat=channel_layouts=${channelLayout}[${label}]`;
 
-            await writeFile(concatList, concatContent, 'utf-8');
+            videoFilters.push(normalize(0, 'vintro'));
+            audioFilters.push(`[1:a]aresample=${mainAudioRate}[aintro]`);
+            videoFilters.push(normalize(2, 'vmain'));
+            audioFilters.push(normalizeAudio(2, 'amain'));
+
+            let videoConcat: string;
+            let audioConcat: string;
+
+            if (posterOutroEnabled) {
+              videoFilters.push(normalize(3, 'voutro'));
+              audioFilters.push(`[4:a]aresample=${mainAudioRate}[aoutro]`);
+              videoConcat = `[vintro][vmain][voutro]concat=n=3:v=1:a=0[vout]`;
+              audioConcat = `[aintro][amain][aoutro]concat=n=3:v=0:a=1[aout]`;
+            } else {
+              videoConcat = `[vintro][vmain]concat=n=2:v=1:a=0[vout]`;
+              audioConcat = `[aintro][amain]concat=n=2:v=0:a=1[aout]`;
+            }
+
+            const filterComplex = [
+              ...videoFilters,
+              ...audioFilters,
+              videoConcat,
+              audioConcat,
+            ].join(';');
 
             const concatCmd = [
               'ffmpeg -y',
-              '-f concat',
-              '-safe 0',
-              `-i ${shQuote(concatList)}`,
-              '-c copy',
+              ...inputs,
+              `-filter_complex ${shQuote(filterComplex)}`,
+              '-map "[vout]"',
+              '-map "[aout]"',
+              '-c:v libx264',
+              '-preset fast',
+              '-crf 18',
+              `-r ${fps}`,
+              '-pix_fmt yuv420p',
+              '-c:a aac',
+              '-b:a 192k',
+              `-ar ${mainAudioRate}`,
+              '-movflags +faststart',
               shQuote(outputFileForRender),
             ].join(' ');
 
             const { stdout: ffStdout, stderr: ffStderr } = await execAsync(concatCmd, {
               cwd: process.cwd(),
-              maxBuffer: 1024 * 1024 * 100,
+              maxBuffer: 1024 * 1024 * 200,
             });
 
             output += '\n' + [ffStdout, ffStderr].filter(Boolean).join('\n');
             output += `\nPoster salvo: ${posterPng}`;
             output += `\nVideo final com poster: ${outputFileForRender}`;
+            output += `\nProbe: ${mainWidth}x${mainHeight} · audio ${mainAudioRate}Hz/${channelLayout}`;
 
             await unlink(normalOutputFile).catch(() => {});
-            await unlink(posterIntroMp4).catch(() => {});
-            await unlink(posterOutroMp4).catch(() => {});
-            await unlink(concatList).catch(() => {});
           }
 
           await unlink(tmpFile).catch(() => {});

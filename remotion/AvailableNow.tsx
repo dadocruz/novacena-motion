@@ -1,7 +1,8 @@
 import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
-import { easings, eased, elegantWiggle, getTextTransition } from './motionEngine';
+import { easings, eased, getTextTransition } from './motionEngine';
+import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
@@ -40,9 +41,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const coverSize = motion.coverSize ?? 510;
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
-  const wH = motion.wiggleHeadline ?? 0;
-  const wD = motion.wiggleDate ?? 0;
-  const wC = motion.wiggleCta ?? 0;
+  const wH = motion.wiggleHeadline ?? 0.35;
+  const wD = motion.wiggleDate ?? 0.25;
+  const wC1 = motion.wiggleCta1 ?? motion.wiggleCta ?? 0.3;
+  const wC2 = motion.wiggleCta2 ?? motion.wiggleCta ?? 0.25;
   const particlesEnabled = motion.particlesEnabled ?? true;
   const finalFlashEnabled = motion.finalFlash ?? true;
   const glowColor = motion.glowColor ?? 'rgba(190, 90, 255, 0.28)';
@@ -50,46 +52,23 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const ctaSwapFrame = motion.ctaSwapFrame ?? MID_HIT;
   const cta2In = motion.cta2InFrame ?? CTA2_IN_DEFAULT;
   const logosIn = motion.logosInFrame ?? LOGOS_IN_DEFAULT;
-
-  const keepTextVisibleTransition = <T extends { wrapStyle?: React.CSSProperties; perChar?: any }>(
-    tx: T
-  ): T => {
-    const wrapOpacity = Number((tx.wrapStyle as any)?.opacity);
-    const safeWrapStyle = {
-      ...(tx.wrapStyle ?? {}),
-      opacity: Number.isFinite(wrapOpacity) ? Math.max(wrapOpacity, 1) : 1,
-    };
-
-    return {
-      ...tx,
-      wrapStyle: safeWrapStyle,
-      perChar: tx.perChar
-        ? (i: number, total: number) => {
-            const charStyle = tx.perChar(i, total) ?? {};
-            const charOpacity = Number((charStyle as any).opacity);
-
-            return {
-              ...charStyle,
-              opacity: Number.isFinite(charOpacity) ? Math.max(charOpacity, 1) : 1,
-            };
-          }
-        : undefined,
-    };
-  };
+  const headlineIn = motion.headlineInFrame ?? HEADLINE_IN;
+  const dateIn = motion.dateInFrame ?? DATE_IN;
 
   const txHeadline: TextTransitionId = (motion.transitionHeadline ?? (motion as any).trHeadline ?? 'mask_reveal') as TextTransitionId;
   const txDate: TextTransitionId = (motion.transitionDate ?? (motion as any).trDate ?? 'scale_pop') as TextTransitionId;
   const txCta: TextTransitionId = (motion.transitionCta ?? (motion as any).trCta ?? 'split_letters') as TextTransitionId;
-  const tH = keepTextVisibleTransition(getTextTransition(txHeadline)(frame, HEADLINE_IN));
-  const tD = keepTextVisibleTransition(getTextTransition(txDate)(frame, DATE_IN));
+  const tH = getTextTransition(txHeadline)(frame, headlineIn, motion.transitionTuningHeadline);
+  const tD = getTextTransition(txDate)(frame, dateIn, motion.transitionTuningDate);
   const txCta1 = (motion.transitionCta1 ?? (motion as any).trCta1 ?? motion.transitionCta ?? (motion as any).trCta ?? 'scale_pop') as TextTransitionId;
   const txCta2 = (motion.transitionCta2 ?? (motion as any).trCta2 ?? motion.transitionCta ?? (motion as any).trCta ?? txCta) as TextTransitionId;
-  const tC1 = keepTextVisibleTransition(getTextTransition(txCta1)(frame, cta1In));
-  const tC = keepTextVisibleTransition(getTextTransition(txCta2)(frame, cta2In));
+  const tC1 = getTextTransition(txCta1)(frame, cta1In, motion.transitionTuningCta1 ?? motion.transitionTuningCta);
+  const tC2 = getTextTransition(txCta2)(frame, cta2In, motion.transitionTuningCta2 ?? motion.transitionTuningCta);
 
-  const wigH = elegantWiggle(frame, { intensity: wH * wiggleIntensity, offset: 10 });
-  const wigD = elegantWiggle(frame, { intensity: wD * wiggleIntensity, offset: 70 });
-  const wigC = elegantWiggle(frame, { intensity: wC * wiggleIntensity, offset: 130 });
+  const wigH = brazuWiggle(frame, { amplitude: wH * wiggleIntensity, frequency: 0.74, seed: 10 });
+  const wigD = brazuWiggle(frame, { amplitude: wD * wiggleIntensity, frequency: 0.64, seed: 70 });
+  const wigC1 = brazuWiggle(frame, { amplitude: wC1 * wiggleIntensity, frequency: 0.9, seed: 130 });
+  const wigC2 = brazuWiggle(frame, { amplitude: wC2 * wiggleIntensity, frequency: 0.82, seed: 210 });
 
   const cta1Text = props.cta ?? 'FAÇA O PRÉ-SAVE';
   const cta2Text = props.cta2 ?? props.cta ?? 'EM TODAS AS PLATAFORMAS DIGITAIS';
@@ -99,11 +78,12 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const finalFlash = finalFlashEnabled ? interpolate(frame, [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14], [0, 0.45, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;
   const showAll = frame >= FINAL_POSTER;
   const isStory = props.renderTarget === 'story';
-
   const visiblePlatforms = props.platforms.filter((p) => Boolean(motion.customLogos?.[p]));
   const platformLogoSize = motion.platformLogoSize ?? 54;
   const platformLogoGap = motion.platformLogoGap ?? 18;
   const platformLogoScales = motion.platformLogoScales ?? {};
+  const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
+  const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
 
   return (
     <AbsoluteFill style={{ fontFamily: 'Inter, Arial, sans-serif', color: '#fff', overflow: 'hidden' }}>
@@ -112,7 +92,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
       <OverlayLayer overlays={motion.overlays} />
       <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>
         <div style={{ width: '100%' }}>
-          <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible', transform: showAll ? undefined : wigH.transform }}>
+          <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible' }}>
             <div style={{
               fontFamily: `'${fontHeadline?.family ?? 'Arial'}', Arial, sans-serif`,
               fontSize: (props.headline || '').length > 14 ? 76 : 92,
@@ -123,10 +103,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               maxWidth: '100%',
               overflow: 'visible',
               ...applyTextStyle(motion.styleHeadline),
-              ...(showAll ? {} : tH.wrapStyle),
-              ...userTextTransform(motion.styleHeadline, tH.wrapStyle),
+              ...userTextTransform(motion.styleHeadline, { transform: wigH.transform }),
             }}>
-              <StyledText text={props.headline || 'LANÇAMENTO'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} />
+              <StyledText text={props.headline || 'LANÇAMENTO'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
           {props.releaseDate ? (
@@ -138,12 +117,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               fontWeight: fontDate?.weight ?? 700,
               letterSpacing: 3.5,
               whiteSpace: 'pre-line',
-              transform: showAll ? undefined : wigD.transform,
               ...applyTextStyle(motion.styleDate),
-              ...(showAll ? {} : tD.wrapStyle),
-              ...userTextTransform(motion.styleDate, tD.wrapStyle),
+              ...userTextTransform(motion.styleDate, { transform: wigD.transform }),
             }}>
-              <StyledText text={props.releaseDate} transition={showAll ? undefined : tD} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} />
+              <StyledText text={props.releaseDate} transition={showAll ? undefined : tD} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />
             </div>
           ) : null}
         </div>
@@ -164,12 +141,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             whiteSpace: 'pre-line',
             maxWidth: '100%',
             opacity: cta1Text.trim() ? (showAll ? 0 : cta1Opacity) : 0,
-            transform: showAll ? undefined : wigC.transform,
             ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
-            ...(showAll ? {} : tC1.wrapStyle),
-            ...userTextTransform(motion.styleCta1 ?? motion.styleCta, tC1.wrapStyle),
+            ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: wigC1.transform }),
           }}>
-            <StyledText text={cta1Text} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} />
+            <StyledText text={cta1Text} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
           <div style={{
             fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
@@ -182,17 +157,24 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             whiteSpace: 'pre-line',
             maxWidth: '100%',
             opacity: cta2Text.trim() ? (showAll ? 1 : cta2Opacity) : 0,
-            transform: showAll ? undefined : wigC.transform,
             ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
-            ...(showAll ? {} : tC.wrapStyle),
-            ...userTextTransform(motion.styleCta2 ?? motion.styleCta, tC.wrapStyle),
+            ...userTextTransform(motion.styleCta2 ?? motion.styleCta, { transform: wigC2.transform }),
           }}>
-            <StyledText text={cta2Text} transition={showAll ? undefined : tC} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} />
+            <StyledText text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
           {visiblePlatforms.length > 0 ? (
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: platformLogoGap, flexWrap: 'wrap', opacity: showAll ? 1 : logosAppear }}>
               {visiblePlatforms.map((p, idx) => (
-                <PlatformLogo key={p} name={p} size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))} delay={logosIn + idx * 7} customSrc={motion.customLogos?.[p]} />
+                <PlatformLogo
+                  key={p}
+                  name={p}
+                  size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))}
+                  delay={logosIn + idx * 7}
+                  customSrc={motion.customLogos?.[p]}
+                  index={idx}
+                  pulseAmount={platformLogoWiggle}
+                  pulseSpeed={platformLogoWiggleSpeed}
+                />
               ))}
             </div>
           ) : null}

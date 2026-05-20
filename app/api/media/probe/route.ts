@@ -9,7 +9,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const FFPROBE_BIN = '/usr/local/bin/ffprobe';
+const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
+  ? '/usr/local/bin/ffprobe'
+  : existsSync('/opt/homebrew/bin/ffprobe')
+    ? '/opt/homebrew/bin/ffprobe'
+    : 'ffprobe';
+const MAX_PROBE_SIZE = 500 * 1024 * 1024;
+const ALLOWED_MEDIA_EXT = ['.mp4', '.mov', '.webm', '.mp3', '.wav', '.m4a', '.aac', '.ogg'];
 
 type ProbeResult = {
   ok: true;
@@ -85,12 +91,19 @@ export async function POST(req: NextRequest): Promise<NextResponse<ProbeResult |
     }
 
     const sizeBytes = file.size;
-    if (sizeBytes > 4 * 1024 * 1024 * 1024) {
-      return NextResponse.json({ ok: false, error: 'Arquivo maior que 4GB' }, { status: 413 });
+    if (sizeBytes > MAX_PROBE_SIZE) {
+      return NextResponse.json({ ok: false, error: 'Arquivo maior que 500MB' }, { status: 413 });
+    }
+
+    const ext = (file as any).name ? path.extname((file as any).name).toLowerCase() : '';
+    if (!ALLOWED_MEDIA_EXT.includes(ext)) {
+      return NextResponse.json(
+        { ok: false, error: `Extensão não suportada: ${ext || 'sem extensão'}.` },
+        { status: 400 }
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = (file as any).name ? path.extname((file as any).name) : '.bin';
     tmpPath = path.join(tmpDir, `probe-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
     await writeFile(tmpPath, buffer);
 

@@ -6,6 +6,10 @@ import type {
   NovaCenaFormat,
   NovaCenaTextPlan,
 } from '../../../../lib/ai/schemas';
+import type { ProviderId } from '../../../../lib/ai/providerRegistry';
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 function normalizeFormats(value: unknown): NovaCenaFormat[] {
   if (!Array.isArray(value)) return ['story', 'square'];
@@ -27,7 +31,8 @@ export async function POST(req: NextRequest) {
     const visualAnalysis = body.visualAnalysis as CoverIntelligenceResult | undefined;
     const targetFormats = normalizeFormats(body.targetFormats);
     const briefing = typeof body.briefing === 'string' ? body.briefing : undefined;
-    const providerId = body.providerId === 'custom-http' ? 'custom-http' : 'mock';
+    const providerId = (body.providerId ?? 'auto') as ProviderId;
+    const noCache = body.noCache === true;
 
     const plan = await generateMotionPlanWithAI({
       providerId,
@@ -36,6 +41,7 @@ export async function POST(req: NextRequest) {
       texts,
       targetFormats,
       briefing,
+      noCache,
     });
 
     return NextResponse.json({

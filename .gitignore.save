@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+
+# Production
+*.tgz
+
+# Misc
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Local env files
+.env*.local
+
+# Uploads pesados (não commitar)
+public/uploads/audio/*
+public/uploads/videos/*
+public/uploads/overlays/*
+public/uploads/covers/*
+!public/uploads/covers/default-cover.svg
+
+# Backups
+_backups-antigos-novacena/
+*.zip
+
+# Local dev backups
+_local-backups/
+*.before-*
+*.backup-*
+*.bak-*
+
+# Local backups outside build
+_local-backups/
+*.before-*
+*.backup-*
+*.bak-*
+
+# Backups locais (arquivados em _archive/)
+**/_archive/
+_archive/
+*.bak.*
+*.broken.*
+*.backup-*
+*.before_reformulate
+*.safe-before-*
+
+# TS incremental cache
+tsconfig.tsbuildinfo
+
+# Pasta _safe-* (snapshots manuais)
+_safe-*/

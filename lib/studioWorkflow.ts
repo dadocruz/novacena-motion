@@ -17,6 +17,7 @@ export const RIGHT_PANEL_PRESET_ORDER: Record<string, number> = {
   'Ritmo CTA (Disponível)': 80,
 
   'Capa': 90,
+  'Celular': 95,
   'Wiggle por elemento': 100,
   'Brilho': 110,
   'Efeitos': 120,
@@ -49,10 +50,9 @@ export const ADVANCED_ONLY_SECTIONS = new Set([
 
 export const STUDIO_TOOL_DOCK = [
   { id: 'cover', label: 'Capa', section: 'Capa' },
-  { id: 'text', label: 'Texto', section: 'Fontes' },
+  { id: 'text', label: 'Texto', section: 'Texto' },
   { id: 'logos', label: 'Logos', section: 'Logos das plataformas' },
-  { id: 'motion', label: 'Motion', section: 'Capa' },
-  { id: 'cta', label: 'CTA', section: 'Ritmo CTA (Disponível)' },
+  { id: 'motion', label: 'Motion', section: 'Ritmo CTA (Disponível)' },
   { id: 'overlay', label: 'Overlay', section: 'Overlays (filmburn / película)' },
   { id: 'render', label: 'Render', section: 'Projeto' },
 ] as const;

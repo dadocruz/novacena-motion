@@ -26,6 +26,11 @@ export const TEMPLATE_INFO: Record<TemplateId, { label: string; description: str
     description: 'Promoção genérica',
     emoji: '🎵',
   },
+  spotify_print: {
+    label: 'Spotify Print',
+    description: 'Print do Spotify dentro de um celular',
+    emoji: '📱',
+  },
 };
 
 export interface TemplateSelectorProps {

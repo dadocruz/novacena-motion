@@ -5,8 +5,20 @@ import { PUBLIC_UPLOADS, safeFileName, saveFile, deleteOldFiles } from '../../..
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const MAX_SIZE = 4 * 1024 * 1024 * 1024; // 4GB
+const MAX_SIZE = 300 * 1024 * 1024; // 300MB
 const ALLOWED_EXT = ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.mp4', '.mov', '.webm'];
+const ALLOWED_TYPES = [
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/mp4',
+  'audio/aac',
+  'audio/ogg',
+  'video/mp4',
+  'video/quicktime',
+  'video/webm',
+];
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,6 +31,12 @@ export async function POST(req: NextRequest) {
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
         { ok: false, error: `Tipo não suportado: ${ext}. Use MP3/WAV/M4A/MP4/MOV/WEBM.` },
+        { status: 400 }
+      );
+    }
+    if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { ok: false, error: `Tipo não suportado: ${file.type}. Use áudio ou vídeo compatível.` },
         { status: 400 }
       );
     }

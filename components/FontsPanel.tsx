@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { TextStroke, TextStrokeMode } from '../remotion/types';
+import { TEXT_TRANSITIONS } from '../remotion/motionEngine';
+import type { TextStroke, TextStrokeMode, TextTransitionId, TextTransitionTuning } from '../remotion/types';
 
 export type FontDef = {
   id: string;
@@ -13,8 +14,16 @@ export type FontDef = {
 };
 
 export type FontRole = 'headline' | 'date' | 'cta' | 'cta1' | 'cta2';
+type TextTransitionRole = 'headline' | 'date' | 'cta1' | 'cta2';
+type TextTransitionPreset = {
+  id: string;
+  label: string;
+  values: Required<TextTransitionTuning>;
+};
 
 type Props = {
+  activeRole?: FontRole;
+  onActiveRoleChange?: (role: FontRole) => void;
   styleHeadline?: any;
   styleDate?: any;
   styleCta?: any;
@@ -55,11 +64,30 @@ type Props = {
   txLH:    Record<string,number>;
   txOX:    Record<string,number>;
   txOY:    Record<string,number>;
+  txWiggle: Record<string,number>;
   onTxScale: (role: string, v: number) => void;
   onTxLS:    (role: string, v: number) => void;
   onTxLH:    (role: string, v: number) => void;
   onTxOX:    (role: string, v: number) => void;
   onTxOY:    (role: string, v: number) => void;
+  onTxWiggle: (role: string, v: number) => void;
+
+  transitionByRole: Record<TextTransitionRole, TextTransitionId>;
+  transitionTuningByRole: Record<TextTransitionRole, Required<TextTransitionTuning>>;
+  transitionInFrameByRole?: Record<TextTransitionRole, number>;
+  maxTransitionFrame?: number;
+  transitionPresets: TextTransitionPreset[];
+  onChangeTransition: (role: TextTransitionRole, id: TextTransitionId) => void;
+  onChangeTransitionTuning: (role: TextTransitionRole, patch: Partial<TextTransitionTuning>) => void;
+  onChangeTransitionInFrame?: (role: TextTransitionRole, frame: number) => void;
+  onApplyTransitionPreset: (role: TextTransitionRole, values: TextTransitionTuning) => void;
+  roleLabels?: Partial<Record<TextTransitionRole, string>>;
+  visibleRoles?: TextTransitionRole[];
+  showCtaToggles?: boolean;
+  showCta1?: boolean;
+  showCta2?: boolean;
+  onToggleCta1?: () => void;
+  onToggleCta2?: () => void;
 };
 
 const SWATCHES = ['#ffc857', '#ff4d6d', '#4ecdc4', '#845ef7', '#ffffff', '#000000', '#ff8c42', '#3a86ff'];
@@ -166,6 +194,15 @@ const fpInputStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+const DEFAULT_ROLE_LABELS: Record<TextTransitionRole, string> = {
+  headline: 'Headline',
+  date: 'Data',
+  cta1: 'CTA 1',
+  cta2: 'CTA 2',
+};
+
+const DEFAULT_VISIBLE_ROLES: TextTransitionRole[] = ['headline', 'date', 'cta1', 'cta2'];
+
 function FillSliderRow({
   label,
   value,
@@ -205,6 +242,111 @@ function FillSliderRow({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ width: '100%' }}
+      />
+    </div>
+  );
+}
+
+function TextTransitionEditor({
+  role,
+  label,
+  value,
+  tuning,
+  inFrame,
+  maxFrame,
+  presets,
+  onChange,
+  onTuningChange,
+  onFrameChange,
+  onPreset,
+}: {
+  role: TextTransitionRole;
+  label: string;
+  value: TextTransitionId;
+  tuning: Required<TextTransitionTuning>;
+  inFrame?: number;
+  maxFrame?: number;
+  presets: TextTransitionPreset[];
+  onChange: (role: TextTransitionRole, id: TextTransitionId) => void;
+  onTuningChange: (role: TextTransitionRole, patch: Partial<TextTransitionTuning>) => void;
+  onFrameChange?: (role: TextTransitionRole, frame: number) => void;
+  onPreset: (role: TextTransitionRole, values: TextTransitionTuning) => void;
+}) {
+  return (
+    <div
+      style={{
+        borderTop: '1px solid var(--border-1)',
+        paddingTop: 12,
+        display: 'grid',
+        gap: 8,
+      }}
+    >
+      <div style={tiny}>Transição do texto · {label}</div>
+
+      <select
+        value={value}
+        onChange={(event) => onChange(role, event.target.value as TextTransitionId)}
+        style={fpInputStyle}
+      >
+        {TEXT_TRANSITIONS.map((transition) => (
+          <option key={transition.id} value={transition.id}>
+            {transition.label} - {transition.description}
+          </option>
+        ))}
+      </select>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+        {presets.map((preset) => (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onPreset(role, preset.values)}
+            style={fpSegBtn}
+            title={`Preset ${preset.label}`}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
+      {typeof inFrame === 'number' && onFrameChange && (
+        <FillSliderRow
+          label="Entrada no tempo"
+          value={inFrame}
+          min={0}
+          max={maxFrame ?? 240}
+          step={1}
+          onChange={(next) => onFrameChange(role, Math.round(next))}
+          format={(next) => `f${Math.round(next)} · ${(next / 30).toFixed(2)}s`}
+        />
+      )}
+
+      <FillSliderRow
+        label="Intensidade"
+        value={tuning.intensity}
+        min={0.15}
+        max={2.4}
+        step={0.05}
+        onChange={(next) => onTuningChange(role, { intensity: next })}
+        format={(next) => `${next.toFixed(2)}x`}
+      />
+      <FillSliderRow
+        label="Velocidade"
+        value={tuning.speed}
+        min={0.35}
+        max={2.4}
+        step={0.05}
+        onChange={(next) => onTuningChange(role, { speed: next })}
+        format={(next) => `${next.toFixed(2)}x`}
+      />
+      <FillSliderRow
+        label="Stagger / delay"
+        value={tuning.stagger}
+        min={0}
+        max={2.4}
+        step={0.05}
+        onChange={(next) => onTuningChange(role, { stagger: next })}
+        format={(next) => `${next.toFixed(2)}x`}
       />
     </div>
   );
@@ -418,6 +560,8 @@ function FillColorEditor({
 }
 
 export default function FontsPanel({
+  activeRole,
+  onActiveRoleChange,
   allFonts,
   fontHeadline,
   fontDate,
@@ -447,12 +591,60 @@ export default function FontsPanel({
   
   sampleCta2,textOpacity,
   onChangeTextOpacity,
-  txScale, txLS, txLH, txOX, txOY,
-  onTxScale, onTxLS, onTxLH, onTxOX, onTxOY,
+  txScale, txLS, txLH, txOX, txOY, txWiggle,
+  onTxScale, onTxLS, onTxLH, onTxOX, onTxOY, onTxWiggle,
+  transitionByRole,
+  transitionTuningByRole,
+  transitionInFrameByRole,
+  maxTransitionFrame,
+  transitionPresets,
+  onChangeTransition,
+  onChangeTransitionTuning,
+  onChangeTransitionInFrame,
+  onApplyTransitionPreset,
+  roleLabels,
+  visibleRoles,
+  showCtaToggles = true,
+  showCta1,
+  showCta2,
+  onToggleCta1,
+  onToggleCta2,
 }: Props) {
   const [role, setRole] = useState<FontRole>('headline');
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement | null>(null);
+  const enabledRoles = useMemo(
+    () => (visibleRoles?.length ? visibleRoles : DEFAULT_VISIBLE_ROLES),
+    [visibleRoles]
+  );
+  const labels = { ...DEFAULT_ROLE_LABELS, ...(roleLabels ?? {}) };
+  const transitionRole: TextTransitionRole =
+    role === 'date' ? 'date' :
+    role === 'cta2' ? 'cta2' :
+    role === 'cta1' || role === 'cta' ? 'cta1' :
+    'headline';
+
+  const chooseRole = (next: FontRole) => {
+    setRole(next);
+    onActiveRoleChange?.(next);
+  };
+
+  useEffect(() => {
+    if (!activeRole || role === activeRole) return;
+    const nextTransitionRole: TextTransitionRole =
+      activeRole === 'date' ? 'date' :
+      activeRole === 'cta2' ? 'cta2' :
+      activeRole === 'cta1' || activeRole === 'cta' ? 'cta1' :
+      'headline';
+
+    if (!enabledRoles.includes(nextTransitionRole)) return;
+    setRole(activeRole);
+  }, [activeRole, enabledRoles, role]);
+
+  useEffect(() => {
+    if (enabledRoles.includes(transitionRole)) return;
+    chooseRole((enabledRoles[0] ?? 'headline') as FontRole);
+  }, [enabledRoles, transitionRole]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -490,6 +682,9 @@ export default function FontsPanel({
   const patchTextStyle = (patch: any) => onChangeTextStyle?.(role, { ...(currentTextStyle || {}), ...patch });
   const sample = getSample(role, sampleHeadline, sampleDate, sampleCta, sampleCta2);
   const selectedFont = allFonts.find((f) => f.id === selectedId) ?? allFonts[0];
+  const strokeWidth = Number(currentStroke?.width ?? 0);
+  const strokeOpacity = Number((currentStroke as any)?.opacity ?? 1);
+  const strokeFillOpacity = Number((currentStroke as any)?.fillOpacity ?? textOpacity);
 
   const favoriteFonts = useMemo(
     () => allFonts.filter((f) => favoriteIds.includes(f.id)),
@@ -572,20 +767,52 @@ export default function FontsPanel({
   }
 
   return (
-    <div style={panel}>
+    <div data-text-panel-anchor="fontes" style={{ ...panel, scrollMarginTop: 78 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ color: '#555', fontSize: 13 }}>⁝⁝</span>
           <span style={tiny}>Fontes</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 5 }}>
-          <button type="button" onClick={() => setRole('headline')} style={tab(role === 'headline')}>Headline</button>
-          <button type="button" onClick={() => setRole('date')} style={tab(role === 'date')}>Data</button>
-          <button type="button" onClick={() => setRole('cta1')} style={tab(role === 'cta1' || role === 'cta')}>CTA 1</button>
-          <button type="button" onClick={() => setRole('cta2')} style={tab(role === 'cta2')}>CTA 2</button>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {enabledRoles.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => chooseRole(item)}
+              style={tab(item === 'cta1' ? role === 'cta1' || role === 'cta' : role === item)}
+            >
+              {labels[item]}
+            </button>
+          ))}
         </div>
       </div>
+
+      <TextTransitionEditor
+        role={transitionRole}
+        label={labels[transitionRole]}
+        value={transitionByRole[transitionRole]}
+        tuning={transitionTuningByRole[transitionRole]}
+        inFrame={transitionInFrameByRole?.[transitionRole]}
+        maxFrame={maxTransitionFrame}
+        presets={transitionPresets}
+        onChange={onChangeTransition}
+        onTuningChange={onChangeTransitionTuning}
+        onFrameChange={onChangeTransitionInFrame}
+        onPreset={onApplyTransitionPreset}
+      />
+
+      {showCtaToggles && (transitionRole === 'cta1' || transitionRole === 'cta2') && (
+        <button
+          type="button"
+          onClick={transitionRole === 'cta1' ? onToggleCta1 : onToggleCta2}
+          style={(transitionRole === 'cta1' ? showCta1 : showCta2) ? fpSegBtnActive : fpSegBtn}
+        >
+          {transitionRole === 'cta1'
+            ? (showCta1 ? `${labels.cta1} ligado` : `${labels.cta1} oculto`)
+            : (showCta2 ? `${labels.cta2} ligado` : `${labels.cta2} oculto`)}
+        </button>
+      )}
 
       <div
         data-text-control="primary-typography"
@@ -660,71 +887,23 @@ export default function FontsPanel({
             {(txLH[role] ?? 1.2).toFixed(2)}
           </span>
         </div>
+
+        <div style={tiny}>WIGGLE</div>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={txWiggle[role] ?? 0}
+            onChange={e => onTxWiggle(role, parseFloat(e.target.value))}
+            style={{ flex:1, accentColor:'rgba(34,197,94,0.9)' }}
+          />
+          <span style={{ fontSize:10, color:'#aaa', minWidth:42, textAlign:'right' }}>
+            {(txWiggle[role] ?? 0).toFixed(2)}
+          </span>
+        </div>
       </div>
-
-      <div style={{ position: 'relative' }}>
-        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#666' }}>⌕</span>
-        <input
-          ref={searchRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Digite ou aperte uma letra..."
-          style={{
-            width: '100%',
-            height: 34,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            color: '#ddd',
-            padding: '0 34px 0 32px',
-            borderRadius: 8,
-            fontSize: 12,
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
-        />
-        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#555', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: 4 }}>
-          {query ? query[0]?.toUpperCase() : 'B'}
-        </span>
-      </div>
-
-      {favoriteFonts.length > 0 && !query && (
-        <>
-          <div style={tiny}>⭐ Favoritas</div>
-          <div style={{ display: 'grid', gap: 5 }}>
-            {favoriteFonts.slice(0, 12).map((font) => (
-              <FontRow key={font.id} font={font} favorite />
-            ))}
-          </div>
-        </>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={tiny}>{query ? `Resultados · ${resultFonts.length}` : `Todas · ${allFonts.length}`}</span>
-        <span style={{ color: '#555', fontSize: 9 }}>scroll ↓</span>
-      </div>
-
-      <div style={{ display: 'grid', gap: 5, maxHeight: 250, overflowY: 'auto', paddingRight: 4, maskImage: 'linear-gradient(to bottom, black 86%, transparent)' }}>
-        {resultFonts.map((font) => (
-          <FontRow key={font.id} font={font} favorite={favoriteIds.includes(font.id)} />
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => uploadInputRef.current?.click()}
-        style={{
-          height: 34,
-          borderRadius: 9,
-          border: '1px dashed rgba(255,255,255,0.15)',
-          background: 'rgba(255,255,255,0.025)',
-          color: '#aaa',
-          fontSize: 11,
-          cursor: 'pointer',
-        }}
-      >
-        + Subir fonte (TTF/OTF/WOFF)
-      </button>
-      <input ref={uploadInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={uploadFont} style={{ display: 'none' }} />
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, display: 'grid', gap: 10 }}>
         <div style={tiny}>Cor real / degradê</div>
@@ -824,7 +1003,18 @@ export default function FontsPanel({
           <span style={{ color: '#aaa', fontSize: 11 }}>Tipo</span>
           <div style={{ display: 'flex', gap: 4 }}>
             {(['none', 'outer', 'inner'] as TextStrokeMode[]).map((mode) => (
-              <button type="button" key={mode} onClick={() => patchStroke({ mode })} style={seg(currentStroke.mode === mode)}>
+              <button
+                type="button"
+                key={mode}
+                onClick={() =>
+                  patchStroke(
+                    mode === 'none'
+                      ? { mode, width: 0 }
+                      : { mode, width: Math.max(strokeWidth, 1.5) }
+                  )
+                }
+                style={seg(currentStroke.mode === mode)}
+              >
                 {mode === 'none' ? 'Nenhum' : mode === 'outer' ? 'Externo' : 'Interno'}
               </button>
             ))}
@@ -836,26 +1026,41 @@ export default function FontsPanel({
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                 <span style={{ color: '#aaa', fontSize: 11 }}>Espessura</span>
-                <span style={{ color: '#777', fontSize: 10 }}>{currentStroke.width}px</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{strokeWidth.toFixed(1)}px</span>
               </div>
-              <input type="range" min={0} max={10} step={1} value={currentStroke.width} onChange={(e) => patchStroke({ width: Number(e.target.value) })} style={{ width: '100%', accentColor: '#ffc857' }} />
+              <input type="range" min={0} max={24} step={0.1} value={strokeWidth} onChange={(e) => patchStroke({ width: Number(e.target.value) })} style={{ width: '100%', accentColor: '#ffc857' }} />
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, marginTop: 8 }}>
-                <span style={{ color: '#aaa', fontSize: 11 }}>Opacidade do preenchimento</span>
-                <span style={{ color: '#777', fontSize: 10 }}>{Math.round(((currentStroke as any).fillOpacity ?? textOpacity) * 100)}%</span>
+                <span style={{ color: '#aaa', fontSize: 11 }}>Força da borda</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{Math.round(strokeOpacity * 100)}%</span>
               </div>
               <input
                 type="range"
                 min={0}
                 max={1}
                 step={0.01}
-                value={(currentStroke as any).fillOpacity ?? textOpacity}
+                value={strokeOpacity}
+                onChange={(e) => patchStroke({ opacity: Number(e.target.value) })}
+                style={{ width: '100%', accentColor: '#ffc857' }}
+              />
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, marginTop: 8 }}>
+                <span style={{ color: '#aaa', fontSize: 11 }}>Preenchimento</span>
+                <span style={{ color: '#777', fontSize: 10 }}>{Math.round(strokeFillOpacity * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.005}
+                value={strokeFillOpacity}
                 onChange={(e) => {
                   const value = Number(e.target.value);
                   patchStroke({ fillOpacity: value });
-                  onChangeTextOpacity(value);
                 }}
                 style={{ width: '100%', accentColor: '#ffc857' }}
               />
@@ -895,6 +1100,69 @@ export default function FontsPanel({
         )}
       </div>
 
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#666' }}>⌕</span>
+        <input
+          ref={searchRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Digite ou aperte uma letra..."
+          style={{
+            width: '100%',
+            height: 34,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#ddd',
+            padding: '0 34px 0 32px',
+            borderRadius: 8,
+            fontSize: 12,
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 9, color: '#555', background: 'rgba(255,255,255,0.05)', padding: '2px 5px', borderRadius: 4 }}>
+          {query ? query[0]?.toUpperCase() : 'B'}
+        </span>
+      </div>
+
+      {favoriteFonts.length > 0 && !query && (
+        <>
+          <div style={tiny}>⭐ Favoritas</div>
+          <div style={{ display: 'grid', gap: 5 }}>
+            {favoriteFonts.slice(0, 12).map((font) => (
+              <FontRow key={font.id} font={font} favorite />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={tiny}>{query ? `Resultados · ${resultFonts.length}` : `Todas · ${allFonts.length}`}</span>
+        <span style={{ color: '#555', fontSize: 9 }}>scroll ↓</span>
+      </div>
+
+      <div style={{ display: 'grid', gap: 5, maxHeight: 250, overflowY: 'auto', paddingRight: 4, maskImage: 'linear-gradient(to bottom, black 86%, transparent)' }}>
+        {resultFonts.map((font) => (
+          <FontRow key={font.id} font={font} favorite={favoriteIds.includes(font.id)} />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => uploadInputRef.current?.click()}
+        style={{
+          height: 34,
+          borderRadius: 9,
+          border: '1px dashed rgba(255,255,255,0.15)',
+          background: 'rgba(255,255,255,0.025)',
+          color: '#aaa',
+          fontSize: 11,
+          cursor: 'pointer',
+        }}
+      >
+        + Subir fonte (TTF/OTF/WOFF)
+      </button>
+      <input ref={uploadInputRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={uploadFont} style={{ display: 'none' }} />
 
     </div>
   );

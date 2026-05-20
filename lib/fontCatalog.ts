@@ -369,6 +369,46 @@ export const applyTextStyle = (style?: any) => {
 
   if (style.color) out.color = style.color;
   if (style.opacity !== undefined) out.opacity = style.opacity;
+  if (style.fontSize !== undefined) {
+    out.fontSize =
+      typeof style.fontSize === 'number'
+        ? `${style.fontSize}px`
+        : style.fontSize;
+  }
+  if (style.fontStyle) out.fontStyle = style.fontStyle;
+  if (style.fontWeight !== undefined) out.fontWeight = style.fontWeight;
+  if (style.textTransform) out.textTransform = style.textTransform;
+  if (style.textAlign) out.textAlign = style.textAlign;
+  if (style.whiteSpace) out.whiteSpace = style.whiteSpace;
+  if (style.maxWidth !== undefined) out.maxWidth = style.maxWidth;
+  if (style.width !== undefined) out.width = style.width;
+  if (style.backgroundColor) out.backgroundColor = style.backgroundColor;
+  if (style.borderRadius !== undefined) {
+    out.borderRadius =
+      typeof style.borderRadius === 'number'
+        ? `${style.borderRadius}px`
+        : style.borderRadius;
+  }
+
+  const spacingKeys = [
+    'padding',
+    'paddingTop',
+    'paddingRight',
+    'paddingBottom',
+    'paddingLeft',
+    'margin',
+    'marginTop',
+    'marginRight',
+    'marginBottom',
+    'marginLeft',
+  ];
+
+  for (const key of spacingKeys) {
+    const value = style[key];
+    if (value !== undefined) {
+      out[key] = typeof value === 'number' ? `${value}px` : value;
+    }
+  }
 
   if (style.letterSpacing !== undefined) {
     out.letterSpacing =
@@ -455,4 +495,3 @@ export const applyTextStyle = (style?: any) => {
 
   return out;
 };
-

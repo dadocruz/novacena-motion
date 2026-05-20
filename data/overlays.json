@@ -1,11 +1,20 @@
 [
   {
-    "label": "STORY - SPOTIFY - ADRIANO JUNIOR.mp4",
-    "filename": "1778668122754-STORY---SPOTIFY---ADRIANO-JUNIOR.mp4",
-    "path": "/api/uploads/overlays/1778668122754-STORY---SPOTIFY---ADRIANO-JUNIOR.mp4",
-    "type": "video",
+    "label": "618-6184129_music-vector-png.png",
+    "filename": "1779317081089-618-6184129_music-vector-png.png",
+    "path": "/api/uploads/overlays/1779317081089-618-6184129_music-vector-png.png",
+    "type": "image",
     "blendMode": "screen",
-    "id": "ov_mp3x2r9zk367y",
-    "uploadedAt": "2026-05-13T10:28:43.031Z"
+    "id": "ov_mpeng6is3xr01",
+    "uploadedAt": "2026-05-20T22:44:41.092Z"
+  },
+  {
+    "label": "LOGO SPOTIFY NEON 2.png",
+    "filename": "1779316183843-LOGO-SPOTIFY-NEON-2.png",
+    "path": "/api/uploads/overlays/1779316183843-LOGO-SPOTIFY-NEON-2.png",
+    "type": "image",
+    "blendMode": "screen",
+    "id": "ov_mpemwy7az4fqk",
+    "uploadedAt": "2026-05-20T22:29:43.846Z"
   }
 ]

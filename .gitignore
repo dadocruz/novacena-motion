@@ -63,3 +63,13 @@ tsconfig.tsbuildinfo
 
 # Pasta _safe-* (snapshots manuais)
 _safe-*/
+
+# Caches e resultados locais
+.ai-cache/
+test-results/
+
+# Uploads locais pesados / gerados por IA
+public/uploads/ai-backgrounds/
+public/uploads/backgrounds/
+public/uploads/motion-references/
+public/uploads/video-sources/

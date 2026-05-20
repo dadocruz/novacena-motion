@@ -62,6 +62,7 @@ export type OverlayAsset = {
   path: string;
   type: 'video' | 'image';
   blendMode: 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal';
+  durationSec?: number;
   uploadedAt: string;
 };
 

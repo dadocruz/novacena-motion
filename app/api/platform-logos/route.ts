@@ -14,6 +14,8 @@ export const maxDuration = 60;
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXT = ['.png', '.svg', '.webp', '.jpg', '.jpeg'];
+const ALLOWED_TYPES = ['image/png', 'image/svg+xml', 'image/webp', 'image/jpeg'];
+const ALLOWED_PLATFORMS = new Set(['Spotify', 'Deezer', 'Apple Music', 'YouTube Music']);
 
 /**
  * Normaliza o path de um logo:
@@ -88,11 +90,24 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+    const platformName = platform.trim();
+    if (!ALLOWED_PLATFORMS.has(platformName)) {
+      return NextResponse.json(
+        { ok: false, error: `Plataforma inválida: ${platformName || 'vazia'}.` },
+        { status: 400 }
+      );
+    }
 
     const ext = path.extname(file.name).toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
         { ok: false, error: `Tipo não suportado: ${ext}. Use PNG/SVG/WEBP/JPG.` },
+        { status: 400 }
+      );
+    }
+    if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { ok: false, error: `Tipo não suportado: ${file.type}. Use PNG/SVG/WEBP/JPG.` },
         { status: 400 }
       );
     }
@@ -114,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     const logoPath = `/api/uploads/platform-logos/${filename}`;
 
-    const logo = await setPlatformLogo(platform, filename, logoPath);
+    const logo = await setPlatformLogo(platformName, filename, logoPath);
 
     return NextResponse.json({
       ok: true,

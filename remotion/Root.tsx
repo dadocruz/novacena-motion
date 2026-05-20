@@ -4,6 +4,7 @@ import { AvailableNow } from './AvailableNow';
 import { WatchOnYouTube } from './WatchOnYouTube';
 import { Milestone } from './Milestone';
 import { OutNow } from './OutNow';
+import { SpotifyPrint } from './SpotifyPrint';
 import { getProject } from './project';
 
 
@@ -130,12 +131,16 @@ const MilestoneWithFonts: React.FC<any> = (props) => (
 const OutNowWithFonts: React.FC<any> = (props) => (
   <FontsInjector><OutNow {...props} /></FontsInjector>
 );
+const SpotifyPrintWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><SpotifyPrint {...props} /></FontsInjector>
+);
 
 const templates = [
   { id: 'AvailableNow', component: AvailableNowWithFonts, project: getProject('available_now') },
   { id: 'WatchOnYouTube', component: WatchOnYouTubeWithFonts, project: getProject('watch_youtube') },
   { id: 'Milestone', component: MilestoneWithFonts, project: getProject('milestone') },
   { id: 'OutNow', component: OutNowWithFonts, project: getProject('out_now') },
+  { id: 'SpotifyPrint', component: SpotifyPrintWithFonts, project: getProject('spotify_print') },
 ] as const;
 
 export const RemotionRoot: React.FC = () => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Img, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
+import { AbsoluteFill, Audio, Img, Video, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
 import { easings, eased, elegantWiggle, hitPulse } from './motionEngine';
 import type { BackgroundConfig } from './types';
 
@@ -188,10 +188,24 @@ export const CinematicBackground: React.FC<Props> = ({
         />
       ) : null}
 
-      {/* CAMADA 0: Vídeo BG (se fornecido) */}
-      {videoSrc ? (
+      {/* CAMADA 0: Vídeo OU Imagem BG (se fornecido) */}
+      {videoSrc && /\.(png|jpe?g|webp|gif)(\?|$)/i.test(videoSrc) ? (
+        // BG é IMAGEM (ex: gerada pela IA via gpt-image-1) → renderiza com <Img> + Ken Burns
         <AbsoluteFill style={{ opacity: videoOpacity }}>
-          <OffthreadVideo
+          <Img
+            src={videoSrc}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
+              transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+            }}
+          />
+        </AbsoluteFill>
+      ) : videoSrc ? (
+        <AbsoluteFill style={{ opacity: videoOpacity }}>
+          <Video
             src={videoSrc}
             startFrom={videoStartFrame}
             muted={!useVideoAudio}

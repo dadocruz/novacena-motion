@@ -4,6 +4,7 @@ import type { TextStroke } from './types';
 export type TextTransitionForStyledText = {
   wrapStyle?: React.CSSProperties;
   charStyle?: React.CSSProperties;
+  split?: 'char' | 'word';
   perChar?: (index: number, total: number) => React.CSSProperties;
 };
 
@@ -29,7 +30,11 @@ type StyledTextProps = {
   style?: StyledTextStyle | any;
   stroke?: TextStroke | any;
   preserveFontShape?: boolean;
+  previewMode?: boolean;
 };
+
+const PREVIEW_VISIBILITY_OPACITY = 0.34;
+const INVISIBLE_OPACITY_THRESHOLD = 0.02;
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 1;
@@ -53,12 +58,11 @@ function getFillOpacity(style?: any, stroke?: any): number {
 }
 
 function hasGradient(style?: any): boolean {
-  return Boolean(
-    style?.useGradient ||
-    style?.fillKind === 'gradient' ||
-    (style?.gradientFrom && style?.gradientTo) ||
-    (style?.gradientColor1 && style?.gradientColor2)
-  );
+  if (!style) return false;
+  if (style.useGradient === false || style.fillKind === 'solid') return false;
+  if (style.useGradient === true || style.fillKind === 'gradient') return true;
+
+  return false;
 }
 
 function colorToRgba(input: string | undefined, alpha: number): string {
@@ -101,8 +105,8 @@ function getFillCss(style?: any, stroke?: any): React.CSSProperties {
   const fillOpacity = getFillOpacity(style, stroke);
 
   if (hasGradient(style)) {
-    const from = style?.gradientFrom ?? style?.gradientColor1 ?? style?.color ?? '#ffffff';
-    const to = style?.gradientTo ?? style?.gradientColor2 ?? style?.color ?? '#ffffff';
+    const from = colorToRgba(style?.gradientFrom ?? style?.gradientColor1 ?? style?.color ?? '#ffffff', fillOpacity);
+    const to = colorToRgba(style?.gradientTo ?? style?.gradientColor2 ?? style?.color ?? '#ffffff', fillOpacity);
     const angle = Number(style?.gradientAngle ?? 90);
 
     return {
@@ -111,7 +115,6 @@ function getFillCss(style?: any, stroke?: any): React.CSSProperties {
       WebkitBackgroundClip: 'text',
       color: 'transparent',
       WebkitTextFillColor: 'transparent',
-      opacity: fillOpacity,
       display: 'inline-block',
     };
   }
@@ -140,54 +143,162 @@ function getStrokeCss(stroke?: any): React.CSSProperties | null {
     opacity
   );
 
+  const cssWidth = stroke.mode === 'outer' && width > 3 ? Math.max(1.5, width * 0.58) : width;
+  const shadowWidth = stroke.mode === 'outer' ? Math.max(0, width - cssWidth) : 0;
+
   return {
-    WebkitTextStroke: `${width}px ${color}`,
+    WebkitTextStroke: `${cssWidth}px ${color}`,
     WebkitTextFillColor: 'transparent',
     color: 'transparent',
     paintOrder: 'stroke fill',
-    textShadow: width >= 2 ? `0 0 ${Math.max(2, width * 1.25)}px ${color}` : undefined,
+    textShadow: shadowWidth > 0 ? buildStrokeShadow(color, shadowWidth) : undefined,
+  };
+}
+
+function buildStrokeShadow(color: string, spread: number): string {
+  const radius = Math.max(0.5, spread);
+  const half = radius * 0.72;
+  const points = [
+    [radius, 0],
+    [-radius, 0],
+    [0, radius],
+    [0, -radius],
+    [half, half],
+    [-half, half],
+    [half, -half],
+    [-half, -half],
+  ];
+
+  return points.map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px 0 ${color}`).join(', ');
+}
+
+function getPreviewSafeWrapStyle(
+  wrapStyle: React.CSSProperties | undefined,
+  previewMode: boolean
+): React.CSSProperties {
+  const next = { ...(wrapStyle ?? {}) };
+
+  if (!previewMode) return next;
+
+  const opacity = Number((next as any).opacity);
+  const isInvisible = Number.isFinite(opacity) && opacity <= INVISIBLE_OPACITY_THRESHOLD;
+
+  if (!isInvisible) return next;
+
+  next.opacity = PREVIEW_VISIBILITY_OPACITY;
+
+  if (typeof next.clipPath === 'string') {
+    next.clipPath = 'none';
+  }
+
+  if (typeof (next as any).WebkitClipPath === 'string') {
+    (next as any).WebkitClipPath = 'none';
+  }
+
+  return next;
+}
+
+function getOpacity(style: React.CSSProperties): number {
+  const opacity = Number((style as any).opacity);
+  return Number.isFinite(opacity) ? opacity : 1;
+}
+
+function getPreviewSafeCharStyle(
+  charStyle: React.CSSProperties,
+  previewMode: boolean
+): React.CSSProperties {
+  if (!previewMode) return charStyle;
+
+  const opacity = getOpacity(charStyle);
+
+  if (opacity >= PREVIEW_VISIBILITY_OPACITY) {
+    return charStyle;
+  }
+
+  return {
+    ...charStyle,
+    opacity: PREVIEW_VISIBILITY_OPACITY,
   };
 }
 
 function renderLines(
   text: string,
   transition?: TextTransitionForStyledText,
-  preserveFontShape = false
+  preserveFontShape = false,
+  previewMode = false,
+  characterBaseStyle?: React.CSSProperties
 ) {
   const lines = String(text ?? '').split(/\r?\n/);
 
   return lines.map((line, lineIndex) => {
     const shouldSplit = Boolean(transition?.perChar && !preserveFontShape);
+    const splitMode = transition?.split ?? 'char';
+    const chars = Array.from(line);
+    const wordTokens = line.match(/\S+|\s+/g) ?? [];
+    const wordTotal = wordTokens.filter((token) => /\S/.test(token)).length;
+    const charStyles = shouldSplit && splitMode === 'char'
+      ? chars.map((_, charIndex) => ({
+          ...(characterBaseStyle ?? {}),
+          ...(transition?.charStyle ?? {}),
+          ...(transition?.perChar?.(charIndex, chars.length) ?? {}),
+        }))
+      : shouldSplit && splitMode === 'word'
+        ? wordTokens
+            .filter((token) => /\S/.test(token))
+            .map((_, wordIndex) => ({
+              ...(characterBaseStyle ?? {}),
+              ...(transition?.charStyle ?? {}),
+              ...(transition?.perChar?.(wordIndex, wordTotal) ?? {}),
+            }))
+        : [];
+    const previewNeedsFloor =
+      previewMode &&
+      charStyles.length > 0 &&
+      Math.max(...charStyles.map(getOpacity)) <= INVISIBLE_OPACITY_THRESHOLD;
+
+    let wordIndex = -1;
 
     return (
       <React.Fragment key={`line-${lineIndex}`}>
-        {shouldSplit
-          ? line.split('').map((char, charIndex, chars) => (
+        {shouldSplit && splitMode === 'char'
+          ? chars.map((char, charIndex) => (
               <span
                 key={`char-${lineIndex}-${charIndex}`}
                 style={{
                   display: 'inline-block',
                   whiteSpace: 'pre',
-                  ...transition?.charStyle,
-                  ...(() => {
-                    const s = transition?.perChar?.(charIndex, chars.length) ?? {};
-                    const opacity = Number((s as any).opacity);
-
-                    // MODO SEGURO:
-                    // Algumas transições por letra começam com opacity 0.
-                    // Isso fazia headline/CTA sumirem no preview e parecer que a transição quebrou.
-                    // Mantemos movimento/rotação/escala, mas nunca deixamos a letra invisível.
-                    if (Number.isFinite(opacity) && opacity <= 0.02) {
-                      return { ...s, opacity: 1 };
-                    }
-
-                    return s;
-                  })(),
+                  ...getPreviewSafeCharStyle(charStyles[charIndex], previewMode),
+                  ...(previewNeedsFloor ? { opacity: PREVIEW_VISIBILITY_OPACITY } : {}),
                 }}
               >
                 {char === ' ' ? '\u00A0' : char}
               </span>
             ))
+          : shouldSplit && splitMode === 'word'
+            ? wordTokens.map((token, tokenIndex) => {
+                const isWord = /\S/.test(token);
+                const styleIndex = isWord ? ++wordIndex : -1;
+                const tokenStyle = isWord
+                  ? getPreviewSafeCharStyle(charStyles[styleIndex], previewMode)
+                  : {
+                      ...(characterBaseStyle ?? {}),
+                      whiteSpace: 'pre',
+                    };
+
+                return (
+                  <span
+                    key={`word-${lineIndex}-${tokenIndex}`}
+                    style={{
+                      display: isWord ? 'inline-block' : 'inline',
+                      whiteSpace: 'pre',
+                      ...tokenStyle,
+                      ...(isWord && previewNeedsFloor ? { opacity: PREVIEW_VISIBILITY_OPACITY } : {}),
+                    }}
+                  >
+                    {token.replace(/ /g, '\u00A0')}
+                  </span>
+                );
+              })
           : line}
         {lineIndex < lines.length - 1 ? <br /> : null}
       </React.Fragment>
@@ -201,16 +312,21 @@ export function StyledText({
   style,
   stroke,
   preserveFontShape = false,
+  previewMode = false,
 }: StyledTextProps) {
   const strokeCss = getStrokeCss(stroke);
   const fillCss = getFillCss(style, stroke);
-
-  const content = renderLines(text, transition, preserveFontShape);
+  const wrapStyle = getPreviewSafeWrapStyle(transition?.wrapStyle, previewMode);
+  const fillContent = renderLines(text, transition, preserveFontShape, previewMode, fillCss);
+  const strokeContent = strokeCss
+    ? renderLines(text, transition, preserveFontShape, previewMode, strokeCss)
+    : null;
 
   const outerStyle: React.CSSProperties = {
     position: 'relative',
     display: 'inline-block',
     whiteSpace: 'pre-line',
+    ...wrapStyle,
   };
 
   if (strokeCss) {
@@ -227,7 +343,7 @@ export function StyledText({
             whiteSpace: 'pre-line',
           }}
         >
-          {content}
+          {strokeContent}
         </span>
 
         <span
@@ -238,20 +354,22 @@ export function StyledText({
             whiteSpace: 'pre-line',
           }}
         >
-          {content}
+          {fillContent}
         </span>
       </span>
     );
   }
 
   return (
-    <span
-      style={{
-        ...outerStyle,
-        ...fillCss,
-      }}
-    >
-      {content}
+    <span style={outerStyle}>
+      <span
+        style={{
+          ...fillCss,
+          whiteSpace: 'pre-line',
+        }}
+      >
+        {fillContent}
+      </span>
     </span>
   );
 }

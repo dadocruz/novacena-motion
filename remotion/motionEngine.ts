@@ -6,6 +6,8 @@
 
 import type React from 'react';
 import { interpolate, spring } from 'remotion';
+import { inertialPop, staggerProgress } from './motionEffects';
+import type { TextTransitionTuning } from './types';
 
 // ============================================================
 // EASINGS PROFISSIONAIS
@@ -38,6 +40,32 @@ export const easings = {
 };
 
 export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+function clampRange(value: number | undefined, min: number, max: number, fallback: number) {
+  const next = Number(value);
+  if (!Number.isFinite(next)) return fallback;
+  return Math.max(min, Math.min(max, next));
+}
+
+function resolveTuning(tuning?: TextTransitionTuning): Required<TextTransitionTuning> {
+  return {
+    intensity: clampRange(tuning?.intensity, 0.15, 2.4, 1),
+    speed: clampRange(tuning?.speed, 0.35, 2.4, 1),
+    stagger: clampRange(tuning?.stagger, 0, 2.4, 1),
+  };
+}
+
+function tunedDuration(base: number, tuning: Required<TextTransitionTuning>) {
+  return Math.max(3, base / tuning.speed);
+}
+
+function tunedDelay(base: number, tuning: Required<TextTransitionTuning>) {
+  return Math.max(0, (base * tuning.stagger) / Math.sqrt(tuning.speed));
+}
+
+function tunedStartScale(baseDelta: number, tuning: Required<TextTransitionTuning>, min = 0.18) {
+  return Math.max(min, 1 - baseDelta * tuning.intensity);
+}
 
 // Atalho: pega t linear entre dois frames e aplica uma curva
 export function eased(
@@ -82,18 +110,20 @@ export function softSpring(frame: number, fps: number, delay = 0) {
  * Combinado com blur que sai (cinemático).
  * O inset usa valores negativos nas laterais e topo pra não cortar textShadow.
  */
-export function maskReveal(frame: number, start: number, duration = 22) {
-  const t = eased(frame, start, start + duration, easings.outQuint);
+export function maskReveal(frame: number, start: number, duration = 22, options?: TextTransitionTuning) {
+  const tuning = resolveTuning(options);
+  const t = eased(frame, start, start + tunedDuration(duration, tuning), easings.outQuint);
   const reveal = (1 - t) * 100;
-  const blur = (1 - t) * 8;
+  const blur = (1 - t) * 11 * tuning.intensity;
   // Quando a animação completa, remove totalmente o clipPath
   // (senão a borda da máscara continua cortando o textShadow que se estende pra fora)
   const isComplete = t >= 0.999;
   return {
     clipPath: isComplete ? 'none' : `inset(-80px -80px ${reveal}% -80px)`,
     filter: `blur(${blur}px)`,
-    opacity: clamp01(t * 2),
-    transform: `translateY(${(1 - t) * 16}px)`,
+    opacity: clamp01(t * 2.2),
+    transform: `translateY(${(1 - t) * 28 * tuning.intensity}px) scale(${0.96 + 0.04 * t})`,
+    transformOrigin: '50% 100%',
   };
 }
 
@@ -238,20 +268,30 @@ export type TextTransitionId =
 
 export type TextTransitionStyle = {
   wrapStyle: React.CSSProperties;
+  split?: 'char' | 'word';
   perChar?: (i: number, total: number) => React.CSSProperties;
 };
+
+type TextTransitionFn = (
+  frame: number,
+  start: number,
+  options?: TextTransitionTuning
+) => TextTransitionStyle;
 
 /**
  * blur_focus: vem completamente desfocado e foca, com sutil scale+slide.
  * Cinematográfico, super elegante. Bom pra headlines longas.
  */
-function tBlurFocus(frame: number, start: number, duration = 26): TextTransitionStyle {
-  const t = eased(frame, start, start + duration, easings.outQuint);
+function tBlurFocus(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const t = eased(frame, start, start + tunedDuration(26, tuning), easings.outQuint);
+  const scaleFrom = tunedStartScale(0.16, tuning, 0.58);
   return {
     wrapStyle: {
-      opacity: clamp01(t * 1.4),
-      filter: `blur(${(1 - t) * 16}px)`,
-      transform: `scale(${0.94 + 0.06 * t}) translateY(${(1 - t) * 10}px)`,
+      opacity: clamp01(t * 1.65),
+      filter: `blur(${(1 - t) * 24 * tuning.intensity}px) brightness(${0.76 + 0.24 * t})`,
+      transform: `scale(${scaleFrom + (1 - scaleFrom) * t}) translateY(${(1 - t) * 22 * tuning.intensity}px)`,
+      transformOrigin: '50% 50%',
     },
   };
 }
@@ -260,18 +300,23 @@ function tBlurFocus(frame: number, start: number, duration = 26): TextTransition
  * split_letters: letras caem de cima (cada uma em momento diferente) com
  * rotação leve e blur, formando a palavra. Vibe Spotify Wrapped.
  */
-function tSplitLetters(frame: number, start: number, totalDuration = 28): TextTransitionStyle {
+function tSplitLetters(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const scaleFrom = tunedStartScale(0.54, tuning);
   return {
     wrapStyle: {},
+    split: 'char',
     perChar: (i: number, total: number) => {
-      const charDelay = (totalDuration / Math.max(total, 1)) * 0.6;
-      const charStart = start + i * charDelay;
-      const t = eased(frame, charStart, charStart + 14, easings.outBack);
+      const t = staggerProgress(frame, start, i, total, {
+        duration: tunedDuration(19, tuning),
+        totalDelay: Math.min(42, tunedDelay(24, tuning)),
+        curve: easings.outBack,
+      });
       return {
         display: 'inline-block',
-        opacity: clamp01(t * 1.6),
-        transform: `translateY(${(1 - t) * -38}px) rotate(${(1 - t) * -6}deg) scale(${0.7 + 0.3 * t})`,
-        filter: `blur(${(1 - t) * 5}px)`,
+        opacity: clamp01(t * 1.7),
+        transform: `translateY(${(1 - t) * -68 * tuning.intensity}px) rotate(${(1 - t) * -15 * tuning.intensity}deg) scale(${scaleFrom + (1 - scaleFrom) * t})`,
+        filter: t >= 0.995 ? 'none' : `blur(${(1 - t) * 6 * tuning.intensity}px)`,
         transformOrigin: '50% 100%',
       };
     },
@@ -282,16 +327,21 @@ function tSplitLetters(frame: number, start: number, totalDuration = 28): TextTr
  * type_writer: digitando letra por letra. Sem cursor (cursor distrai).
  * Aparece e ganha leve overshoot. Bom pra CTAs.
  */
-function tTypeWriter(frame: number, start: number, charDelay = 1.6): TextTransitionStyle {
+function tTypeWriter(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const scaleFrom = tunedStartScale(0.54, tuning);
   return {
     wrapStyle: {},
+    split: 'char',
     perChar: (i: number) => {
-      const charStart = start + i * charDelay;
-      const t = eased(frame, charStart, charStart + 5, easings.outBack);
+      const charStart = start + i * tunedDelay(1.6, tuning);
+      const t = eased(frame, charStart, charStart + tunedDuration(7, tuning), easings.outBack);
       return {
         display: 'inline-block',
         opacity: t < 0.1 ? 0 : 1,
-        transform: `scale(${0.8 + 0.2 * t})`,
+        transform: `translateY(${(1 - t) * 16 * tuning.intensity}px) scale(${scaleFrom + (1 - scaleFrom) * t})`,
+        filter: t >= 0.995 ? 'none' : `blur(${(1 - t) * 2.4 * tuning.intensity}px)`,
+        transformOrigin: '50% 80%',
       };
     },
   };
@@ -301,20 +351,25 @@ function tTypeWriter(frame: number, start: number, charDelay = 1.6): TextTransit
  * slide_stagger: cada palavra entra de um lado alternado.
  * Vibe editorial moderna.
  */
-function tSlideStagger(frame: number, start: number, wordDelay = 6): TextTransitionStyle {
-  // Implementado com perChar mas alternando direção por blocos.
+function tSlideStagger(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const scaleFrom = tunedStartScale(0.14, tuning, 0.5);
   return {
     wrapStyle: {},
+    split: 'word',
     perChar: (i: number, total: number) => {
-      // Trata como letter mas com delay maior
-      const charStart = start + i * (wordDelay * 0.4);
-      const t = eased(frame, charStart, charStart + 12, easings.outQuint);
+      const t = staggerProgress(frame, start, i, total, {
+        duration: tunedDuration(20, tuning),
+        totalDelay: Math.max(0, Math.min(46, tunedDelay(total * 5.06, tuning))),
+        curve: easings.outQuint,
+      });
       const direction = i % 2 === 0 ? -1 : 1;
       return {
         display: 'inline-block',
-        opacity: clamp01(t * 1.6),
-        transform: `translateX(${(1 - t) * 24 * direction}px)`,
-        filter: `blur(${(1 - t) * 5}px)`,
+        opacity: clamp01(t * 1.55),
+        transform: `translate(${(1 - t) * 58 * tuning.intensity * direction}px, ${(1 - t) * 18 * tuning.intensity}px) rotate(${(1 - t) * 5 * tuning.intensity * direction}deg) scale(${scaleFrom + (1 - scaleFrom) * t})`,
+        filter: t >= 0.995 ? 'none' : `blur(${(1 - t) * 4 * tuning.intensity}px)`,
+        transformOrigin: '50% 50%',
       };
     },
   };
@@ -324,18 +379,19 @@ function tSlideStagger(frame: number, start: number, wordDelay = 6): TextTransit
  * glitch_rgb: aparece com RGB split rápido (3 frames) depois estabiliza.
  * Forte, brutalist, urbano. Use com moderação.
  */
-function tGlitchRGB(frame: number, start: number, duration = 18): TextTransitionStyle {
-  const t = eased(frame, start, start + duration, easings.outCubic);
+function tGlitchRGB(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const t = eased(frame, start, start + tunedDuration(18, tuning), easings.outCubic);
   // Glitch ativo no início, vai diminuindo
-  const glitch = (1 - t) * 6;
+  const glitch = (1 - t) * 10 * tuning.intensity;
   return {
     wrapStyle: {
       opacity: clamp01(t * 1.6),
       textShadow:
         glitch > 0.4
-          ? `${glitch}px 0 0 rgba(255,0,80,0.85), -${glitch}px 0 0 rgba(0,255,200,0.75)`
+          ? `${glitch}px 0 0 rgba(255,0,80,0.92), -${glitch}px 0 0 rgba(0,255,200,0.82), 0 ${glitch * 0.4}px 0 rgba(255,255,255,0.28)`
           : undefined,
-      transform: `translateY(${(1 - t) * 8}px)`,
+      transform: `translateY(${(1 - t) * 14 * tuning.intensity}px) skewX(${(1 - t) * -4 * tuning.intensity}deg)`,
     },
   };
 }
@@ -343,12 +399,17 @@ function tGlitchRGB(frame: number, start: number, duration = 18): TextTransition
 /**
  * scale_pop: scale com overshoot. Bom pra números, badges, datas.
  */
-function tScalePop(frame: number, start: number, duration = 20): TextTransitionStyle {
-  const t = eased(frame, start, start + duration, easings.outBack);
+function tScalePop(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const base = eased(frame, start, start + tunedDuration(20, tuning), easings.outCubic);
+  const scaleFrom = tunedStartScale(0.66, tuning);
+  const t = inertialPop(base, { overshoot: 0.34 * tuning.intensity, waves: 1.32, decay: 2.25 });
   return {
     wrapStyle: {
-      opacity: clamp01(eased(frame, start, start + 8, easings.outCubic) * 1.5),
-      transform: `scale(${0.55 + 0.45 * t})`,
+      opacity: clamp01(eased(frame, start, start + tunedDuration(6, tuning), easings.outCubic) * 1.8),
+      transform: `scale(${scaleFrom + (1 - scaleFrom) * t}) rotate(${(1 - base) * -2.5 * tuning.intensity}deg)`,
+      filter: base >= 0.995 ? 'none' : `blur(${(1 - base) * 3.5 * tuning.intensity}px)`,
+      transformOrigin: '50% 50%',
     },
   };
 }
@@ -357,12 +418,16 @@ function tScalePop(frame: number, start: number, duration = 20): TextTransitionS
  * rise_clean: simples, profissional — slide up com fade. Sem firulas.
  * Bom como default conservador.
  */
-function tRiseClean(frame: number, start: number, duration = 18): TextTransitionStyle {
-  const t = eased(frame, start, start + duration, easings.outCubic);
+function tRiseClean(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  const tuning = resolveTuning(options);
+  const t = eased(frame, start, start + tunedDuration(18, tuning), easings.outCubic);
+  const scaleFrom = tunedStartScale(0.06, tuning, 0.72);
   return {
     wrapStyle: {
-      opacity: clamp01(t * 1.3),
-      transform: `translateY(${(1 - t) * 22}px)`,
+      opacity: clamp01(t * 1.45),
+      transform: `translateY(${(1 - t) * 34 * tuning.intensity}px) scale(${scaleFrom + (1 - scaleFrom) * t})`,
+      filter: t >= 0.995 ? 'none' : `blur(${(1 - t) * 3 * tuning.intensity}px)`,
+      transformOrigin: '50% 100%',
     },
   };
 }
@@ -370,13 +435,13 @@ function tRiseClean(frame: number, start: number, duration = 18): TextTransition
 /**
  * mask_reveal: usa a função maskReveal existente. Mantido pra compat.
  */
-function tMaskReveal(frame: number, start: number, duration = 26): TextTransitionStyle {
-  return { wrapStyle: maskReveal(frame, start, duration) };
+function tMaskReveal(frame: number, start: number, options?: TextTransitionTuning): TextTransitionStyle {
+  return { wrapStyle: maskReveal(frame, start, 26, options) };
 }
 
 export function getTextTransition(
   id: TextTransitionId
-): (frame: number, start: number) => TextTransitionStyle {
+): TextTransitionFn {
   switch (id) {
     case 'blur_focus':
       return tBlurFocus;
@@ -466,4 +531,26 @@ export function popIn(frame: number, fps: number, delay: number, from = 0.6) {
 export function wiggle(frame: number, intensity = 1) {
   const w = elegantWiggle(frame, { intensity });
   return w.transform;
+}
+
+/**
+ * Garante opacity mínima visível no preview (sem afetar render final).
+ * Aplica em qualquer animação que tem opacity 0→1 (mask, char, scale, etc.)
+ * pra evitar "texto sumindo" durante o play do Studio.
+ *
+ * Uso:
+ *   ...previewSafeAnim(headlineMask, previewMode, showAll)
+ *
+ * No render real (previewMode=false), passa direto.
+ * No Studio preview (previewMode=true e !showAll), força opacity mínima 0.28.
+ */
+export function previewSafeAnim<T extends { opacity?: number }>(
+  anim: T,
+  previewMode = false,
+  showAll = false
+): T {
+  if (!previewMode || showAll) return anim;
+  if (!anim || typeof anim.opacity !== 'number') return anim;
+  if (anim.opacity >= 0.28) return anim;
+  return { ...anim, opacity: 0.28 };
 }
