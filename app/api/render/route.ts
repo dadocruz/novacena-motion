@@ -12,7 +12,6 @@ const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
 const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 999);
-const LAMBDA_CONCURRENCY = Number(process.env.REMOTION_LAMBDA_CONCURRENCY || 1);
 const LAMBDA_REQUIRED =
   process.env.RENDER_PROVIDER === 'lambda' ||
   (process.env.NODE_ENV === 'production' && process.env.RENDER_PROVIDER !== 'local');
@@ -102,7 +101,7 @@ function friendlyLambdaError(message: string) {
 
   return [
     'A AWS bloqueou o render por limite de concorrência da conta Lambda.',
-    `O app já está usando Lambda em modo serial (concurrency=${LAMBDA_CONCURRENCY}, framesPerLambda=${LAMBDA_FRAMES_PER_LAMBDA}), então este limite precisa ser aumentado na AWS ou o vídeo precisa ser renderizado com menos segmentos.`,
+    `O app já está reduzindo a quantidade de Lambdas com framesPerLambda=${LAMBDA_FRAMES_PER_LAMBDA}, então este limite precisa ser aumentado na AWS ou o vídeo precisa usar ainda menos segmentos.`,
     'Rode na VPS: npx remotion lambda quotas',
     'Depois solicite aumento em Service Quotas > AWS Lambda > Concurrent executions, ou tente REMOTION_LAMBDA_FRAMES_PER_LAMBDA=9999 para vídeos curtos.',
   ].join('\n');
@@ -343,7 +342,6 @@ export async function POST(request: NextRequest) {
               codec: 'h264',
               imageFormat: 'jpeg',
               framesPerLambda: LAMBDA_FRAMES_PER_LAMBDA,
-              concurrency: LAMBDA_CONCURRENCY,
               concurrencyPerLambda: 1,
               maxRetries: 2,
               privacy: 'public',
