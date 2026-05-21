@@ -12,6 +12,7 @@ const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
 const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 999);
+const LAMBDA_TARGET_CHUNKS = Number(process.env.REMOTION_LAMBDA_TARGET_CHUNKS || 4);
 const LAMBDA_REQUIRED =
   process.env.RENDER_PROVIDER === 'lambda' ||
   (process.env.NODE_ENV === 'production' && process.env.RENDER_PROVIDER !== 'local');
@@ -101,10 +102,26 @@ function friendlyLambdaError(message: string) {
 
   return [
     'A AWS bloqueou o render por limite de concorrência da conta Lambda.',
-    `O app já está reduzindo a quantidade de Lambdas com framesPerLambda=${LAMBDA_FRAMES_PER_LAMBDA}, então este limite precisa ser aumentado na AWS ou o vídeo precisa usar ainda menos segmentos.`,
+    `O app está reduzindo a quantidade de Lambdas com framesPerLambda mínimo de ${LAMBDA_FRAMES_PER_LAMBDA} e alvo de até ${LAMBDA_TARGET_CHUNKS} chunks, então este limite precisa ser aumentado na AWS ou o vídeo precisa usar ainda menos segmentos.`,
     'Rode na VPS: npx remotion lambda quotas',
     'Depois solicite aumento em Service Quotas > AWS Lambda > Concurrent executions, ou tente REMOTION_LAMBDA_FRAMES_PER_LAMBDA=9999 para vídeos curtos.',
   ].join('\n');
+}
+
+function getEffectiveFramesPerLambda(renderProps: any) {
+  const durationSecondsRaw = Number(renderProps?.durationSeconds ?? 8);
+  const durationSeconds = Number.isFinite(durationSecondsRaw) && durationSecondsRaw > 0
+    ? durationSecondsRaw
+    : 8;
+  const targetChunks = Number.isFinite(LAMBDA_TARGET_CHUNKS) && LAMBDA_TARGET_CHUNKS > 0
+    ? Math.max(1, Math.floor(LAMBDA_TARGET_CHUNKS))
+    : 4;
+  const estimatedFrames = Math.max(1, Math.ceil(durationSeconds * 30));
+
+  return Math.max(
+    LAMBDA_FRAMES_PER_LAMBDA,
+    Math.ceil(estimatedFrames / targetChunks)
+  );
 }
 
 async function pathToDataUrl(urlPath: string): Promise<string | null> {
@@ -324,11 +341,14 @@ export async function POST(request: NextRequest) {
 
         if (lambdaConfig && !posterEnabled) {
           const startedAt = Date.now();
+          const framesPerLambda = getEffectiveFramesPerLambda(renderProps);
           console.log('[render:lambda] starting', {
             composition: comp.id,
             target: comp.target,
             region: lambdaConfig.region,
             appOrigin: APP_ORIGIN,
+            framesPerLambda,
+            targetChunks: LAMBDA_TARGET_CHUNKS,
           });
 
           try {
@@ -341,7 +361,7 @@ export async function POST(request: NextRequest) {
               composition: comp.id,
               codec: 'h264',
               imageFormat: 'jpeg',
-              framesPerLambda: LAMBDA_FRAMES_PER_LAMBDA,
+              framesPerLambda,
               concurrencyPerLambda: 1,
               maxRetries: 2,
               privacy: 'public',
