@@ -1958,7 +1958,7 @@ export default function Home() {
     const full = d.items.find((g: any) => g.id === item.id);
     const snap = full?.projectSnapshot;
     if (!snap) return;
-    setTemplate(snap.type);
+    setTemplate(snap.template ?? snap.type);
     setReleaseDate(snap.releaseDate ?? '');
     setHeadline(snap.headline ?? '');
     setCta(snap.cta ?? '');
