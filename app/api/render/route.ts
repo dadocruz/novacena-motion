@@ -11,6 +11,9 @@ const execAsync = promisify(exec);
 const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
+const LAMBDA_REQUIRED =
+  process.env.RENDER_PROVIDER === 'lambda' ||
+  (process.env.NODE_ENV === 'production' && process.env.RENDER_PROVIDER !== 'local');
 
 function shQuote(value: string) {
   return JSON.stringify(value);
@@ -279,6 +282,30 @@ export async function POST(request: NextRequest) {
           : outputFileForRender;
 
         const lambdaConfig = getLambdaConfig();
+        if (posterEnabled && lambdaConfig) {
+          await unlink(tmpFile).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: 'Desative "Renderizar capa no início" para renderizar no Lambda. Essa opção ainda usa pós-processamento local.',
+              provider: 'lambda',
+            },
+            { status: 400 }
+          );
+        }
+
+        if (!lambdaConfig && LAMBDA_REQUIRED) {
+          await unlink(tmpFile).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: 'Render Lambda não configurado no servidor. Verifique REMOTION_LAMBDA_FUNCTION_NAME e REMOTION_LAMBDA_SERVE_URL antes de renderizar.',
+              provider: 'none',
+            },
+            { status: 503 }
+          );
+        }
+
         if (lambdaConfig && !posterEnabled) {
           const startedAt = Date.now();
           console.log('[render:lambda] starting', {
