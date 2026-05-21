@@ -5,7 +5,6 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

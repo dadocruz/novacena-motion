@@ -187,10 +187,10 @@ export async function POST(request: NextRequest) {
 
         const renderProps = JSON.parse(JSON.stringify(props));
 
-        // Assets locais precisam virar URL absoluta do app. Evita 404 no servidor
-        // do Remotion sem explodir o JSON com base64 gigante.
+        // Cover é pequena o suficiente para embutir. Isso evita falhas
+        // intermitentes da Lambda ao baixar imagem via Traefik/VPS.
         if (renderProps?.coverImage && typeof renderProps.coverImage === 'string' && renderProps.coverImage.startsWith('/')) {
-          renderProps.coverImage = toAppAssetUrl(renderProps.coverImage);
+          renderProps.coverImage = await pathToDataUrl(renderProps.coverImage) || toAppAssetUrl(renderProps.coverImage);
         }
 
         // Audio/Video de fundo → continua HTTP (arquivos grandes)

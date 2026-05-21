@@ -4,13 +4,12 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import { z } from 'zod';
-import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-const FFmpeg_BIN = existsSync('/usr/local/bin/ffmpeg')
+const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
   ? '/usr/local/bin/ffmpeg'
   : existsSync('/usr/bin/ffmpeg')
     ? '/usr/bin/ffmpeg'

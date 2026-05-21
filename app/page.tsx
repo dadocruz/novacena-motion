@@ -3399,7 +3399,7 @@ export default function Home() {
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
-    setRenderOutputUrl('');
+    setLambdaOutputUrl(null);
     try {
       const motionSource = liveProject.motion ?? {};
       const activeFontIds = new Set(
@@ -3448,7 +3448,7 @@ export default function Home() {
         return;
       }
       if (typeof result.outputFile === 'string' && /^https?:\/\//.test(result.outputFile)) {
-        setRenderOutputUrl(result.outputFile);
+        setLambdaOutputUrl(result.outputFile);
       }
       setRenderMessage(result.provider === 'lambda' ? `${label} gerado no Lambda. ✓` : `${label} gerado. ✓`);
       // Atualizar lista de arquivos disponíveis para download
@@ -4733,9 +4733,9 @@ return (
             {renderMessage && (
               <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-2)' }}>{renderMessage}</div>
             )}
-            {renderOutputUrl && (
+            {lambdaOutputUrl && (
               <a
-                href={renderOutputUrl}
+                href={lambdaOutputUrl}
                 target="_blank"
                 rel="noreferrer"
                 style={downloadVideoWideBtnStyle}
