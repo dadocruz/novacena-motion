@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Img, Video, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
+import { AbsoluteFill, Audio, Img, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
 import { easings, eased, elegantWiggle, hitPulse } from './motionEngine';
 import type { BackgroundConfig } from './types';
 
@@ -205,7 +205,7 @@ export const CinematicBackground: React.FC<Props> = ({
         </AbsoluteFill>
       ) : videoSrc ? (
         <AbsoluteFill style={{ opacity: videoOpacity }}>
-          <Video
+          <OffthreadVideo
             src={videoSrc}
             startFrom={videoStartFrame}
             muted={!useVideoAudio}
