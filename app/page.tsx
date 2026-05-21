@@ -143,6 +143,22 @@ import {
   FontPicker,
 } from '../components/editor';
 
+type RenderEngine = 'desktop' | 'local' | 'lambda';
+
+type LocalAssetRef = {
+  id: string;
+  kind: 'backgroundVideo' | 'backgroundAudio' | 'overlay';
+  name: string;
+  size: number;
+  type: string;
+  durationSec?: number;
+  lastModified?: number;
+  trimStartSec?: number;
+  trimDurationSec?: number;
+  serverPreviewSrc?: string;
+  renderReadySrc?: string;
+};
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
@@ -362,9 +378,10 @@ export default function Home() {
   const [rendering, setRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
-  const [renderEngine, setRenderEngine] = useState<'local' | 'lambda'>(() => {
+  const [renderEngine, setRenderEngine] = useState<RenderEngine>(() => {
     if (typeof window === 'undefined') return 'local';
-    return (localStorage.getItem('novacena:renderEngine') as 'local' | 'lambda') || 'local';
+    const saved = localStorage.getItem('novacena:renderEngine');
+    return saved === 'desktop' || saved === 'local' || saved === 'lambda' ? saved : 'desktop';
   });
   const [lambdaOutputUrl, setLambdaOutputUrl] = useState<string | null>(null);
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
@@ -373,6 +390,9 @@ export default function Home() {
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [bgTrimPreviewTime, setBgTrimPreviewTime] = useState(0);
   const [bgTrimTimecodeInput, setBgTrimTimecodeInput] = useState('00:00.0');
+  const [bgVideoLocalAsset, setBgVideoLocalAsset] = useState<LocalAssetRef | null>(
+    (factoryBackground.localAsset as LocalAssetRef | undefined) ?? null
+  );
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery'>('studio');
   const [studioMode, setStudioMode] = useState<StudioMode>('simple');
   const [typoSubTab, setTypoSubTab] = React.useState<'char'|'layout'>('char');
@@ -1371,6 +1391,7 @@ export default function Home() {
         videoDurationSec: bgVideoDuration || undefined,
         videoNeedsTrim: bgVideoNeedsTrim || undefined,
         videoOriginalName: bgVideoOriginalName || undefined,
+        localAsset: bgVideoLocalAsset ?? undefined,
         videoOpacity: bgVideoOpacity,
         bgColor,
         videoBlur: bgVideoBlur,
@@ -2037,6 +2058,7 @@ export default function Home() {
         setBgVideoDuration(m.background.videoDurationSec ?? 0);
         setBgVideoNeedsTrim(Boolean(m.background.videoNeedsTrim));
         setBgVideoOriginalName(m.background.videoOriginalName ?? '');
+        setBgVideoLocalAsset((m.background.localAsset as LocalAssetRef | undefined) ?? null);
         setBgVideoOpacity(m.background.videoOpacity ?? 1);
         setBgColor(m.background.bgColor ?? '#030205');
         setBgVideoBlur(m.background.videoBlur ?? 22);
@@ -2113,6 +2135,16 @@ export default function Home() {
       const clipDuration = Math.min(durationSeconds, 40);
       const shouldTrim = totalDuration > clipDuration + 0.5;
       setBgVideo(d.videoSrc);
+      setBgVideoLocalAsset({
+        id: `local-bg-${file.size}-${file.lastModified}`,
+        kind: 'backgroundVideo',
+        name: file.name,
+        size: file.size,
+        type: file.type || 'video/mp4',
+        durationSec: totalDuration,
+        lastModified: file.lastModified,
+        serverPreviewSrc: d.videoSrc,
+      });
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
       setBgTrimTimecodeInput(formatTimecode(0));
@@ -2137,6 +2169,7 @@ export default function Home() {
     if (!bgVideo) return;
     setBgVideoNeedsTrim(false);
     setBgVideoStartSec(0);
+    setBgVideoLocalAsset((asset) => asset ? { ...asset, trimStartSec: 0, trimDurationSec: bgVideoDuration || durationSeconds, renderReadySrc: bgVideo } : asset);
     setBgTrimPreviewTime(0);
     setBgTrimTimecodeInput(formatTimecode(0));
     setVideoUploadMsg('Vídeo inteiro aplicado como fundo. Ajuste opacidade, blur e saturação abaixo.');
@@ -2168,7 +2201,14 @@ export default function Home() {
         return;
       }
 
+      const trimStartSec = bgVideoStartSec;
       setBgVideo(d.videoSrc);
+      setBgVideoLocalAsset((asset) => asset ? {
+        ...asset,
+        trimStartSec,
+        trimDurationSec: d.durationSec ?? clipDuration,
+        renderReadySrc: d.videoSrc,
+      } : asset);
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
       setBgTrimTimecodeInput(formatTimecode(0));
@@ -2194,6 +2234,7 @@ export default function Home() {
     setBgVideoDuration(0);
     setBgVideoNeedsTrim(false);
     setBgVideoOriginalName('');
+    setBgVideoLocalAsset(null);
     setVideoUploadMsg('');
   }
 
@@ -2221,6 +2262,7 @@ export default function Home() {
       setBgVideoDuration(0);
       setBgVideoNeedsTrim(false);
       setBgVideoOriginalName(file.name);
+      setBgVideoLocalAsset(null);
       setVideoUploadMsg(`Imagem de fundo pronta: ${file.name}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha desconhecida';
@@ -2509,6 +2551,7 @@ export default function Home() {
     setBgVideo(bg.videoSrc ?? '');
     setBgVideoStartSec(typeof bg.videoStartFrame === 'number' ? bg.videoStartFrame / 30 : 0);
     setBgVideoDuration(bg.videoDurationSec ?? 0);
+    setBgVideoLocalAsset((bg.localAsset as LocalAssetRef | undefined) ?? null);
     setBgVideoOpacity(bg.videoOpacity ?? 1);
     setBgColor(bg.bgColor ?? '#030205');
     setBgVideoBlur(bg.videoBlur ?? 22);
@@ -3390,6 +3433,92 @@ export default function Home() {
     else setHeadline(value);
   }
 
+  function buildRenderInputProps() {
+    const motionSource = liveProject.motion ?? {};
+    const activeFontIds = new Set(
+      [
+        motionSource.fontHeadline,
+        motionSource.fontDate,
+        motionSource.fontCta,
+        motionSource.fontCta1,
+        motionSource.fontCta2,
+      ].filter((id): id is string => typeof id === 'string' && id.length > 0)
+    );
+    const customFontsForRender = Array.isArray(motionSource.customFonts)
+      ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
+      : [];
+
+    return {
+      ...liveProject,
+      motion: {
+        ...motionSource,
+        customFonts: customFontsForRender,
+        previewMode: false,
+      },
+      posterFrame: {
+        enabled: posterFrameEnabled,
+        frameSec: posterFrameSec,
+        holdSec: posterHoldSec,
+        outroEnabled: posterOutroEnabled,
+      },
+    };
+  }
+
+  function downloadJsonFile(filename: string, data: unknown) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportForDesktop(label: string) {
+    const inputProps = buildRenderInputProps();
+    const assetWarnings: string[] = [];
+    const backgroundAsset = inputProps.motion?.background?.localAsset as LocalAssetRef | undefined;
+
+    if (inputProps.motion?.background?.videoSrc && !backgroundAsset && inputProps.motion.background.mediaType !== 'image') {
+      assetWarnings.push('O vídeo de fundo está salvo como URL do servidor. O Exporter local pode pedir para localizar o arquivo original.');
+    }
+
+    const packageData = {
+      schemaVersion: 1,
+      kind: 'novacena-local-export',
+      createdAt: new Date().toISOString(),
+      appOrigin: typeof window !== 'undefined' ? window.location.origin : '',
+      render: {
+        label,
+        template,
+        target,
+        script: renderScriptFor(template, target),
+        fps: 30,
+        width: 1080,
+        height: target === 'story' ? 1920 : 1350,
+        durationSeconds,
+      },
+      project: inputProps,
+      localAssets: {
+        backgroundVideo: backgroundAsset ?? null,
+      },
+      assetWarnings,
+    };
+
+    const safeArtist = (activeArtist?.name || 'novacena').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'novacena';
+    downloadJsonFile(`${safeArtist}-${target}.novacena-export.json`, packageData);
+    setRenderLog(JSON.stringify(packageData, null, 2));
+    setRenderStatus('done');
+    setRenderProgress(100);
+    setRenderMessage(
+      assetWarnings.length > 0
+        ? 'Pacote para Exporter local criado. O app local pode pedir para localizar assets pesados.'
+        : 'Pacote para Exporter local criado. Pronto para renderizar no computador.'
+    );
+  }
+
   async function renderScript(script: string, label: string) {
     if (bgVideoNeedsTrim) {
       setRenderMessage('Corte/otimize o trecho do vídeo antes de renderizar.');
@@ -3401,33 +3530,7 @@ export default function Home() {
     setRenderLog('');
     setLambdaOutputUrl(null);
     try {
-      const motionSource = liveProject.motion ?? {};
-      const activeFontIds = new Set(
-        [
-          motionSource.fontHeadline,
-          motionSource.fontDate,
-          motionSource.fontCta,
-          motionSource.fontCta1,
-          motionSource.fontCta2,
-        ].filter((id): id is string => typeof id === 'string' && id.length > 0)
-      );
-      const customFontsForRender = Array.isArray(motionSource.customFonts)
-        ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
-        : [];
-      const renderPropsForServer = {
-        ...liveProject,
-        motion: {
-          ...motionSource,
-          customFonts: customFontsForRender,
-          previewMode: false,
-        },
-        posterFrame: {
-          enabled: posterFrameEnabled,
-          frameSec: posterFrameSec,
-          holdSec: posterHoldSec,
-          outroEnabled: posterOutroEnabled,
-        },
-      };
+      const renderPropsForServer = buildRenderInputProps();
 
       const response = await fetch('/api/render', {
         method: 'POST',
@@ -3476,19 +3579,7 @@ export default function Home() {
     setLambdaOutputUrl(null);
 
     try {
-      const motionSource = liveProject.motion ?? {};
-      const activeFontIds = new Set(
-        [motionSource.fontHeadline, motionSource.fontDate, motionSource.fontCta, motionSource.fontCta1, motionSource.fontCta2]
-          .filter((id): id is string => typeof id === 'string' && id.length > 0)
-      );
-      const customFontsForRender = Array.isArray(motionSource.customFonts)
-        ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
-        : [];
-      const inputProps = {
-        ...liveProject,
-        motion: { ...motionSource, customFonts: customFontsForRender, previewMode: false },
-        posterFrame: { enabled: posterFrameEnabled, frameSec: posterFrameSec, holdSec: posterHoldSec, outroEnabled: posterOutroEnabled },
-      };
+      const inputProps = buildRenderInputProps();
 
       const startRes = await fetch('/api/render/lambda', {
         method: 'POST',
@@ -3551,14 +3642,16 @@ export default function Home() {
 
   function handleRender() {
     const label = `${templateLabels[template]} ${target}`;
-    if (renderEngine === 'lambda') {
+    if (renderEngine === 'desktop') {
+      exportForDesktop(label);
+    } else if (renderEngine === 'lambda') {
       renderLambda(label);
     } else {
       renderScript(renderScriptFor(template, target), label);
     }
   }
 
-  function switchRenderEngine(engine: 'local' | 'lambda') {
+  function switchRenderEngine(engine: RenderEngine) {
     setRenderEngine(engine);
     localStorage.setItem('novacena:renderEngine', engine);
   }
@@ -3838,6 +3931,7 @@ export default function Home() {
     if (typeof background.videoDurationSec === 'number') setBgVideoDuration(background.videoDurationSec);
     if (typeof background.videoNeedsTrim === 'boolean') setBgVideoNeedsTrim(background.videoNeedsTrim);
     if (typeof background.videoOriginalName === 'string') setBgVideoOriginalName(background.videoOriginalName);
+    setBgVideoLocalAsset((background.localAsset as LocalAssetRef | undefined) ?? null);
     if (typeof background.videoOpacity === 'number') setBgVideoOpacity(background.videoOpacity);
     if (typeof background.bgColor === 'string') setBgColor(background.bgColor);
     if (typeof background.videoBlur === 'number') setBgVideoBlur(background.videoBlur);
@@ -4414,9 +4508,20 @@ return (
           </button>
           <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-1)' }}>
             <button
+              onClick={() => switchRenderEngine('desktop')}
+              style={{
+                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'var(--bg-2)',
+                color: renderEngine === 'desktop' ? '#fff' : 'var(--text-3)',
+              }}
+            >
+              Computador
+            </button>
+            <button
               onClick={() => switchRenderEngine('local')}
               style={{
                 flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                borderLeft: '1px solid var(--border-1)',
                 background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'var(--bg-2)',
                 color: renderEngine === 'local' ? '#fff' : 'var(--text-3)',
               }}
@@ -4442,7 +4547,7 @@ return (
           >
             {rendering
               ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-              : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar vídeo (${target})`}
+              : renderEngine === 'desktop' ? `Exportar pacote (${target})` : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar vídeo (${target})`}
           </button>
           {lambdaOutputUrl && renderEngine === 'lambda' && (
             <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
@@ -4673,9 +4778,20 @@ return (
             <div style={renderBarStyle}>
               <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <button
+                  onClick={() => switchRenderEngine('desktop')}
+                  style={{
+                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'rgba(255,255,255,0.06)',
+                    color: renderEngine === 'desktop' ? '#fff' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  Computador
+                </button>
+                <button
                   onClick={() => switchRenderEngine('local')}
                   style={{
                     flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    borderLeft: '1px solid rgba(255,255,255,0.1)',
                     background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'rgba(255,255,255,0.06)',
                     color: renderEngine === 'local' ? '#fff' : 'rgba(255,255,255,0.4)',
                   }}
@@ -4701,7 +4817,7 @@ return (
               >
                 {rendering
                   ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-                  : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar ${target}`}
+                  : renderEngine === 'desktop' ? `Exportar pacote ${target}` : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar ${target}`}
               </button>
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>
@@ -5293,6 +5409,22 @@ return (
             </div>
 
             {videoUploadMsg && <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>{videoUploadMsg}</div>}
+
+            {bgVideo && (
+              <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                {!bgIsImage && !bgVideoNeedsTrim && bgVideoDuration > 0 && (
+                  <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
+                    onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
+                )}
+                <SliderRow label={bgIsImage ? 'Opacidade da imagem' : 'Opacidade do vídeo'} value={bgVideoOpacity} min={0} max={1} step={0.05}
+                  onChange={setBgVideoOpacity} format={(v) => `${Math.round(v * 100)}%`} />
+                <SliderRow label="Blur" value={bgVideoBlur} min={0} max={60} step={1}
+                  onChange={setBgVideoBlur} format={(v) => `${v}px`} />
+                <SliderRow label="Saturação" value={bgVideoSaturation} min={0} max={2} step={0.05}
+                  onChange={setBgVideoSaturation} format={(v) => `${v.toFixed(2)}×`} />
+              </div>
+            )}
+
             {bgVideoNeedsTrim && (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                 <video
@@ -5453,21 +5585,6 @@ return (
               </div>
             )}
           </div>
-
-          {bgVideo && (
-            <>
-              {!bgIsImage && !bgVideoNeedsTrim && bgVideoDuration > 0 && (
-                <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
-                  onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
-              )}
-              <SliderRow label={bgIsImage ? 'Opacidade da imagem' : 'Opacidade do vídeo'} value={bgVideoOpacity} min={0} max={1} step={0.05}
-                onChange={setBgVideoOpacity} format={(v) => `${Math.round(v * 100)}%`} />
-              <SliderRow label="Blur" value={bgVideoBlur} min={0} max={60} step={1}
-                onChange={setBgVideoBlur} format={(v) => `${v}px`} />
-              <SliderRow label="Saturação" value={bgVideoSaturation} min={0} max={2} step={0.05}
-                onChange={setBgVideoSaturation} format={(v) => `${v.toFixed(2)}×`} />
-            </>
-          )}
 
           <div style={{ marginTop: 12 }}>
             <div style={miniInputLabel}>Cor de fundo</div>

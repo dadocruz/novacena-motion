@@ -175,6 +175,19 @@ export type BackgroundConfig = {
   videoNeedsTrim?: boolean;
   videoOriginalName?: string;
   videoOriginalSize?: number;
+  localAsset?: {
+    id: string;
+    kind: 'backgroundVideo' | 'backgroundAudio' | 'overlay';
+    name: string;
+    size: number;
+    type: string;
+    durationSec?: number;
+    lastModified?: number;
+    trimStartSec?: number;
+    trimDurationSec?: number;
+    serverPreviewSrc?: string;
+    renderReadySrc?: string;
+  };
   videoOpacity?: number;
   bgColor?: string;
   videoBlur?: number;
