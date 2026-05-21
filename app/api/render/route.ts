@@ -9,6 +9,8 @@ import { randomBytes } from 'crypto';
 
 const execAsync = promisify(exec);
 const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
+const LAMBDA_POLL_INTERVAL_MS = 5000;
+const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
 
 function shQuote(value: string) {
   return JSON.stringify(value);
@@ -39,6 +41,7 @@ function activeFontIdsFromMotion(motion: any) {
 
 
 export const runtime = 'nodejs';
+export const maxDuration = 900;
 
 const RenderRequestSchema = z.object({
   project: z.object({
@@ -71,6 +74,19 @@ const ALLOWED_RENDER_SCRIPTS = new Set([
 ]);
 
 const renderQueue: Map<string, any> = new Map();
+
+function getLambdaConfig() {
+  const region = process.env.REMOTION_AWS_REGION || process.env.AWS_REGION || 'us-east-1';
+  const functionName = process.env.REMOTION_LAMBDA_FUNCTION_NAME;
+  const serveUrl = process.env.REMOTION_LAMBDA_SERVE_URL;
+
+  if (!functionName || !serveUrl) return null;
+  return { region, functionName, serveUrl };
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function pathToDataUrl(urlPath: string): Promise<string | null> {
   try {
@@ -261,6 +277,126 @@ export async function POST(request: NextRequest) {
         const normalOutputFile = posterEnabled
           ? outputFileForRender.replace(/\.mp4$/, `.normal.mp4`)
           : outputFileForRender;
+
+        const lambdaConfig = getLambdaConfig();
+        if (lambdaConfig && !posterEnabled) {
+          const startedAt = Date.now();
+          console.log('[render:lambda] starting', {
+            composition: comp.id,
+            target: comp.target,
+            region: lambdaConfig.region,
+            appOrigin: APP_ORIGIN,
+          });
+
+          try {
+            const lambdaModule = await new Function('specifier', 'return import(specifier)')('@remotion/lambda');
+            const { getRenderProgress, renderMediaOnLambda } = lambdaModule;
+            const render = await renderMediaOnLambda({
+              region: lambdaConfig.region,
+              functionName: lambdaConfig.functionName,
+              serveUrl: lambdaConfig.serveUrl,
+              composition: comp.id,
+              codec: 'h264',
+              imageFormat: 'jpeg',
+              framesPerLambda: 30,
+              maxRetries: 1,
+              privacy: 'public',
+              inputProps: renderProps,
+            });
+
+            let lastLoggedProgress = -1;
+            while (Date.now() - startedAt < LAMBDA_MAX_WAIT_MS) {
+              await wait(LAMBDA_POLL_INTERVAL_MS);
+
+              const progress = await getRenderProgress({
+                renderId: render.renderId,
+                bucketName: render.bucketName,
+                functionName: lambdaConfig.functionName,
+                region: lambdaConfig.region,
+              });
+
+              const pct = Math.round(progress.overallProgress * 100);
+              if (pct !== lastLoggedProgress) {
+                lastLoggedProgress = pct;
+                console.log('[render:lambda] progress', {
+                  renderId: render.renderId,
+                  composition: comp.id,
+                  progress: pct,
+                  done: progress.done,
+                });
+              }
+
+              if (progress.fatalErrorEncountered) {
+                console.error('[render:lambda] fatal', {
+                  renderId: render.renderId,
+                  errors: progress.errors,
+                });
+                await unlink(tmpFile).catch(() => {});
+                return NextResponse.json(
+                  {
+                    ok: false,
+                    error: progress.errors?.[0]?.message || 'Falha fatal no render Lambda',
+                    output: JSON.stringify(progress.errors ?? [], null, 2),
+                    provider: 'lambda',
+                    renderId: render.renderId,
+                  },
+                  { status: 500 }
+                );
+              }
+
+              if (progress.done) {
+                const seconds = Math.round((Date.now() - startedAt) / 1000);
+                const output = [
+                  `Render Lambda finalizado em ${seconds}s`,
+                  `renderId: ${render.renderId}`,
+                  `bucket: ${render.bucketName}`,
+                  `arquivo: ${progress.outputFile}`,
+                ].join('\n');
+
+                console.log('[render:lambda] done', {
+                  renderId: render.renderId,
+                  seconds,
+                  outputFile: progress.outputFile,
+                });
+
+                await unlink(tmpFile).catch(() => {});
+                return NextResponse.json({
+                  ok: true,
+                  output,
+                  outputFile: progress.outputFile,
+                  provider: 'lambda',
+                  renderId: render.renderId,
+                  bucketName: render.bucketName,
+                });
+              }
+            }
+
+            await unlink(tmpFile).catch(() => {});
+            return NextResponse.json(
+              {
+                ok: false,
+                error: `Render Lambda excedeu ${Math.round(LAMBDA_MAX_WAIT_MS / 1000)}s aguardando conclusão.`,
+                output: `renderId: ${render.renderId}\nbucket: ${render.bucketName}`,
+                provider: 'lambda',
+                renderId: render.renderId,
+                bucketName: render.bucketName,
+              },
+              { status: 504 }
+            );
+          } catch (err: any) {
+            console.error('[render:lambda] error', err);
+            await unlink(tmpFile).catch(() => {});
+            return NextResponse.json(
+              {
+                ok: false,
+                error: err instanceof Error ? err.message : 'Falha no render Lambda',
+                output: err?.stack || String(err),
+                provider: 'lambda',
+              },
+              { status: 500 }
+            );
+          }
+        }
 
         // DEBUG: salva props ao lado do mp4 para inspecao
         try {

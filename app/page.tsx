@@ -362,6 +362,7 @@ export default function Home() {
   const [rendering, setRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
+  const [renderOutputUrl, setRenderOutputUrl] = useState('');
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [processingVideoClip, setProcessingVideoClip] = useState(false);
@@ -3394,6 +3395,7 @@ export default function Home() {
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
+    setRenderOutputUrl('');
     try {
       const motionSource = liveProject.motion ?? {};
       const activeFontIds = new Set(
@@ -3434,7 +3436,10 @@ export default function Home() {
         setRenderMessage(`Erro: ${result.error ?? 'falha'}`);
         return;
       }
-      setRenderMessage(`${label} gerado. ✓`);
+      if (typeof result.outputFile === 'string' && /^https?:\/\//.test(result.outputFile)) {
+        setRenderOutputUrl(result.outputFile);
+      }
+      setRenderMessage(result.provider === 'lambda' ? `${label} gerado no Lambda. ✓` : `${label} gerado. ✓`);
       // Atualizar lista de arquivos disponíveis para download
       fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
     } catch (error) {
@@ -4556,6 +4561,16 @@ return (
             </div>
             {renderMessage && (
               <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-2)' }}>{renderMessage}</div>
+            )}
+            {renderOutputUrl && (
+              <a
+                href={renderOutputUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={downloadVideoWideBtnStyle}
+              >
+                Abrir vídeo renderizado
+              </a>
             )}
             {renderFiles[0] && (
               <a
