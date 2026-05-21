@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
 const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
-const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 120);
+const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 999);
 const LAMBDA_CONCURRENCY = Number(process.env.REMOTION_LAMBDA_CONCURRENCY || 1);
 const LAMBDA_REQUIRED =
   process.env.RENDER_PROVIDER === 'lambda' ||
@@ -91,6 +91,21 @@ function getLambdaConfig() {
 
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isLambdaRateLimitError(message: string) {
+  return /rate exceeded|concurrency limit|ConcurrentInvocationLimitExceeded|TooManyRequestsException/i.test(message);
+}
+
+function friendlyLambdaError(message: string) {
+  if (!isLambdaRateLimitError(message)) return message;
+
+  return [
+    'A AWS bloqueou o render por limite de concorrência da conta Lambda.',
+    `O app já está usando Lambda em modo serial (concurrency=${LAMBDA_CONCURRENCY}, framesPerLambda=${LAMBDA_FRAMES_PER_LAMBDA}), então este limite precisa ser aumentado na AWS ou o vídeo precisa ser renderizado com menos segmentos.`,
+    'Rode na VPS: npx remotion lambda quotas',
+    'Depois solicite aumento em Service Quotas > AWS Lambda > Concurrent executions, ou tente REMOTION_LAMBDA_FRAMES_PER_LAMBDA=9999 para vídeos curtos.',
+  ].join('\n');
 }
 
 async function pathToDataUrl(urlPath: string): Promise<string | null> {
@@ -358,6 +373,7 @@ export async function POST(request: NextRequest) {
               }
 
               if (progress.fatalErrorEncountered) {
+                const rawErrorMessage = progress.errors?.[0]?.message || 'Falha fatal no render Lambda';
                 console.error('[render:lambda] fatal', {
                   renderId: render.renderId,
                   errors: progress.errors,
@@ -366,7 +382,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json(
                   {
                     ok: false,
-                    error: progress.errors?.[0]?.message || 'Falha fatal no render Lambda',
+                    error: friendlyLambdaError(rawErrorMessage),
                     output: JSON.stringify(progress.errors ?? [], null, 2),
                     provider: 'lambda',
                     renderId: render.renderId,
@@ -416,11 +432,12 @@ export async function POST(request: NextRequest) {
             );
           } catch (err: any) {
             console.error('[render:lambda] error', err);
+            const rawErrorMessage = err instanceof Error ? err.message : 'Falha no render Lambda';
             await unlink(tmpFile).catch(() => {});
             return NextResponse.json(
               {
                 ok: false,
-                error: err instanceof Error ? err.message : 'Falha no render Lambda',
+                error: friendlyLambdaError(rawErrorMessage),
                 output: err?.stack || String(err),
                 provider: 'lambda',
               },
