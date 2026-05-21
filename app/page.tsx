@@ -3430,7 +3430,14 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script, props: renderPropsForServer }),
       });
-      const result = await response.json();
+      const responseText = await response.text();
+      let result: any;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        const preview = responseText.trim().slice(0, 500) || `HTTP ${response.status}`;
+        throw new Error(`Resposta inválida do servidor de render: ${preview}`);
+      }
       setRenderLog(result.output ?? '');
       if (!result.ok) {
         setRenderMessage(`Erro: ${result.error ?? 'falha'}`);
