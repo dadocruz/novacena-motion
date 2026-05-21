@@ -2105,15 +2105,19 @@ export default function Home() {
       }
 
       const totalDuration = Number(d.durationSec) || browserDuration || 0;
+      const clipDuration = Math.min(durationSeconds, 40);
+      const shouldTrim = totalDuration > clipDuration + 0.5;
       setBgVideo(d.videoSrc);
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
       setBgTrimTimecodeInput(formatTimecode(0));
       setBgVideoDuration(totalDuration);
-      setBgVideoNeedsTrim(true);
+      setBgVideoNeedsTrim(shouldTrim);
       setBgVideoOriginalName(file.name);
       setVideoUploadMsg(
-        `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início e clique em cortar/otimizar.`
+        shouldTrim
+          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
+          : `Vídeo pronto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha desconhecida';
@@ -2122,6 +2126,15 @@ export default function Home() {
       setUploadingVideo(false);
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
+  }
+
+  function useBgVideoWithoutTrim() {
+    if (!bgVideo) return;
+    setBgVideoNeedsTrim(false);
+    setBgVideoStartSec(0);
+    setBgTrimPreviewTime(0);
+    setBgTrimTimecodeInput(formatTimecode(0));
+    setVideoUploadMsg('Vídeo inteiro aplicado como fundo. Ajuste opacidade, blur e saturação abaixo.');
   }
 
   async function processBgVideoClip() {
@@ -5243,13 +5256,21 @@ return (
                 >
                   {processingVideoClip ? 'Otimizando trecho…' : `Cortar/otimizar ${bgClipDuration}s`}
                 </button>
+                <button
+                  type="button"
+                  onClick={useBgVideoWithoutTrim}
+                  disabled={processingVideoClip || uploadingVideo}
+                  style={smallBtn}
+                >
+                  Usar vídeo inteiro
+                </button>
               </div>
             )}
           </div>
 
-          {bgVideo && !bgVideoNeedsTrim && (
+          {bgVideo && (
             <>
-              {!bgIsImage && bgVideoDuration > 0 && (
+              {!bgIsImage && !bgVideoNeedsTrim && bgVideoDuration > 0 && (
                 <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
                   onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
               )}
