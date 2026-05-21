@@ -5,6 +5,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
+import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,13 @@ const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public',
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
 const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
 const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'application/octet-stream'];
-const FFPROBE_BIN = '/usr/local/bin/ffprobe';
+const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
+  ? '/usr/local/bin/ffprobe'
+  : existsSync('/usr/bin/ffprobe')
+    ? '/usr/bin/ffprobe'
+    : existsSync('/opt/homebrew/bin/ffprobe')
+      ? '/opt/homebrew/bin/ffprobe'
+      : 'ffprobe';
 
 function safeFileName(name: string): string {
   const ext = path.extname(name || '.mp4').toLowerCase() || '.mp4';

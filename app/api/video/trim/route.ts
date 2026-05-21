@@ -3,12 +3,19 @@ import { mkdir, stat, unlink } from 'fs/promises';
 import path from 'path';
 import { spawn } from 'child_process';
 import { z } from 'zod';
+import { existsSync } from 'fs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
-const FFmpeg_BIN = '/usr/local/bin/ffmpeg';
+const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
+  ? '/usr/local/bin/ffmpeg'
+  : existsSync('/usr/bin/ffmpeg')
+    ? '/usr/bin/ffmpeg'
+    : existsSync('/opt/homebrew/bin/ffmpeg')
+      ? '/opt/homebrew/bin/ffmpeg'
+      : 'ffmpeg';
 const SOURCE_PARTS = ['public', 'uploads', 'video-sources'] as const;
 const VIDEO_PARTS = ['public', 'uploads', 'videos'] as const;
 
@@ -81,7 +88,7 @@ export async function POST(req: NextRequest) {
       'format=yuv420p',
     ].join(',');
 
-    await run(FFmpeg_BIN, [
+    await run(FFMPEG_BIN, [
       '-y',
       '-ss', String(parsed.startSec),
       '-i', filePath,
