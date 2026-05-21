@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mkdir, stat, unlink } from 'fs/promises';
-import { createWriteStream } from 'fs';
+import { createWriteStream, existsSync } from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -13,14 +13,13 @@ export const maxDuration = 300;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
-const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v'];
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
+const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'application/octet-stream'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
   : existsSync('/usr/bin/ffprobe')
     ? '/usr/bin/ffprobe'
-    : existsSync('/opt/homebrew/bin/ffprobe')
-      ? '/opt/homebrew/bin/ffprobe'
-      : 'ffprobe';
+    : 'ffprobe';
 
 function safeFileName(name: string): string {
   const ext = path.extname(name || '.mp4').toLowerCase() || '.mp4';

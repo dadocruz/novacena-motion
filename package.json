@@ -29,14 +29,13 @@
     "test:e2e": "playwright test",
     "lambda:validate": "remotion lambda policies validate",
     "lambda:functions": "remotion lambda functions",
-    "lambda:sites": "remotion lambda sites",
-    "lambda:test": "node --env-file=.env.local scripts/test-lambda-render.mjs"
+    "lambda:sites": "remotion lambda sites"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",
     "@google/generative-ai": "^0.24.1",
     "@remotion/cli": "^4.0.459",
-    "@remotion/lambda": "^4.0.464",
+    "@remotion/lambda": "^4.0.459",
     "@remotion/player": "^4.0.459",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",

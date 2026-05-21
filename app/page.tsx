@@ -362,7 +362,11 @@ export default function Home() {
   const [rendering, setRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
-  const [renderOutputUrl, setRenderOutputUrl] = useState('');
+  const [renderEngine, setRenderEngine] = useState<'local' | 'lambda'>(() => {
+    if (typeof window === 'undefined') return 'local';
+    return (localStorage.getItem('novacena:renderEngine') as 'local' | 'lambda') || 'local';
+  });
+  const [lambdaOutputUrl, setLambdaOutputUrl] = useState<string | null>(null);
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [processingVideoClip, setProcessingVideoClip] = useState(false);
@@ -1959,7 +1963,7 @@ export default function Home() {
     const full = d.items.find((g: any) => g.id === item.id);
     const snap = full?.projectSnapshot;
     if (!snap) return;
-    setTemplate(snap.type);
+    setTemplate(snap.template ?? snap.type);
     setReleaseDate(snap.releaseDate ?? '');
     setHeadline(snap.headline ?? '');
     setCta(snap.cta ?? '');
@@ -3458,6 +3462,107 @@ export default function Home() {
     }
   }
 
+  async function renderLambda(label: string) {
+    if (bgVideoNeedsTrim) {
+      setRenderMessage('Corte/otimize o trecho do vídeo antes de renderizar.');
+      return;
+    }
+
+    setRendering(true);
+    setRenderMessage(`☁ Lambda: iniciando ${label}…`);
+    setRenderLog('');
+    setRenderProgress(0);
+    setRenderStatus('rendering');
+    setLambdaOutputUrl(null);
+
+    try {
+      const motionSource = liveProject.motion ?? {};
+      const activeFontIds = new Set(
+        [motionSource.fontHeadline, motionSource.fontDate, motionSource.fontCta, motionSource.fontCta1, motionSource.fontCta2]
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      );
+      const customFontsForRender = Array.isArray(motionSource.customFonts)
+        ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
+        : [];
+      const inputProps = {
+        ...liveProject,
+        motion: { ...motionSource, customFonts: customFontsForRender, previewMode: false },
+        posterFrame: { enabled: posterFrameEnabled, frameSec: posterFrameSec, holdSec: posterHoldSec, outroEnabled: posterOutroEnabled },
+      };
+
+      const startRes = await fetch('/api/render/lambda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, target, inputProps }),
+      });
+      const startData = await startRes.json();
+      if (!startData.ok) {
+        setRenderMessage(`Erro Lambda: ${startData.error}`);
+        setRenderStatus('error');
+        return;
+      }
+
+      const { renderId, bucketName } = startData;
+      setRenderMessage(`☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
+
+      // Poll progress
+      let done = false;
+      const startTime = Date.now();
+      while (!done) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const statusRes = await fetch(`/api/render/lambda/status?renderId=${renderId}&bucketName=${bucketName}`);
+        const status = await statusRes.json();
+
+        if (!status.ok) {
+          setRenderMessage(`Erro ao consultar progresso: ${status.error}`);
+          setRenderStatus('error');
+          return;
+        }
+
+        const pct = status.progress ?? 0;
+        setRenderProgress(pct);
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        setRenderMessage(`☁ Lambda: ${pct}% (${elapsed}s)`);
+
+        if (status.fatalErrorEncountered) {
+          const errMsg = status.errors?.[0] ?? 'Erro fatal no render Lambda';
+          setRenderMessage(`Erro Lambda: ${errMsg}`);
+          setRenderStatus('error');
+          return;
+        }
+
+        if (status.done) {
+          done = true;
+          const totalTime = Math.round((Date.now() - startTime) / 1000);
+          setLambdaOutputUrl(status.outputFile);
+          setRenderMessage(`☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
+          setRenderStatus('done');
+          setRenderProgress(100);
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha';
+      setRenderMessage(`Erro Lambda: ${message}`);
+      setRenderStatus('error');
+    } finally {
+      setRendering(false);
+    }
+  }
+
+  function handleRender() {
+    const label = `${templateLabels[template]} ${target}`;
+    if (renderEngine === 'lambda') {
+      renderLambda(label);
+    } else {
+      renderScript(renderScriptFor(template, target), label);
+    }
+  }
+
+  function switchRenderEngine(engine: 'local' | 'lambda') {
+    setRenderEngine(engine);
+    localStorage.setItem('novacena:renderEngine', engine);
+  }
+
   async function openOutFolder() {
     await fetch('/api/open-out', { method: 'POST' });
   }
@@ -4307,13 +4412,43 @@ return (
           <button onClick={saveToGallery} style={primaryBtn} disabled={!activeSlug}>
             ★ Salvar na galeria
           </button>
+          <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-1)' }}>
+            <button
+              onClick={() => switchRenderEngine('local')}
+              style={{
+                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'var(--bg-2)',
+                color: renderEngine === 'local' ? '#fff' : 'var(--text-3)',
+              }}
+            >
+              Local
+            </button>
+            <button
+              onClick={() => switchRenderEngine('lambda')}
+              style={{
+                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                borderLeft: '1px solid var(--border-1)',
+                background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'var(--bg-2)',
+                color: renderEngine === 'lambda' ? '#fff' : 'var(--text-3)',
+              }}
+            >
+              Lambda (AWS)
+            </button>
+          </div>
           <button
             disabled={rendering}
-            onClick={() => renderScript(renderScriptFor(template, target), `${templateLabels[template]} ${target}`)}
+            onClick={handleRender}
             style={renderBtnStyle}
           >
-            {rendering ? 'Renderizando…' : `Renderizar vídeo (${target})`}
+            {rendering
+              ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
+              : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar vídeo (${target})`}
           </button>
+          {lambdaOutputUrl && renderEngine === 'lambda' && (
+            <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
+              Baixar vídeo Lambda
+            </a>
+          )}
           <button onClick={saveProjectMain} disabled={saving} style={ghostBtnStyle}>
             {saving ? 'Salvando…' : 'Salvar projeto (render)'}
           </button>
@@ -4536,14 +4671,37 @@ return (
             </div>
 
             <div style={renderBarStyle}>
+              <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                  onClick={() => switchRenderEngine('local')}
+                  style={{
+                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'rgba(255,255,255,0.06)',
+                    color: renderEngine === 'local' ? '#fff' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  Local
+                </button>
+                <button
+                  onClick={() => switchRenderEngine('lambda')}
+                  style={{
+                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                    borderLeft: '1px solid rgba(255,255,255,0.1)',
+                    background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'rgba(255,255,255,0.06)',
+                    color: renderEngine === 'lambda' ? '#fff' : 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  Lambda (AWS)
+                </button>
+              </div>
               <button
                 disabled={rendering}
-                onClick={() =>
-                  renderScript(renderScriptFor(template, target), `${templateLabels[template]} ${target}`)
-                }
+                onClick={handleRender}
                 style={renderBtnStyle}
               >
-                {rendering ? 'Renderizando…' : `Renderizar ${target}`}
+                {rendering
+                  ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
+                  : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar ${target}`}
               </button>
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>
@@ -4557,6 +4715,12 @@ return (
                       transition: 'width 0.4s ease' }} />
                   </div>
                 </div>
+              )}
+              {lambdaOutputUrl && renderEngine === 'lambda' && (
+                <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block', color: '#f97316' }}>
+                  Baixar vídeo Lambda
+                </a>
               )}
 
               <button disabled={rendering} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
