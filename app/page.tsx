@@ -5247,9 +5247,9 @@ return (
             )}
           </div>
 
-          {bgVideo && !bgVideoNeedsTrim && (
+          {bgVideo && (
             <>
-              {!bgIsImage && bgVideoDuration > 0 && (
+              {!bgIsImage && !bgVideoNeedsTrim && bgVideoDuration > 0 && (
                 <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
                   onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
               )}
