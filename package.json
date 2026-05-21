@@ -26,7 +26,11 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lambda:validate": "remotion lambda policies validate",
+    "lambda:functions": "remotion lambda functions",
+    "lambda:sites": "remotion lambda sites",
+    "lambda:test": "node --env-file=.env.local scripts/test-lambda-render.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",

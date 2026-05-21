@@ -25,6 +25,12 @@ yarn-error.log*
 
 # Local env files
 .env*.local
+.env.local
+.env.production
+.env*.production
+.env*.save
+*.env.save
+*.save
 
 # Uploads pesados (não commitar)
 public/uploads/audio/*
