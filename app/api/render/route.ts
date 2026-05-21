@@ -11,6 +11,7 @@ const execAsync = promisify(exec);
 const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
+const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 120);
 const LAMBDA_REQUIRED =
   process.env.RENDER_PROVIDER === 'lambda' ||
   (process.env.NODE_ENV === 'production' && process.env.RENDER_PROVIDER !== 'local');
@@ -325,8 +326,8 @@ export async function POST(request: NextRequest) {
               composition: comp.id,
               codec: 'h264',
               imageFormat: 'jpeg',
-              framesPerLambda: 30,
-              maxRetries: 1,
+              framesPerLambda: LAMBDA_FRAMES_PER_LAMBDA,
+              maxRetries: 2,
               privacy: 'public',
               inputProps: renderProps,
             });
