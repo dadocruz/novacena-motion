@@ -4774,9 +4774,9 @@ return (
                     : `✓ Clip otimizado (${bgVideoDuration.toFixed(1)}s)`
                   : bgIsImage
                     ? `✓ Imagem BG${bgVideoOriginalName ? ` · ${bgVideoOriginalName}` : ''}`
-                  : '+ Carregar MP4/MOV/WEBM pesado'}
+                  : '+ Carregar MP4/MOV/WEBM/M4V pesado'}
             </button>
-            <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm"
+            <input ref={videoInputRef} type="file" accept="video/*,.mp4,.mov,.webm,.m4v"
               onChange={handleVideoUpload} style={{ display: 'none' }} />
             <button
               type="button"

@@ -13,8 +13,7 @@ export const maxDuration = 300;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
-const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
-const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'application/octet-stream'];
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
   : existsSync('/usr/bin/ffprobe')
@@ -31,6 +30,11 @@ function safeFileName(name: string): string {
       .replace(/[^a-zA-Z0-9-_]+/g, '-')
       .slice(0, 42) || 'video';
   return `${Date.now()}-${base}${ext}`;
+}
+
+function isAllowedContentType(contentType: string): boolean {
+  if (!contentType || contentType === 'application/octet-stream') return true;
+  return contentType.startsWith('video/');
 }
 
 function runFfprobe(filepath: string): Promise<any> {
@@ -92,19 +96,19 @@ export async function POST(req: NextRequest) {
   try {
     const filenameParam = req.nextUrl.searchParams.get('filename') || 'video.mp4';
     const ext = path.extname(filenameParam).toLowerCase();
-    const contentType = (req.headers.get('content-type') || 'application/octet-stream').split(';')[0];
+    const contentType = (req.headers.get('content-type') || '').split(';')[0].toLowerCase();
     const contentLength = Number(req.headers.get('content-length') || 0);
 
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
-        { ok: false, error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV ou WEBM.` },
+        { ok: false, error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV, WEBM ou M4V.` },
         { status: 400 }
       );
     }
 
-    if (contentType && !ALLOWED_TYPES.includes(contentType)) {
+    if (!isAllowedContentType(contentType)) {
       return NextResponse.json(
-        { ok: false, error: `Tipo não suportado: ${contentType}. Use MP4, MOV ou WEBM.` },
+        { ok: false, error: `Tipo não suportado: ${contentType}. Use MP4, MOV, WEBM ou M4V.` },
         { status: 400 }
       );
     }
