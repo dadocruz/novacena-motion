@@ -379,7 +379,7 @@ export default function Home() {
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
   const [renderEngine, setRenderEngine] = useState<RenderEngine>(() => {
-    if (typeof window === 'undefined') return 'local';
+    if (typeof window === 'undefined') return 'desktop';
     const saved = localStorage.getItem('novacena:renderEngine');
     return saved === 'desktop' || saved === 'local' || saved === 'lambda' ? saved : 'desktop';
   });
@@ -4530,7 +4530,7 @@ return (
                 color: renderEngine === 'local' ? '#fff' : 'var(--text-3)',
               }}
             >
-              Local
+              Servidor
             </button>
             <button
               onClick={() => switchRenderEngine('lambda')}
@@ -4551,7 +4551,7 @@ return (
           >
             {rendering
               ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-              : renderEngine === 'desktop' ? `Exportar pacote (${target})` : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar vídeo (${target})`}
+              : renderEngine === 'desktop' ? `Exportar pacote (${target})` : renderEngine === 'local' ? `Renderizar no servidor (${target})` : `☁ Renderizar vídeo (${target})`}
           </button>
           {lambdaOutputUrl && renderEngine === 'lambda' && (
             <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
@@ -4800,7 +4800,7 @@ return (
                     color: renderEngine === 'local' ? '#fff' : 'rgba(255,255,255,0.4)',
                   }}
                 >
-                  Local
+                  Servidor
                 </button>
                 <button
                   onClick={() => switchRenderEngine('lambda')}
@@ -4821,7 +4821,7 @@ return (
               >
                 {rendering
                   ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-                  : renderEngine === 'desktop' ? `Exportar pacote ${target}` : `${renderEngine === 'lambda' ? '☁ ' : ''}Renderizar ${target}`}
+                  : renderEngine === 'desktop' ? `Exportar pacote ${target}` : renderEngine === 'local' ? `Renderizar no servidor ${target}` : `☁ Renderizar ${target}`}
               </button>
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>

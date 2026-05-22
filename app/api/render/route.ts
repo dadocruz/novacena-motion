@@ -328,7 +328,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        if (!lambdaConfig && LAMBDA_REQUIRED) {
+        if (!forceLocal && !lambdaConfig && LAMBDA_REQUIRED) {
           await unlink(tmpFile).catch(() => {});
           return NextResponse.json(
             {
