@@ -245,7 +245,7 @@ export default function SalesPage() {
                   <p style={planDesc}>{plan.description}</p>
                 </div>
                 <div>
-                  <div style={planPrice}>{formatBRL(price)}</div>
+                  <div style={planPriceStyle}>{formatBRL(price)}</div>
                   <div style={planPriceSub}>
                     {cycle === 'monthly' ? '/mes' : `por ${months} meses`}
                     {selectedCycle.discountLabel ? ` · ${selectedCycle.discountLabel}` : ''}
@@ -843,7 +843,7 @@ const planDesc: CSSProperties = {
   lineHeight: 1.45,
 };
 
-const planPrice: CSSProperties = {
+const planPriceStyle: CSSProperties = {
   fontSize: 36,
   fontWeight: 900,
   color: '#111',
