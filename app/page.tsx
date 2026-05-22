@@ -145,6 +145,10 @@ import {
 
 type RenderEngine = 'desktop' | 'local' | 'lambda';
 
+const SAAS_EXPORT_MODE =
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+
 type LocalAssetRef = {
   id: string;
   kind: 'backgroundVideo' | 'backgroundAudio' | 'overlay';
@@ -379,6 +383,7 @@ export default function Home() {
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
   const [renderEngine, setRenderEngine] = useState<RenderEngine>(() => {
+    if (SAAS_EXPORT_MODE) return 'lambda';
     if (typeof window === 'undefined') return 'desktop';
     const saved = localStorage.getItem('novacena:renderEngine');
     return saved === 'desktop' || saved === 'local' || saved === 'lambda' ? saved : 'desktop';
@@ -3567,16 +3572,28 @@ export default function Home() {
     }
   }
 
+  function formatSaasExportError(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error ?? 'falha');
+    if (/aws|lambda|concurrency|rate exceeded|quota|remotion/i.test(message)) {
+      return 'O serviço de exportação está ocupado no momento. Tente novamente em alguns minutos.';
+    }
+    return message;
+  }
+
   async function renderLambda(label: string) {
     if (bgVideoNeedsTrim) {
       setRenderMessage('⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
       setRenderStatus('error');
-      alert('Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.');
+      alert(
+        SAAS_EXPORT_MODE
+          ? 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
+          : 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.'
+      );
       return;
     }
 
     setRendering(true);
-    setRenderMessage(`☁ Lambda: iniciando ${label}…`);
+    setRenderMessage(SAAS_EXPORT_MODE ? `Preparando exportação de ${label}…` : `☁ Lambda: iniciando ${label}…`);
     setRenderLog('');
     setRenderProgress(0);
     setRenderStatus('rendering');
@@ -3592,13 +3609,17 @@ export default function Home() {
       });
       const startData = await startRes.json();
       if (!startData.ok) {
-        setRenderMessage(`Erro Lambda: ${startData.error}`);
+        setRenderMessage(
+          SAAS_EXPORT_MODE
+            ? `Erro ao exportar: ${formatSaasExportError(startData.error)}`
+            : `Erro Lambda: ${startData.error}`
+        );
         setRenderStatus('error');
         return;
       }
 
       const { renderId, bucketName } = startData;
-      setRenderMessage(`☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
+      setRenderMessage(SAAS_EXPORT_MODE ? `Exportação iniciada (${renderId.slice(0, 8)}…)` : `☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
 
       // Poll progress
       let done = false;
@@ -3609,7 +3630,11 @@ export default function Home() {
         const status = await statusRes.json();
 
         if (!status.ok) {
-          setRenderMessage(`Erro ao consultar progresso: ${status.error}`);
+          setRenderMessage(
+            SAAS_EXPORT_MODE
+              ? `Erro ao consultar progresso: ${formatSaasExportError(status.error)}`
+              : `Erro ao consultar progresso: ${status.error}`
+          );
           setRenderStatus('error');
           return;
         }
@@ -3617,11 +3642,15 @@ export default function Home() {
         const pct = status.progress ?? 0;
         setRenderProgress(pct);
         const elapsed = Math.round((Date.now() - startTime) / 1000);
-        setRenderMessage(`☁ Lambda: ${pct}% (${elapsed}s)`);
+        setRenderMessage(SAAS_EXPORT_MODE ? `Exportando: ${pct}% (${elapsed}s)` : `☁ Lambda: ${pct}% (${elapsed}s)`);
 
         if (status.fatalErrorEncountered) {
           const errMsg = status.errors?.[0] ?? 'Erro fatal no render Lambda';
-          setRenderMessage(`Erro Lambda: ${errMsg}`);
+          setRenderMessage(
+            SAAS_EXPORT_MODE
+              ? `Erro ao exportar: ${formatSaasExportError(errMsg)}`
+              : `Erro Lambda: ${errMsg}`
+          );
           setRenderStatus('error');
           return;
         }
@@ -3630,14 +3659,14 @@ export default function Home() {
           done = true;
           const totalTime = Math.round((Date.now() - startTime) / 1000);
           setLambdaOutputUrl(status.outputFile);
-          setRenderMessage(`☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
+          setRenderMessage(SAAS_EXPORT_MODE ? `${label} exportado em ${totalTime}s ✓` : `☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
           setRenderStatus('done');
           setRenderProgress(100);
         }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha';
-      setRenderMessage(`Erro Lambda: ${message}`);
+      setRenderMessage(SAAS_EXPORT_MODE ? `Erro ao exportar: ${formatSaasExportError(error)}` : `Erro Lambda: ${message}`);
       setRenderStatus('error');
     } finally {
       setRendering(false);
@@ -3646,7 +3675,9 @@ export default function Home() {
 
   function handleRender() {
     const label = `${templateLabels[template]} ${target}`;
-    if (renderEngine === 'desktop') {
+    if (SAAS_EXPORT_MODE) {
+      renderLambda(label);
+    } else if (renderEngine === 'desktop') {
       exportForDesktop(label);
     } else if (renderEngine === 'lambda') {
       renderLambda(label);
@@ -4510,56 +4541,60 @@ return (
           <button onClick={saveToGallery} style={primaryBtn} disabled={!activeSlug}>
             ★ Salvar na galeria
           </button>
-          <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-1)' }}>
-            <button
-              onClick={() => switchRenderEngine('desktop')}
-              style={{
-                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'var(--bg-2)',
-                color: renderEngine === 'desktop' ? '#fff' : 'var(--text-3)',
-              }}
-            >
-              Computador
-            </button>
-            <button
-              onClick={() => switchRenderEngine('local')}
-              style={{
-                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                borderLeft: '1px solid var(--border-1)',
-                background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'var(--bg-2)',
-                color: renderEngine === 'local' ? '#fff' : 'var(--text-3)',
-              }}
-            >
-              Servidor
-            </button>
-            <button
-              onClick={() => switchRenderEngine('lambda')}
-              style={{
-                flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                borderLeft: '1px solid var(--border-1)',
-                background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'var(--bg-2)',
-                color: renderEngine === 'lambda' ? '#fff' : 'var(--text-3)',
-              }}
-            >
-              Lambda (AWS)
-            </button>
-          </div>
+          {!SAAS_EXPORT_MODE && (
+            <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-1)' }}>
+              <button
+                onClick={() => switchRenderEngine('desktop')}
+                style={{
+                  flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'var(--bg-2)',
+                  color: renderEngine === 'desktop' ? '#fff' : 'var(--text-3)',
+                }}
+              >
+                Computador
+              </button>
+              <button
+                onClick={() => switchRenderEngine('local')}
+                style={{
+                  flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  borderLeft: '1px solid var(--border-1)',
+                  background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'var(--bg-2)',
+                  color: renderEngine === 'local' ? '#fff' : 'var(--text-3)',
+                }}
+              >
+                Servidor
+              </button>
+              <button
+                onClick={() => switchRenderEngine('lambda')}
+                style={{
+                  flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  borderLeft: '1px solid var(--border-1)',
+                  background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'var(--bg-2)',
+                  color: renderEngine === 'lambda' ? '#fff' : 'var(--text-3)',
+                }}
+              >
+                Lambda (AWS)
+              </button>
+            </div>
+          )}
           <button
             disabled={rendering}
             onClick={handleRender}
             style={renderBtnStyle}
           >
-            {rendering
+            {SAAS_EXPORT_MODE
+              ? (rendering ? `Exportando… ${renderProgress}%` : `Exportar vídeo (${target})`)
+              : rendering
               ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
               : renderEngine === 'desktop' ? `Exportar pacote (${target})` : renderEngine === 'local' ? `Renderizar no servidor (${target})` : `☁ Renderizar vídeo (${target})`}
           </button>
-          {lambdaOutputUrl && renderEngine === 'lambda' && (
+          {lambdaOutputUrl && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && (
             <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
-              Baixar vídeo Lambda
+              {SAAS_EXPORT_MODE ? 'Baixar vídeo' : 'Baixar vídeo Lambda'}
             </a>
           )}
           <button onClick={saveProjectMain} disabled={saving} style={ghostBtnStyle}>
-            {saving ? 'Salvando…' : 'Salvar projeto (render)'}
+            {saving ? 'Salvando…' : SAAS_EXPORT_MODE ? 'Salvar projeto' : 'Salvar projeto (render)'}
           </button>
           {renderMessage && (
             <div style={{ fontSize: 11, color: renderMessage.startsWith('Erro') ? 'var(--danger)' : 'var(--text-3)' }}>
@@ -4780,46 +4815,50 @@ return (
             </div>
 
             <div style={renderBarStyle}>
-              <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <button
-                  onClick={() => switchRenderEngine('desktop')}
-                  style={{
-                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                    background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'rgba(255,255,255,0.06)',
-                    color: renderEngine === 'desktop' ? '#fff' : 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  Computador
-                </button>
-                <button
-                  onClick={() => switchRenderEngine('local')}
-                  style={{
-                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                    borderLeft: '1px solid rgba(255,255,255,0.1)',
-                    background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'rgba(255,255,255,0.06)',
-                    color: renderEngine === 'local' ? '#fff' : 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  Servidor
-                </button>
-                <button
-                  onClick={() => switchRenderEngine('lambda')}
-                  style={{
-                    flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
-                    borderLeft: '1px solid rgba(255,255,255,0.1)',
-                    background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'rgba(255,255,255,0.06)',
-                    color: renderEngine === 'lambda' ? '#fff' : 'rgba(255,255,255,0.4)',
-                  }}
-                >
-                  Lambda (AWS)
-                </button>
-              </div>
+              {!SAAS_EXPORT_MODE && (
+                <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <button
+                    onClick={() => switchRenderEngine('desktop')}
+                    style={{
+                      flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      background: renderEngine === 'desktop' ? 'rgba(34,197,94,0.85)' : 'rgba(255,255,255,0.06)',
+                      color: renderEngine === 'desktop' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    Computador
+                  </button>
+                  <button
+                    onClick={() => switchRenderEngine('local')}
+                    style={{
+                      flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      borderLeft: '1px solid rgba(255,255,255,0.1)',
+                      background: renderEngine === 'local' ? 'rgba(168,85,247,0.85)' : 'rgba(255,255,255,0.06)',
+                      color: renderEngine === 'local' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    Servidor
+                  </button>
+                  <button
+                    onClick={() => switchRenderEngine('lambda')}
+                    style={{
+                      flex: 1, padding: '7px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      borderLeft: '1px solid rgba(255,255,255,0.1)',
+                      background: renderEngine === 'lambda' ? 'rgba(249,115,22,0.85)' : 'rgba(255,255,255,0.06)',
+                      color: renderEngine === 'lambda' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    Lambda (AWS)
+                  </button>
+                </div>
+              )}
               <button
                 disabled={rendering}
                 onClick={handleRender}
                 style={renderBtnStyle}
               >
-                {rendering
+                {SAAS_EXPORT_MODE
+                  ? (rendering ? `Exportando… ${renderProgress}%` : `Exportar ${target}`)
+                  : rendering
                   ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
                   : renderEngine === 'desktop' ? `Exportar pacote ${target}` : renderEngine === 'local' ? `Renderizar no servidor ${target}` : `☁ Renderizar ${target}`}
               </button>
@@ -4836,19 +4875,23 @@ return (
                   </div>
                 </div>
               )}
-              {lambdaOutputUrl && renderEngine === 'lambda' && (
+              {lambdaOutputUrl && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && (
                 <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer"
                   style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block', color: '#f97316' }}>
-                  Baixar vídeo Lambda
+                  {SAAS_EXPORT_MODE ? 'Baixar vídeo' : 'Baixar vídeo Lambda'}
                 </a>
               )}
 
-              <button disabled={rendering} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
-                Gerar todos
-              </button>
-              <button onClick={openOutFolder} style={ghostBtnStyle}>
-                Abrir pasta
-              </button>
+              {!SAAS_EXPORT_MODE && (
+                <>
+                  <button disabled={rendering} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
+                    Gerar todos
+                  </button>
+                  <button onClick={openOutFolder} style={ghostBtnStyle}>
+                    Abrir pasta
+                  </button>
+                </>
+              )}
             </div>
             {renderMessage && (
               <div style={{ marginTop: 12, fontSize: 12, color: 'var(--text-2)' }}>{renderMessage}</div>
@@ -4863,7 +4906,7 @@ return (
                 Abrir vídeo renderizado
               </a>
             )}
-            {renderFiles[0] && (
+            {!SAAS_EXPORT_MODE && renderFiles[0] && (
               <a
                 href={`/api/render-files?file=${encodeURIComponent(renderFiles[0].name)}`}
                 download={renderFiles[0].name}
@@ -4872,7 +4915,7 @@ return (
                 Baixar vídeo
               </a>
             )}
-            {renderFiles.length > 0 && (
+            {!SAAS_EXPORT_MODE && renderFiles.length > 0 && (
               <div
                 style={{
                   position: 'relative',
@@ -4984,7 +5027,7 @@ return (
                 </div>
               </div>
             )}
-            {renderLog && (
+            {!SAAS_EXPORT_MODE && renderLog && (
               <details style={{ marginTop: 10, maxWidth: 520 }}>
                 <summary style={{ cursor: 'pointer', color: 'var(--text-3)', fontSize: 12 }}>Log</summary>
                 <pre style={logBoxStyle}>{renderLog.slice(-3000)}</pre>
