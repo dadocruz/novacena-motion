@@ -522,7 +522,7 @@ const MONO = '"SF Mono", "Fira Code", Menlo, monospace';
 const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 const W = 'min(1200px, calc(100% - 48px))';
 
-const page: CSSProperties = { minHeight: '100dvh', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS };
+const page: CSSProperties = { height: '100%', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS };
 
 /* ── Nav ── */
 const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: W, margin: '0 auto', height: 64, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
