@@ -1,14 +1,28 @@
 'use client';
 
-import { type CSSProperties, FormEvent, useState } from 'react';
+import { type CSSProperties, FormEvent, useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nextPath, setNextPath] = useState('/');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mode') === 'signup') setMode('signup');
+    const next = params.get('next');
+    if (next?.startsWith('/')) setNextPath(next);
+    const errorCode = params.get('error');
+    if (errorCode === 'google_not_configured') {
+      setError('Login com Google ainda não está configurado no servidor.');
+    } else if (errorCode === 'google_failed') {
+      setError('Não foi possível entrar com Google. Tente novamente.');
+    }
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -25,7 +39,7 @@ export default function LoginPage() {
         setError(data.error || 'Não foi possível entrar.');
         return;
       }
-      window.location.href = '/';
+      window.location.href = nextPath;
     } catch {
       setError('Não foi possível entrar.');
     } finally {
@@ -89,7 +103,7 @@ export default function LoginPage() {
         </div>
 
         <a
-          href="/api/auth/google/start?next=/"
+          href={`/api/auth/google/start?next=${encodeURIComponent(nextPath)}`}
           style={{
             height: 44,
             borderRadius: 8,
