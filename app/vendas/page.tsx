@@ -193,9 +193,9 @@ export default function SalesPage() {
         <div style={logosRow}>
           {[
             { name: 'Spotify', src: '/logos/spotify/logo-color.png' },
-            { name: 'Apple Music', src: '/logos/apple-music/logo-color.png' },
+            { name: 'Apple Music', src: '/logos/apple-music/logo-white.png' },
             { name: 'YouTube Music', src: '/logos/youtube-music/logo-color.png' },
-            { name: 'Deezer', src: '/logos/deezer/logo-color.png' },
+            { name: 'Deezer', src: '/logos/deezer/logo-white.png' },
           ].map((p) => (
             <img key={p.name} src={p.src} alt={p.name} style={logoImg} />
           ))}
@@ -231,8 +231,7 @@ export default function SalesPage() {
         <div style={stepsGrid}>
           {steps.map((s) => (
             <div key={s.n} style={stepCard}>
-              <div style={stepVisual} />
-              <div style={stepMeta}>
+              <div style={stepHeader}>
                 <span style={stepN}>{s.n}</span>
                 <span style={stepLabel}>{s.label}</span>
               </div>
@@ -525,7 +524,7 @@ const W = 'min(1200px, calc(100% - 48px))';
 const page: CSSProperties = { height: '100%', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS };
 
 /* ── Nav ── */
-const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: W, margin: '0 auto', height: 64, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
+const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, margin: '0 auto', height: 64, padding: '0 24px', background: 'rgba(8,10,15,0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
 const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' };
 const navPill: CSSProperties = { display: 'flex', gap: 2, padding: '5px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
 const navItem: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 999 };
@@ -552,6 +551,7 @@ const hero: CSSProperties = { width: W, margin: '0 auto', padding: '80px 0 60px'
 const heroText: CSSProperties = { display: 'grid', gap: 26 };
 const heroSub: CSSProperties = { margin: 0, fontSize: 17, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7, maxWidth: 480 };
 const heroBtns: CSSProperties = { display: 'flex', gap: 12, flexWrap: 'wrap' };
+const heroVisual: CSSProperties = { display: 'grid', alignItems: 'center' };
 
 /* Hero video */
 const videoWrapper: CSSProperties = { position: 'relative', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0c0e14', aspectRatio: '16 / 9' };
@@ -590,14 +590,13 @@ const painItem: CSSProperties = { padding: '24px 0', borderTop: '1px solid rgba(
 const painTextStyle: CSSProperties = { margin: 0, fontSize: 'clamp(16px, 1.8vw, 20px)', color: '#e06c6c', lineHeight: 1.5, fontWeight: 500 };
 
 /* ── Steps ── */
-const stepsGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginTop: 16 };
-const stepCard: CSSProperties = { display: 'grid', gap: 14 };
-const stepVisual: CSSProperties = { height: 200, borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' };
-const stepMeta: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 };
-const stepN: CSSProperties = { fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: 'rgba(255,255,255,0.25)' };
-const stepLabel: CSSProperties = { fontFamily: MONO, fontSize: 11, fontWeight: 700, color: '#5eead4', letterSpacing: '0.08em', padding: '4px 10px', borderRadius: 4, border: '1px solid rgba(94,234,212,0.15)', background: 'rgba(94,234,212,0.06)' };
-const stepTitle: CSSProperties = { margin: 0, fontSize: 20, fontWeight: 700, color: '#fff' };
-const stepDesc: CSSProperties = { margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.38)', lineHeight: 1.65 };
+const stepsGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24, marginTop: 16 };
+const stepCard: CSSProperties = { display: 'grid', gap: 16, padding: '32px 28px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' };
+const stepHeader: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12 };
+const stepN: CSSProperties = { fontFamily: SERIF, fontStyle: 'italic', fontSize: 28, color: 'rgba(255,255,255,0.18)', lineHeight: 1 };
+const stepLabel: CSSProperties = { fontFamily: MONO, fontSize: 11, fontWeight: 700, color: '#5eead4', letterSpacing: '0.08em', padding: '5px 12px', borderRadius: 6, border: '1px solid rgba(94,234,212,0.15)', background: 'rgba(94,234,212,0.06)' };
+const stepTitle: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 700, color: '#fff' };
+const stepDesc: CSSProperties = { margin: 0, fontSize: 15, color: 'rgba(255,255,255,0.42)', lineHeight: 1.7 };
 
 /* ── For who ── */
 const forGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 48, marginTop: 24 };
