@@ -176,6 +176,18 @@ type SaasUserSummary = {
   billingCycle?: string;
 };
 
+type PixPayment = {
+  type: 'pix';
+  key: string;
+  name: string;
+  whatsapp?: string;
+  amountBRL: number;
+  planName: string;
+  cycle: BillingCycle;
+  renders: number;
+  reference: string;
+};
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
@@ -399,6 +411,7 @@ export default function Home() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeCycle, setUpgradeCycle] = useState<BillingCycle>('monthly');
   const [upgradeMessage, setUpgradeMessage] = useState('');
+  const [upgradePixPayment, setUpgradePixPayment] = useState<PixPayment | null>(null);
   const [loadingUpgradePlan, setLoadingUpgradePlan] = useState<string | null>(null);
   const [renderEngine, setRenderEngine] = useState<RenderEngine>(() => {
     if (SAAS_EXPORT_MODE) return 'lambda';
@@ -3614,6 +3627,7 @@ export default function Home() {
   async function chooseUpgradePlan(planId: string) {
     setLoadingUpgradePlan(planId);
     setUpgradeMessage('');
+    setUpgradePixPayment(null);
     try {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
@@ -3627,6 +3641,11 @@ export default function Home() {
       }
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
+        return;
+      }
+      if (data.payment?.type === 'pix') {
+        setUpgradePixPayment(data.payment);
+        setUpgradeMessage('');
         return;
       }
       if (data.manual && data.user) {
@@ -6274,6 +6293,42 @@ return (
               {upgradeMessage && (
                 <div style={{ padding: 12, borderRadius: 8, background: 'rgba(248,113,113,0.14)', color: '#fca5a5', fontSize: 13 }}>
                   {upgradeMessage}
+                </div>
+              )}
+
+              {upgradePixPayment && (
+                <div style={{ display: 'grid', gap: 10, padding: 14, borderRadius: 10, border: '1px solid rgba(112,224,177,0.34)', background: 'rgba(112,224,177,0.10)' }}>
+                  <div>
+                    <div style={{ color: '#70e0b1', fontSize: 11, fontWeight: 950, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Pix para liberar agora
+                    </div>
+                    <strong style={{ display: 'block', marginTop: 4, fontSize: 18 }}>
+                      {formatBRL(upgradePixPayment.amountBRL)} · {upgradePixPayment.planName} · {upgradePixPayment.renders} renders
+                    </strong>
+                    <span style={{ display: 'block', marginTop: 4, color: 'rgba(255,255,255,0.62)', fontSize: 13 }}>
+                      Envie o comprovante com o email da conta para liberarmos os renders.
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <code style={{ flex: '1 1 260px', padding: 11, borderRadius: 8, background: '#090a0c', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', wordBreak: 'break-all' }}>
+                      {upgradePixPayment.key}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => navigator.clipboard?.writeText(upgradePixPayment.key)}
+                      style={{ border: 'none', borderRadius: 8, padding: '0 14px', background: '#70e0b1', color: '#07110c', fontWeight: 950, cursor: 'pointer' }}
+                    >
+                      Copiar Pix
+                    </button>
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.54)', fontSize: 12 }}>
+                    Favorecido: {upgradePixPayment.name} · Identificação: {upgradePixPayment.reference}
+                  </div>
+                  {upgradePixPayment.whatsapp && (
+                    <a href={`https://wa.me/${upgradePixPayment.whatsapp.replace(/\D/g, '')}`} style={{ color: '#70e0b1', fontWeight: 900, textDecoration: 'none', fontSize: 13 }}>
+                      Enviar comprovante no WhatsApp
+                    </a>
+                  )}
                 </div>
               )}
 

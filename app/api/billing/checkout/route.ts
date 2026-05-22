@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkoutEnvName, SAAS_PLANS, type BillingCycle } from '../../../../lib/saasPlans';
+import { checkoutEnvName, planPrice, SAAS_PLANS, type BillingCycle } from '../../../../lib/saasPlans';
 import { getSaasUserById, SAAS_COOKIE_NAME, updateUserPlan, verifySessionToken } from '../../../../lib/saasUsers';
 
 export const runtime = 'nodejs';
@@ -42,9 +42,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, manual: true, user: updated });
   }
 
+  const pixKey = process.env.NOVACENA_PIX_KEY;
+  if (pixKey) {
+    const months = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
+    return NextResponse.json({
+      ok: true,
+      payment: {
+        type: 'pix',
+        key: pixKey,
+        name: process.env.NOVACENA_PIX_NAME || 'NovaCena',
+        whatsapp: process.env.NOVACENA_PIX_WHATSAPP || '',
+        amountBRL: planPrice(plan, cycle),
+        planName: plan.name,
+        cycle,
+        renders: plan.includedTokens * months,
+        reference: `${user.email} - ${plan.name} ${cycle}`,
+      },
+    });
+  }
+
   return NextResponse.json({
     ok: false,
-    error: 'Checkout ainda não configurado. Defina o link de pagamento deste plano no servidor.',
-    env: checkoutEnvName(plan.id, cycle),
+    error: 'Pagamento Pix ainda não configurado. Defina NOVACENA_PIX_KEY no servidor.',
+    env: 'NOVACENA_PIX_KEY',
   }, { status: 400 });
 }

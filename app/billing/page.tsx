@@ -18,6 +18,18 @@ type BillingUser = {
   billingCycle: BillingCycle | null;
 };
 
+type PixPayment = {
+  type: 'pix';
+  key: string;
+  name: string;
+  whatsapp?: string;
+  amountBRL: number;
+  planName: string;
+  cycle: BillingCycle;
+  renders: number;
+  reference: string;
+};
+
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }
@@ -28,6 +40,7 @@ export default function BillingPage() {
   const [user, setUser] = useState<BillingUser | null>(null);
   const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [message, setMessage] = useState('');
+  const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
   useEffect(() => {
@@ -53,6 +66,7 @@ export default function BillingPage() {
   async function choosePlan(planId: string) {
     setLoadingPlan(planId);
     setMessage('');
+    setPixPayment(null);
     try {
       const response = await fetch('/api/billing/checkout', {
         method: 'POST',
@@ -66,6 +80,11 @@ export default function BillingPage() {
       }
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
+        return;
+      }
+      if (data.payment?.type === 'pix') {
+        setPixPayment(data.payment);
+        setMessage('');
         return;
       }
       if (data.manual && data.user) {
@@ -122,6 +141,41 @@ export default function BillingPage() {
           <div style={{ padding: 12, borderRadius: 8, background: 'rgba(248,113,113,0.12)', color: '#fca5a5' }}>
             {message}
           </div>
+        )}
+
+        {pixPayment && (
+          <section style={{ display: 'grid', gap: 14, padding: 18, borderRadius: 12, border: '1px solid rgba(112,224,177,0.34)', background: 'rgba(112,224,177,0.10)' }}>
+            <div>
+              <div style={{ color: '#70e0b1', fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Pagamento Pix</div>
+              <h2 style={{ margin: '6px 0 0', fontSize: 24 }}>Pague {formatBRL(pixPayment.amountBRL)} para liberar {pixPayment.renders} renders</h2>
+              <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.68)' }}>
+                Plano {pixPayment.planName}. Depois do pagamento, envie o comprovante com o email da conta para liberarmos os renders.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gap: 8 }}>
+              <span style={{ color: 'rgba(255,255,255,0.52)', fontSize: 12, fontWeight: 800 }}>Chave Pix</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <code style={{ flex: '1 1 280px', padding: 12, borderRadius: 8, background: '#090a0c', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', wordBreak: 'break-all' }}>
+                  {pixPayment.key}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard?.writeText(pixPayment.key)}
+                  style={{ border: 'none', borderRadius: 8, padding: '0 16px', background: '#70e0b1', color: '#07110c', fontWeight: 900 }}
+                >
+                  Copiar Pix
+                </button>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.58)', fontSize: 13 }}>
+                Favorecido: {pixPayment.name} · Identificação: {pixPayment.reference}
+              </div>
+              {pixPayment.whatsapp && (
+                <a href={`https://wa.me/${pixPayment.whatsapp.replace(/\D/g, '')}`} style={{ color: '#70e0b1', fontWeight: 900, textDecoration: 'none' }}>
+                  Enviar comprovante no WhatsApp
+                </a>
+              )}
+            </div>
+          </section>
         )}
 
         <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
