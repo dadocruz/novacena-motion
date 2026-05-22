@@ -29,7 +29,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monthlyPriceBRL: 97,
     includedTokens: 30,
     maxVideoSeconds: 20,
-    features: ['30 tokens por ciclo', 'Templates essenciais', 'Exportação em story e feed'],
+    features: ['30 renders por ciclo', 'Templates essenciais', 'Exportação em story e feed'],
   },
   {
     id: 'pro',
@@ -38,7 +38,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monthlyPriceBRL: 197,
     includedTokens: 100,
     maxVideoSeconds: 40,
-    features: ['100 tokens por ciclo', 'Todos os templates', 'Galeria de projetos', 'Uploads pesados'],
+    features: ['100 renders por ciclo', 'Todos os templates', 'Galeria de projetos', 'Uploads pesados'],
   },
   {
     id: 'studio',
@@ -47,7 +47,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monthlyPriceBRL: 497,
     includedTokens: 350,
     maxVideoSeconds: 60,
-    features: ['350 tokens por ciclo', 'Prioridade na fila', 'Biblioteca avançada', 'Suporte de implantação'],
+    features: ['350 renders por ciclo', 'Prioridade na fila', 'Biblioteca avançada', 'Suporte de implantação'],
   },
 ];
 

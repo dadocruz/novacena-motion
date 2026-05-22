@@ -177,7 +177,7 @@ export default function LoginPage() {
         </button>
 
         <a href="/billing" style={{ color: 'rgba(255,255,255,0.56)', fontSize: 13, textAlign: 'center' }}>
-          Ver planos e tokens
+          Ver planos e renders
         </a>
       </form>
     </main>

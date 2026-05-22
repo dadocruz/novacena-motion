@@ -4357,7 +4357,7 @@ return (
           {SAAS_EXPORT_MODE && (
             <>
               <button onClick={() => { window.location.href = '/billing'; }} style={topTab}>
-                {saasUser ? `${saasUser.tokens} tokens` : 'Planos'}
+                {saasUser ? `${saasUser.tokens} ${saasUser.tokens === 1 ? 'render' : 'renders'}` : 'Planos'}
               </button>
               <button onClick={logoutSaas} style={topTab}>
                 Sair

@@ -24,7 +24,7 @@ export async function POST(
   const billingCycle = isBillingCycle(body.billingCycle) ? body.billingCycle : undefined;
 
   if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ ok: false, error: 'Informe uma quantidade de tokens maior que zero.' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'Informe uma quantidade de renders maior que zero.' }, { status: 400 });
   }
 
   if (planId && !SAAS_PLANS.some((plan) => plan.id === planId)) {

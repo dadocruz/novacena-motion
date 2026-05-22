@@ -108,7 +108,7 @@ export default function SalesPage() {
                     {selectedCycle.discountLabel ? ` · ${selectedCycle.discountLabel}` : ''}
                   </div>
                 </div>
-                <div style={tokenLine}>{plan.includedTokens * months} tokens no ciclo</div>
+                <div style={tokenLine}>{plan.includedTokens * months} renders no ciclo</div>
                 <ul style={featureList}>
                   {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
                   <li>Vídeos até {plan.maxVideoSeconds}s</li>

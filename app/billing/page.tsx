@@ -87,7 +87,7 @@ export default function BillingPage() {
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.46)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
               NovaCena
             </div>
-            <h1 style={{ margin: '8px 0 0', fontSize: 34 }}>Planos e tokens</h1>
+            <h1 style={{ margin: '8px 0 0', fontSize: 34 }}>Planos e renders</h1>
           </div>
           <a href="/" style={{ color: '#fff', textDecoration: 'none', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 8, padding: '10px 14px' }}>
             Voltar ao estúdio
@@ -153,7 +153,7 @@ export default function BillingPage() {
                   </div>
                 </div>
                 <div style={{ color: '#fbbf24', fontWeight: 800 }}>
-                  {plan.includedTokens * months} tokens no ciclo
+                  {plan.includedTokens * months} renders no ciclo
                 </div>
                 <ul style={{ margin: 0, paddingLeft: 18, color: 'rgba(255,255,255,0.72)', display: 'grid', gap: 8 }}>
                   {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
