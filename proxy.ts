@@ -21,19 +21,44 @@ function isPublicPath(pathname: string) {
   return false;
 }
 
-async function sha256(value: string) {
-  const bytes = new TextEncoder().encode(value);
-  const hash = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(hash))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
+function base64url(bytes: ArrayBuffer) {
+  const chars = String.fromCharCode(...new Uint8Array(bytes));
+  return btoa(chars).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
-async function expectedSessionToken() {
-  const password = process.env.NOVACENA_SAAS_PASSWORD;
-  if (!password) return null;
-  const secret = process.env.NOVACENA_AUTH_SECRET || password;
-  return sha256(`${password}:${secret}`);
+async function hmac(payload: string) {
+  const secret = process.env.NOVACENA_AUTH_SECRET || process.env.NOVACENA_SAAS_PASSWORD || 'novacena-dev-secret';
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return base64url(signature);
+}
+
+function parsePayload(encodedPayload: string) {
+  try {
+    const normalized = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const json = atob(padded);
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+async function isValidSession(token?: string) {
+  if (!token) return false;
+  const [encodedPayload, signature] = token.split('.');
+  if (!encodedPayload || !signature) return false;
+  const expected = await hmac(encodedPayload);
+  if (signature !== expected) return false;
+  const payload = parsePayload(encodedPayload);
+  if (!payload?.exp) return false;
+  return payload.exp > Math.floor(Date.now() / 1000);
 }
 
 export async function proxy(req: NextRequest) {
@@ -42,9 +67,8 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (isPublicPath(pathname)) return NextResponse.next();
 
-  const expectedToken = await expectedSessionToken();
   const currentToken = req.cookies.get(COOKIE_NAME)?.value;
-  if (expectedToken && currentToken === expectedToken) {
+  if (await isValidSession(currentToken)) {
     return NextResponse.next();
   }
 

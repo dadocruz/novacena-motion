@@ -163,11 +163,20 @@ type LocalAssetRef = {
   renderReadySrc?: string;
 };
 
+type SaasUserSummary = {
+  email: string;
+  name: string;
+  tokens: number;
+  planId?: string;
+  billingCycle?: string;
+};
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
 export default function Home() {
   const [isClientReady, setIsClientReady] = useState(false);
+  const [saasUser, setSaasUser] = useState<SaasUserSummary | null>(null);
   const [activeStudioTool, setActiveStudioTool] = useState<StudioToolId>('cover');
   const [activeTextRole, setActiveTextRole] = useState<FontRole>('headline');
   // ─── ARTISTA ──────────────────────────────────────────────
@@ -651,6 +660,16 @@ export default function Home() {
   // ─── EFEITOS ─────────────────────────────────────────────
   useEffect(() => {
     setIsClientReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!SAAS_EXPORT_MODE) return;
+    fetch('/api/auth/me')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.ok && data.user) setSaasUser(data.user);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -3666,6 +3685,14 @@ export default function Home() {
           setRenderMessage(SAAS_EXPORT_MODE ? `${label} exportado em ${totalTime}s ✓` : `☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
           setRenderStatus('done');
           setRenderProgress(100);
+          if (SAAS_EXPORT_MODE) {
+            fetch('/api/auth/me')
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.ok && data.user) setSaasUser(data.user);
+              })
+              .catch(() => {});
+          }
         }
       }
     } catch (error) {
@@ -4277,9 +4304,14 @@ return (
             Galeria {gallery.length > 0 && `(${gallery.length})`}
           </button>
           {SAAS_EXPORT_MODE && (
-            <button onClick={logoutSaas} style={topTab}>
-              Sair
-            </button>
+            <>
+              <button onClick={() => { window.location.href = '/billing'; }} style={topTab}>
+                {saasUser ? `${saasUser.tokens} tokens` : 'Planos'}
+              </button>
+              <button onClick={logoutSaas} style={topTab}>
+                Sair
+              </button>
+            </>
           )}
         </div>
       </header>

@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { consumeUserTokens, getSaasUserById, SAAS_COOKIE_NAME, verifySessionToken } from '../../../../lib/saasUsers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
+
+const SAAS_MODE =
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
 
 const COMPOSITION_MAP: Record<string, string> = {
   available_now: 'AvailableNow',
@@ -157,6 +162,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let saasUserId: string | null = null;
+    if (SAAS_MODE) {
+      const session = verifySessionToken(req.cookies.get(SAAS_COOKIE_NAME)?.value);
+      if (!session) {
+        return NextResponse.json(
+          { ok: false, error: 'Entre na sua conta para exportar.' },
+          { status: 401 }
+        );
+      }
+      const user = await getSaasUserById(session.sub);
+      if (!user) {
+        return NextResponse.json(
+          { ok: false, error: 'Conta não encontrada. Entre novamente.' },
+          { status: 401 }
+        );
+      }
+      if (user.tokens < 1) {
+        return NextResponse.json(
+          { ok: false, error: 'Você não tem tokens suficientes para exportar. Acesse Planos e Tokens para comprar mais.' },
+          { status: 402 }
+        );
+      }
+      saasUserId = user.id;
+    }
+
     // Upload local assets to S3 so Lambda workers can access them
     uploadCache.clear();
     const resolvedProps = inputProps
@@ -186,6 +216,10 @@ export async function POST(req: NextRequest) {
       maxRetries: 2,
       framesPerLambda: optimalFramesPerLambda,
     });
+
+    if (saasUserId) {
+      await consumeUserTokens(saasUserId, 1);
+    }
 
     return NextResponse.json({
       ok: true,
