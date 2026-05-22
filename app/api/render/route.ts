@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
       const parsed = ScriptRenderSchema.parse(body);
       const script = parsed.script.trim();
       const props = body.props ?? null;
+      const forceLocal = body.forceLocal === true;
 
       if (!ALLOWED_RENDER_SCRIPTS.has(script)) {
         return NextResponse.json(
@@ -314,7 +315,7 @@ export async function POST(request: NextRequest) {
           ? outputFileForRender.replace(/\.mp4$/, `.normal.mp4`)
           : outputFileForRender;
 
-        const lambdaConfig = getLambdaConfig();
+        const lambdaConfig = forceLocal ? null : getLambdaConfig();
         if (posterEnabled && lambdaConfig) {
           await unlink(tmpFile).catch(() => {});
           return NextResponse.json(

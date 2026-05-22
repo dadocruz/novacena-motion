@@ -3521,7 +3521,9 @@ export default function Home() {
 
   async function renderScript(script: string, label: string) {
     if (bgVideoNeedsTrim) {
-      setRenderMessage('Corte/otimize o trecho do vídeo antes de renderizar.');
+      setRenderMessage('⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
+      setRenderStatus('error');
+      alert('Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
       return;
     }
 
@@ -3535,7 +3537,7 @@ export default function Home() {
       const response = await fetch('/api/render', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script, props: renderPropsForServer }),
+        body: JSON.stringify({ script, props: renderPropsForServer, forceLocal: true }),
       });
       const responseText = await response.text();
       let result: any;
@@ -3567,7 +3569,9 @@ export default function Home() {
 
   async function renderLambda(label: string) {
     if (bgVideoNeedsTrim) {
-      setRenderMessage('Corte/otimize o trecho do vídeo antes de renderizar.');
+      setRenderMessage('⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
+      setRenderStatus('error');
+      alert('Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.');
       return;
     }
 
