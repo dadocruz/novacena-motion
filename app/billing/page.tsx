@@ -99,8 +99,8 @@ export default function BillingPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', padding: 28, background: '#0a0a0c', color: '#fff', overflow: 'auto' }}>
-      <div style={{ maxWidth: 1180, margin: '0 auto', display: 'grid', gap: 24 }}>
+    <main style={{ height: '100dvh', padding: 'clamp(16px, 2vw, 28px)', background: '#0a0a0c', color: '#fff', overflow: 'auto' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gap: 24 }}>
         <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.46)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>

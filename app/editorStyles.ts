@@ -5,6 +5,9 @@ export const topbarStyle: React.CSSProperties = {
   background: 'var(--bg-1)', borderBottom: '1px solid var(--border-1)',
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   padding: '0 22px', gap: 12,
+  minWidth: 0,
+  overflowX: 'auto',
+  overflowY: 'hidden',
 };
 
 export const separator: React.CSSProperties = {
@@ -38,7 +41,7 @@ export const rightSidebar: React.CSSProperties = {
 
 export const centerStyle: React.CSSProperties = {
   gridArea: 'center', background: 'var(--bg-0)',
-  padding: '24px 30px',
+  padding: 'clamp(14px, 1.6vw, 28px)',
   display: 'flex', flexDirection: 'column',
   alignItems: 'center', gap: 16,
   overflowY: 'auto', overflowX: 'hidden',

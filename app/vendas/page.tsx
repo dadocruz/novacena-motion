@@ -39,9 +39,9 @@ export default function SalesPage() {
             <a href="/login?mode=signup&next=/" style={secondaryCta}>Testar com 1 render</a>
           </div>
           <div style={proofGrid}>
-            <div><strong>Story + feed</strong><span>formatos sociais</span></div>
-            <div><strong>1 render</strong><span>demonstração grátis</span></div>
-            <div><strong>100% online</strong><span>sem instalar nada</span></div>
+            <div style={proofItem}><strong>Story + feed</strong><span>formatos sociais</span></div>
+            <div style={proofItem}><strong>1 render</strong><span>demonstração grátis</span></div>
+            <div style={proofItem}><strong>100% online</strong><span>sem instalar nada</span></div>
           </div>
         </div>
         <div style={previewPanel}>
@@ -53,8 +53,8 @@ export default function SalesPage() {
             </div>
           </div>
           <div style={previewStats}>
-            <div><strong>Exportação</strong><span>via nuvem</span></div>
-            <div><strong>Templates</strong><span>campanhas prontas</span></div>
+            <div style={proofItem}><strong>Exportação</strong><span>via nuvem</span></div>
+            <div style={proofItem}><strong>Templates</strong><span>campanhas prontas</span></div>
           </div>
         </div>
       </section>
@@ -153,10 +153,10 @@ export default function SalesPage() {
 }
 
 const page: CSSProperties = {
-  minHeight: '100vh',
+  height: '100dvh',
   background: '#090a0c',
   color: '#f7f4ef',
-  overflowX: 'hidden',
+  overflow: 'auto',
 };
 
 const nav: CSSProperties = {
@@ -164,7 +164,7 @@ const nav: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
 };
 
@@ -191,11 +191,11 @@ const navCta: CSSProperties = {
 };
 
 const hero: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
-  minHeight: 'calc(100vh - 120px)',
+  minHeight: 'min(760px, calc(100dvh - 120px))',
   display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1.02fr) minmax(300px, 0.78fr)',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(420px, 100%), 1fr))',
   gap: 36,
   alignItems: 'center',
   padding: '24px 0 58px',
@@ -261,6 +261,14 @@ const proofGrid: CSSProperties = {
   maxWidth: 660,
 };
 
+const proofItem: CSSProperties = {
+  display: 'grid',
+  gap: 3,
+  alignContent: 'start',
+  color: 'rgba(255,255,255,0.72)',
+  lineHeight: 1.12,
+};
+
 const previewPanel: CSSProperties = {
   display: 'grid',
   gap: 14,
@@ -268,7 +276,7 @@ const previewPanel: CSSProperties = {
 };
 
 const phoneFrame: CSSProperties = {
-  width: 'min(330px, 100%)',
+  width: 'clamp(250px, 28vw, 360px)',
   aspectRatio: '9 / 16',
   borderRadius: 28,
   padding: 12,
@@ -293,11 +301,11 @@ const previewStats: CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
   gap: 12,
-  width: 'min(330px, 100%)',
+  width: 'clamp(250px, 28vw, 360px)',
 };
 
 const featureBand: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -313,7 +321,7 @@ const featureCard: CSSProperties = {
 };
 
 const conversionBand: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
   display: 'flex',
   justifyContent: 'space-between',
@@ -334,7 +342,7 @@ const conversionTitle: CSSProperties = {
 };
 
 const workflowSection: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
   display: 'grid',
   gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -352,7 +360,7 @@ const workflowCard: CSSProperties = {
 };
 
 const pricingSection: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
   display: 'grid',
   gap: 22,
@@ -479,7 +487,7 @@ const primaryPlanButton: CSSProperties = {
 };
 
 const footer: CSSProperties = {
-  width: 'min(1180px, calc(100% - 32px))',
+  width: 'min(1280px, calc(100% - 32px))',
   margin: '0 auto',
   borderTop: '1px solid rgba(255,255,255,0.1)',
   padding: '24px 0 36px',

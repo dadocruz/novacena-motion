@@ -4215,15 +4215,20 @@ export default function Home() {
 return (
     <main
       style={{
-        height: '100vh',
+        height: '100dvh',
+        width: 'min(100vw, 2240px)',
+        margin: '0 auto',
         overflow: 'hidden',
         display: 'grid',
-        gridTemplateColumns: '380px 1fr 360px',
+        gridTemplateColumns: 'minmax(260px, clamp(300px, 20vw, 420px)) minmax(320px, 1fr) minmax(260px, clamp(300px, 19vw, 420px))',
         gridTemplateRows: '56px 1fr',
         gridTemplateAreas: `
           "topbar topbar topbar"
           "left center right"
         `,
+        background: 'var(--bg-0)',
+        borderLeft: '1px solid var(--border-1)',
+        borderRight: '1px solid var(--border-1)',
       }}
     >
       {/* ─── TOPBAR ─── */}
