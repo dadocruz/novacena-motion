@@ -16,12 +16,13 @@ export async function GET(req: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appOrigin = process.env.NOVACENA_APP_ORIGIN || req.nextUrl.origin;
+  const redirectOrigin = appOrigin.replace(/\/$/, '');
 
   if (!code || !clientId || !clientSecret) {
-    return NextResponse.redirect(new URL('/login?error=google_not_configured', req.nextUrl.origin));
+    return NextResponse.redirect(new URL('/login?error=google_not_configured', redirectOrigin));
   }
 
-  const redirectUri = `${appOrigin}/api/auth/google/callback`;
+  const redirectUri = `${redirectOrigin}/api/auth/google/callback`;
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!tokenResponse.ok) {
-    return NextResponse.redirect(new URL('/login?error=google_failed', req.nextUrl.origin));
+    return NextResponse.redirect(new URL('/login?error=google_failed', redirectOrigin));
   }
 
   const tokenData = await tokenResponse.json();
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
   });
 
   if (!userInfoResponse.ok) {
-    return NextResponse.redirect(new URL('/login?error=google_failed', req.nextUrl.origin));
+    return NextResponse.redirect(new URL('/login?error=google_failed', redirectOrigin));
   }
 
   const googleUser = await userInfoResponse.json() as GoogleUserInfo;
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
     googleSub: googleUser.sub,
   });
 
-  const response = NextResponse.redirect(new URL(next.startsWith('/') ? next : '/', req.nextUrl.origin));
+  const response = NextResponse.redirect(new URL(next.startsWith('/') ? next : '/', redirectOrigin));
   response.cookies.set({
     name: SAAS_COOKIE_NAME,
     value: createSessionToken(user),
