@@ -153,6 +153,21 @@ export async function updateUserPlan(userId: string, patch: { planId: string; bi
   return users[index];
 }
 
+export async function addUserTokens(userId: string, amount: number, patch?: { planId?: string; billingCycle?: BillingCycle }) {
+  const users = await readUsers();
+  const index = users.findIndex((user) => user.id === userId);
+  if (index < 0) return null;
+  users[index] = {
+    ...users[index],
+    planId: patch?.planId ?? users[index].planId,
+    billingCycle: patch?.billingCycle ?? users[index].billingCycle,
+    tokens: users[index].tokens + Math.max(0, Math.floor(amount)),
+    updatedAt: new Date().toISOString(),
+  };
+  await writeUsers(users);
+  return users[index];
+}
+
 export async function consumeUserTokens(userId: string, amount = 1) {
   const users = await readUsers();
   const index = users.findIndex((user) => user.id === userId);

@@ -6,7 +6,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 
-export const DATA_DIR = path.join(process.cwd(), 'data');
+export const DATA_DIR = process.env.NOVACENA_DATA_DIR || path.join(process.cwd(), 'data');
 const ARTISTS_FILE = path.join(DATA_DIR, 'artists.json');
 const USER_FONTS_FILE = path.join(DATA_DIR, 'user-fonts.json');
 const OVERLAYS_FILE = path.join(DATA_DIR, 'overlays.json');
