@@ -72,6 +72,28 @@ export default function SalesPage() {
         ))}
       </section>
 
+      <section style={conversionBand}>
+        <div>
+          <div style={eyebrow}>Feito para vender lançamento</div>
+          <h2 style={conversionTitle}>O produtor vê o template, ajusta em minutos e compra renders para lançar mais rápido.</h2>
+        </div>
+        <a href="/login?mode=signup&next=/" style={primaryCta}>Entrar e testar</a>
+      </section>
+
+      <section style={workflowSection}>
+        {[
+          ['1', 'Escolha um template', 'Comece por modelos prontos para single, pré-save, Spotify, YouTube e marcos de streams.'],
+          ['2', 'Personalize a campanha', 'Troque capa, texto, fundo, logos, overlays e movimento sem abrir After Effects.'],
+          ['3', 'Exporte e compre renders', 'Use o render grátis, veja o resultado e carregue novos pacotes via Pix quando quiser continuar.'],
+        ].map(([number, heading, text]) => (
+          <article key={heading} style={workflowCard}>
+            <strong>{number}</strong>
+            <h3>{heading}</h3>
+            <p>{text}</p>
+          </article>
+        ))}
+      </section>
+
       <section id="planos" style={pricingSection}>
         <div style={sectionHeader}>
           <div>
@@ -288,6 +310,45 @@ const featureCard: CSSProperties = {
   borderRadius: 8,
   padding: 20,
   background: 'rgba(255,255,255,0.045)',
+};
+
+const conversionBand: CSSProperties = {
+  width: 'min(1180px, calc(100% - 32px))',
+  margin: '0 auto',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 20,
+  flexWrap: 'wrap',
+  padding: 24,
+  borderRadius: 8,
+  border: '1px solid rgba(244,211,94,0.34)',
+  background: 'linear-gradient(135deg, rgba(244,211,94,0.12), rgba(112,224,177,0.08))',
+};
+
+const conversionTitle: CSSProperties = {
+  margin: '8px 0 0',
+  maxWidth: 760,
+  fontSize: 28,
+  lineHeight: 1.12,
+};
+
+const workflowSection: CSSProperties = {
+  width: 'min(1180px, calc(100% - 32px))',
+  margin: '0 auto',
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+  gap: 14,
+  padding: '34px 0 22px',
+};
+
+const workflowCard: CSSProperties = {
+  display: 'grid',
+  gap: 8,
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 8,
+  padding: 20,
+  background: '#111318',
 };
 
 const pricingSection: CSSProperties = {

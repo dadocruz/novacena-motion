@@ -3624,6 +3624,12 @@ export default function Home() {
     return message;
   }
 
+  function openUpgradeOffer(message = '') {
+    setUpgradeMessage(message);
+    setUpgradePixPayment(null);
+    setShowUpgradeModal(true);
+  }
+
   async function chooseUpgradePlan(planId: string) {
     setLoadingUpgradePlan(planId);
     setUpgradeMessage('');
@@ -4375,8 +4381,26 @@ return (
           </button>
           {SAAS_EXPORT_MODE && (
             <>
-              <button onClick={() => { window.location.href = '/billing'; }} style={topTab}>
+              <button
+                onClick={() => openUpgradeOffer('Escolha um pacote para carregar renders na sua conta.')}
+                style={{
+                  ...topTab,
+                  borderColor: saasUser && saasUser.tokens <= 3 ? 'rgba(244,211,94,0.62)' : 'rgba(255,255,255,0.12)',
+                  color: saasUser && saasUser.tokens <= 3 ? '#f4d35e' : 'rgba(255,255,255,0.72)',
+                }}
+              >
                 {saasUser ? `${saasUser.tokens} ${saasUser.tokens === 1 ? 'render' : 'renders'}` : 'Planos'}
+              </button>
+              <button
+                onClick={() => openUpgradeOffer('Compre renders agora e continue criando campanhas sem interromper o fluxo.')}
+                style={{
+                  ...topTabActive,
+                  background: 'linear-gradient(90deg, #b855ff, #ff9244)',
+                  color: '#fff',
+                  borderColor: 'transparent',
+                }}
+              >
+                Comprar renders
               </button>
               <button onClick={logoutSaas} style={topTab}>
                 Sair
@@ -4654,6 +4678,49 @@ return (
             backdropFilter: 'blur(14px)',
           }}
         >
+          {SAAS_EXPORT_MODE && (
+            <div
+              style={{
+                display: 'grid',
+                gap: 8,
+                padding: 12,
+                borderRadius: 10,
+                border: '1px solid rgba(244,211,94,0.34)',
+                background: 'linear-gradient(135deg, rgba(244,211,94,0.13), rgba(184,85,255,0.12))',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div>
+                  <div style={{ color: '#f4d35e', fontSize: 10, fontWeight: 950, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    Renders na conta
+                  </div>
+                  <div style={{ marginTop: 3, color: '#fff', fontSize: 17, fontWeight: 950 }}>
+                    {saasUser ? `${saasUser.tokens} ${saasUser.tokens === 1 ? 'render' : 'renders'}` : 'Pacotes ativos'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openUpgradeOffer('Escolha um plano e pague via Pix para liberar mais renders.')}
+                  style={{
+                    border: 'none',
+                    borderRadius: 8,
+                    background: '#f4d35e',
+                    color: '#111',
+                    padding: '9px 11px',
+                    fontSize: 12,
+                    fontWeight: 950,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Comprar
+                </button>
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.64)', fontSize: 11, lineHeight: 1.35 }}>
+                Gostou do template? Carregue renders antes do lançamento e exporte story, feed e variações sem esperar.
+              </div>
+            </div>
+          )}
           {presetExportButtonV1}
           <button onClick={saveToGallery} style={primaryBtn} disabled={!activeSlug}>
             ★ Salvar na galeria
@@ -4705,6 +4772,20 @@ return (
               ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
               : renderEngine === 'desktop' ? `Exportar pacote (${target})` : renderEngine === 'local' ? `Renderizar no servidor (${target})` : `☁ Renderizar vídeo (${target})`}
           </button>
+          {SAAS_EXPORT_MODE && (
+            <button
+              type="button"
+              onClick={() => openUpgradeOffer('Pacotes maiores deixam sua equipe pronta para vários lançamentos.')}
+              style={{
+                ...ghostBtnStyle,
+                borderColor: 'rgba(244,211,94,0.28)',
+                color: '#f4d35e',
+                fontWeight: 900,
+              }}
+            >
+              Ver pacotes de renders
+            </button>
+          )}
           {lambdaOutputUrl && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && (
             <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
               {SAAS_EXPORT_MODE ? 'Baixar vídeo' : 'Baixar vídeo Lambda'}
@@ -6291,7 +6372,15 @@ return (
               </div>
 
               {upgradeMessage && (
-                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(248,113,113,0.14)', color: '#fca5a5', fontSize: 13 }}>
+                <div
+                  style={{
+                    padding: 12,
+                    borderRadius: 8,
+                    background: /não|erro|falha/i.test(upgradeMessage) ? 'rgba(248,113,113,0.14)' : 'rgba(244,211,94,0.12)',
+                    color: /não|erro|falha/i.test(upgradeMessage) ? '#fca5a5' : '#f4d35e',
+                    fontSize: 13,
+                  }}
+                >
                   {upgradeMessage}
                 </div>
               )}
