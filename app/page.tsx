@@ -3695,6 +3695,11 @@ export default function Home() {
     localStorage.setItem('novacena:renderEngine', engine);
   }
 
+  async function logoutSaas() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  }
+
   async function openOutFolder() {
     await fetch('/api/open-out', { method: 'POST' });
   }
@@ -4271,6 +4276,11 @@ return (
           >
             Galeria {gallery.length > 0 && `(${gallery.length})`}
           </button>
+          {SAAS_EXPORT_MODE && (
+            <button onClick={logoutSaas} style={topTab}>
+              Sair
+            </button>
+          )}
         </div>
       </header>
 
