@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
       }
       if (user.tokens < 1) {
         return NextResponse.json(
-          { ok: false, error: 'Você não tem tokens suficientes para exportar. Acesse Planos e Tokens para comprar mais.' },
+          { ok: false, error: 'Seu render de demonstração já foi usado. Compre um pacote em Planos e Tokens para continuar exportando.' },
           { status: 402 }
         );
       }

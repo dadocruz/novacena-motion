@@ -5,6 +5,7 @@ import { DATA_DIR, uid } from './storage';
 import type { BillingCycle } from './saasPlans';
 
 export const SAAS_COOKIE_NAME = 'novacena_session';
+export const TRIAL_RENDER_TOKENS = 1;
 
 const USERS_FILE = path.join(DATA_DIR, 'users', 'saas-users.json');
 
@@ -97,7 +98,7 @@ export async function createPasswordUser(input: { email: string; name?: string; 
     provider: 'password',
     passwordHash: hash,
     passwordSalt: salt,
-    tokens: 5,
+    tokens: TRIAL_RENDER_TOKENS,
     createdAt: now,
     updatedAt: now,
   };
@@ -129,7 +130,7 @@ export async function upsertGoogleUser(input: { email: string; name?: string; go
     name: input.name?.trim() || email.split('@')[0],
     provider: 'google',
     googleSub: input.googleSub,
-    tokens: 5,
+    tokens: TRIAL_RENDER_TOKENS,
     createdAt: now,
     updatedAt: now,
   };

@@ -96,7 +96,7 @@ export default function BillingPage() {
 
         <section style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ color: 'rgba(255,255,255,0.72)' }}>
-            {user ? `${user.name} · ${user.tokens} tokens disponíveis` : 'Carregando conta...'}
+            {user ? `${user.name} · ${user.tokens} ${user.tokens === 1 ? 'render disponível' : 'renders disponíveis'}` : 'Carregando conta...'}
           </div>
           <div style={{ display: 'flex', gap: 8, padding: 4, border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10 }}>
             {cycles.map((item) => (

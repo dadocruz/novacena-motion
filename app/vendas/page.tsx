@@ -36,11 +36,11 @@ export default function SalesPage() {
           </p>
           <div style={heroActions}>
             <a href="#planos" style={primaryCta}>Ver pacotes</a>
-            <a href="/login?mode=signup&next=/" style={secondaryCta}>Criar conta grátis</a>
+            <a href="/login?mode=signup&next=/" style={secondaryCta}>Testar com 1 render</a>
           </div>
           <div style={proofGrid}>
             <div><strong>Story + feed</strong><span>formatos sociais</span></div>
-            <div><strong>5 tokens</strong><span>teste inicial</span></div>
+            <div><strong>1 render</strong><span>demonstração grátis</span></div>
             <div><strong>100% online</strong><span>sem instalar nada</span></div>
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function SalesPage() {
         {[
           ['Editor visual', 'Ajuste capas, textos, vídeo de fundo, overlays, cor e movimento em um fluxo simples.'],
           ['Templates de lançamento', 'Pacotes para disponível agora, YouTube, marco de streams, Spotify print e mais.'],
-          ['Tokens por exportação', 'Você paga pelo volume de vídeos exportados e acompanha seu saldo dentro do estúdio.'],
+          ['1 render grátis', 'A conta de demonstração libera uma exportação. Depois disso, o cliente compra um pacote para continuar.'],
         ].map(([heading, text]) => (
           <article key={heading} style={featureCard}>
             <h2>{heading}</h2>

@@ -81,7 +81,7 @@ export default function LoginPage() {
             {mode === 'login' ? 'Entrar no estúdio' : 'Criar sua conta'}
           </h1>
           <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.58)', fontSize: 13, lineHeight: 1.45 }}>
-            Acesse seus projetos, tokens e exportações em nuvem.
+            Crie sua conta e teste com 1 render de demonstração.
           </p>
         </div>
 
