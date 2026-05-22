@@ -18,30 +18,37 @@ const painPoints = [
 ];
 
 const steps = [
-  {
-    n: '1',
-    label: 'TEMPLATE',
-    title: 'Escolha o template.',
-    desc: 'Disponível Agora, Assista no YouTube, Marco de Streams, Spotify Print. Story e feed prontos pra usar.',
-  },
-  {
-    n: '2',
-    label: 'EDIÇÃO',
-    title: 'Personalize no navegador.',
-    desc: 'Troque capa, texto, vídeo de fundo, logos, cor, opacidade e blur. Tudo visual, sem timeline.',
-  },
-  {
-    n: '3',
-    label: 'EXPORTAÇÃO',
-    title: 'Exporte na nuvem.',
-    desc: 'AWS Lambda renderiza o vídeo. Seu computador não trava. Baixe o MP4 pronto.',
-  },
+  { n: '1', label: 'TEMPLATE', title: 'Escolha o template.', desc: 'Disponível Agora, Assista no YouTube, Marco de Streams, Spotify Print. Story e feed prontos pra usar.' },
+  { n: '2', label: 'EDIÇÃO', title: 'Personalize no navegador.', desc: 'Troque capa, texto, vídeo de fundo, logos, cor, opacidade e blur. Tudo visual, sem timeline.' },
+  { n: '3', label: 'EXPORTAÇÃO', title: 'Exporte na nuvem.', desc: 'AWS Lambda renderiza o vídeo. Seu computador não trava. Baixe o MP4 pronto.' },
+];
+
+const reviews = [
+  { name: 'Lucas Martins', initials: 'LM', role: 'Produtor musical', text: 'Em 5 minutos eu tinha o motion pronto. Antes eu gastava 2 horas no After Effects pra cada lançamento. Mudou completamente meu fluxo.' },
+  { name: 'Camila Rocha', initials: 'CR', role: 'Social media', text: 'Meus artistas ficaram impressionados. Parece que contratamos uma agência de motion design. Entrego tudo no mesmo dia agora.' },
+  { name: 'Pedro Gustavo', initials: 'PG', role: 'Artista independente', text: 'Não sei usar Premiere, não sei usar After Effects. Aqui eu só troquei a capa e o texto. Ficou profissional.' },
+  { name: 'Rafaela Duarte', initials: 'RD', role: 'Distribuidora digital', text: 'A gente lança 40 singles por mês. Sem essa ferramenta a gente não dava conta. Virou parte do nosso processo.' },
+  { name: 'Marcos Vieira', initials: 'MV', role: 'Produtor musical', text: 'Substituiu completamente o freelancer de motion que eu pagava R$300 por vídeo. A qualidade é a mesma ou melhor.' },
+  { name: 'Ana Clara Santos', initials: 'AS', role: 'Cantora', text: 'Nunca pensei que eu mesma conseguiria fazer motion pro meu single. Fiz em 10 minutos e ficou incrível.' },
+  { name: 'Felipe Torres', initials: 'FT', role: 'Social media', text: 'Entrego material pra 12 artistas por semana. Antes eu terceirizava tudo. Agora resolvo sozinho em minutos.' },
+  { name: 'Julia Mendes', initials: 'JM', role: 'Cantora', text: 'Meu primeiro lançamento com motion profissional. A diferença no engajamento foi absurda. Todo mundo perguntou quem fez.' },
+];
+
+const faqs = [
+  { q: 'O que é a NovaCena?', a: 'Uma ferramenta online para criar motion graphics de divulgação musical. Você escolhe um template, personaliza com sua capa e texto, e exporta o vídeo na nuvem. Tudo no navegador.' },
+  { q: 'Preciso instalar algum software?', a: 'Não. A NovaCena funciona 100% no navegador. Chrome, Safari, Edge. Qualquer computador com internet.' },
+  { q: 'Quanto tempo leva pra exportar um vídeo?', a: 'Entre 2 e 5 minutos. A renderização é feita por AWS Lambda na nuvem — seu computador não trava e não precisa ficar aberto.' },
+  { q: 'Posso usar minha própria capa e vídeo de fundo?', a: 'Sim. Você faz upload da arte do lançamento, vídeo de fundo, e ajusta texto, cor, opacidade, blur e saturação no editor visual.' },
+  { q: 'O que é um render?', a: 'Um render é uma exportação de vídeo. Cada vez que você exporta um motion, consome 1 render do seu saldo. Você compra pacotes de renders nos planos.' },
+  { q: 'Como funciona o teste grátis?', a: 'Ao criar sua conta, você recebe 1 render de demonstração gratuito. Personalize qualquer template e exporte pra ver a qualidade antes de comprar.' },
 ];
 
 /* ── Page ─────────────────────────────────────────────── */
 
 export default function SalesPage() {
   const [cycle, setCycle] = useState<BillingCycle>('annual');
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   const selectedCycle = useMemo(
     () => BILLING_CYCLES.find((item) => item.id === cycle) ?? BILLING_CYCLES[0],
     [cycle],
@@ -153,7 +160,7 @@ export default function SalesPage() {
         <div style={painList}>
           {painPoints.map((p, i) => (
             <div key={i} style={painItem}>
-              <p style={painText}>{p}</p>
+              <p style={painTextStyle}>{p}</p>
             </div>
           ))}
         </div>
@@ -192,7 +199,7 @@ export default function SalesPage() {
         <div style={forGrid}>
           <div style={forCol}>
             <div style={forRule} />
-            <div style={forLabel}>PRODUTORES</div>
+            <div style={forLabelRed}>PRODUTORES</div>
             <p style={forText}>
               Você lança 10, 20, 40 artistas por mês. Precisa de escala,
               velocidade e qualidade visual pra cada campanha.
@@ -209,7 +216,7 @@ export default function SalesPage() {
           </div>
           <div style={forCol}>
             <div style={forRule} />
-            <div style={forLabel}>ARTISTAS</div>
+            <div style={forLabelRed}>ARTISTAS</div>
             <p style={forText}>
               Você faz música. Agora pode criar seu próprio motion de lançamento
               sem contratar ninguém. Troque a capa, ajuste o texto, exporte.
@@ -226,17 +233,17 @@ export default function SalesPage() {
         </div>
       </section>
 
-      {/* ── Social media ───────────────────────────── */}
+      {/* ── Social media / distribuidoras ──────────── */}
       <section style={sect}>
-        <div style={tag}>{'// SOCIAL MEDIA'}</div>
+        <div style={tag}>{'// TAMBÉM PARA'}</div>
         <h2 style={h2}>
           O lançamento é amanhã.{' '}
           <em style={emCyan}>Entregue hoje</em>.
         </h2>
-        <div style={smGrid}>
-          <div style={smCol}>
+        <div style={forGrid}>
+          <div style={forCol}>
             <div style={forRule} />
-            <div style={smLabel}>SOCIAL MEDIA</div>
+            <div style={forLabelCyan}>SOCIAL MEDIA</div>
             <p style={forText}>
               Você cuida das redes de artistas. O prazo é curto.
               Precisa de um motion profissional agora, não em dias.
@@ -251,9 +258,9 @@ export default function SalesPage() {
               <span style={quoteRole}>Social media</span>
             </div>
           </div>
-          <div style={smCol}>
+          <div style={forCol}>
             <div style={forRule} />
-            <div style={smLabel}>DISTRIBUIDORAS</div>
+            <div style={forLabelCyan}>DISTRIBUIDORAS</div>
             <p style={forText}>
               Alto volume de lançamentos. Cada artista precisa de material visual.
               Com NovaCena, uma pessoa resolve o que antes precisava de uma equipe.
@@ -270,11 +277,42 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* ── Reviews ────────────────────────────────── */}
+      <section style={reviewsSect}>
+        <h2 style={h2Center}>
+          Produtores reais.{' '}
+          <em style={emCyan}>Tempo real economizado</em>.
+        </h2>
+        <div style={reviewsBadge}>
+          <span style={reviewStars}>{'★★★★★'}</span>
+          <span style={reviewScore}>5.0 nota média · produtores e artistas</span>
+        </div>
+        <div style={reviewsGrid}>
+          {reviews.map((r) => (
+            <div key={r.name} style={reviewCard}>
+              <div style={reviewCardStars}>{'★★★★★'}</div>
+              <p style={reviewCardText}>&ldquo;{r.text}&rdquo;</p>
+              <div style={reviewCardDivider} />
+              <div style={reviewCardAuthor}>
+                <div style={reviewAvatar}>{r.initials}</div>
+                <div>
+                  <div style={reviewName}>{r.name}</div>
+                  <div style={reviewRole}>{r.role}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Pricing ────────────────────────────────── */}
       <section id="planos" style={sect}>
-        <div style={tag}>{'// PLANOS'}</div>
-        <h2 style={h2}>Todos os recursos. <em style={emCyan}>Preço justo</em>.</h2>
-        <p style={subMuted}>Escolha o volume que faz sentido pro seu ritmo de lançamentos.</p>
+        <div style={tagCenter}>{'// PLANOS'}</div>
+        <h2 style={h2Center}>
+          Comece a usar a NovaCena.{' '}
+          <em style={emCyan}>Escolha seu plano</em>.
+        </h2>
+        <p style={subCenter}>Todos os recursos em todos os planos. Escolha o volume de renders.</p>
 
         <div style={cycleRow}>
           {BILLING_CYCLES.map((item) => (
@@ -299,7 +337,7 @@ export default function SalesPage() {
             return (
               <article key={plan.id} style={featured ? planFeatured : planCard}>
                 {featured && <div style={planBadge}>Mais popular</div>}
-                <h3 style={planName}>{plan.name}</h3>
+                <h3 style={planTitleStyle}>{plan.name}</h3>
                 <p style={planDesc}>{plan.description}</p>
                 <div>
                   <div style={planPriceVal}>{formatBRL(price)}</div>
@@ -314,11 +352,11 @@ export default function SalesPage() {
                 <ul style={planFeatures}>
                   {plan.features.map((f) => (
                     <li key={f} style={planFeatureItem}>
-                      <span style={check}>{'✓'}</span> {f}
+                      <span style={checkIcon}>{'✓'}</span> {f}
                     </li>
                   ))}
                   <li style={planFeatureItem}>
-                    <span style={check}>{'✓'}</span> Vídeos até {plan.maxVideoSeconds}s
+                    <span style={checkIcon}>{'✓'}</span> Vídeos até {plan.maxVideoSeconds}s
                   </li>
                 </ul>
                 <a href={url} style={featured ? planBtnFeat : planBtnNorm}>
@@ -330,32 +368,73 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* ── FAQ ────────────────────────────────────── */}
+      <section style={faqSect}>
+        <div style={tagCenter}>{'// DÚVIDAS'}</div>
+        <h2 style={h2Center}>
+          As perguntas que{' '}
+          <em style={emCyan}>todo mundo faz</em>.
+        </h2>
+        <div style={faqList}>
+          {faqs.map((faq, i) => (
+            <div key={i} style={faqItem}>
+              <button
+                type="button"
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                style={faqQuestion}
+              >
+                <span>{faq.q}</span>
+                <span style={faqIcon}>{openFaq === i ? '−' : '+'}</span>
+              </button>
+              {openFaq === i && (
+                <div style={faqAnswer}>{faq.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── Final CTA ──────────────────────────────── */}
       <section style={finalSect}>
-        <h2 style={h2}>
-          Seu próximo lançamento merece{' '}
-          <em style={emCyan}>motion profissional</em>.
+        <h2 style={h2Center}>
+          Escolha o template. Troque a capa.{' '}
+          <em style={emCyan}>Exporte na nuvem</em>.
         </h2>
-        <p style={subMuted}>Crie sua conta, teste com 1 render grátis e veja como é simples.</p>
-        <a href="/login?mode=signup&next=/" style={btnPrimary}>Começar agora — é grátis ↗</a>
+        <p style={subCenter}>
+          Teste grátis com 1 render de demonstração. Sem cartão.
+        </p>
+        <a href="/login?mode=signup&next=/" style={btnPrimary}>Começar grátis ↗</a>
       </section>
 
       {/* ── Footer ─────────────────────────────────── */}
       <footer style={footer}>
-        <div style={footerTop}>
-          <div>
+        <div style={footerGrid}>
+          <div style={footerBrandCol}>
             <div style={footerBrand}>NovaCena</div>
-            <p style={footerTagline}>Motion studio para lançamentos musicais.</p>
+            <p style={footerTagline}>
+              Motion studio online para<br />
+              lançamentos musicais.
+            </p>
           </div>
-          <div style={footerLinks}>
+          <div style={footerCol}>
+            <div style={footerColTitle}>PRODUTO</div>
             <a href="#como" style={footerLink}>Como funciona</a>
             <a href="#planos" style={footerLink}>Planos</a>
-            <a href="/login" style={footerLink}>Entrar</a>
             <a href="/login?mode=signup&next=/" style={footerLink}>Criar conta</a>
+          </div>
+          <div style={footerCol}>
+            <div style={footerColTitle}>CONTA</div>
+            <a href="/login" style={footerLink}>Entrar</a>
+            <a href="/login?mode=signup&next=/billing" style={footerLink}>Comprar renders</a>
+          </div>
+          <div style={footerCol}>
+            <div style={footerColTitle}>SUPORTE</div>
+            <a href="mailto:estudionovacena@gmail.com" style={footerLink}>Contato</a>
           </div>
         </div>
         <div style={footerBottom}>
-          © 2026 NovaCena. Todos os direitos reservados.
+          <span>© 2026 NovaCena. Todos os direitos reservados.</span>
+          <span style={footerBuilt}>Feito para produtores musicais.</span>
         </div>
       </footer>
     </main>
@@ -370,27 +449,10 @@ const SERIF = 'Georgia, "Times New Roman", serif';
 const MONO = '"SF Mono", "Fira Code", Menlo, monospace';
 const W = 'min(1200px, calc(100% - 48px))';
 
-const page: CSSProperties = {
-  minHeight: '100dvh',
-  background: '#080a0f',
-  color: '#e8e8ec',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-};
+const page: CSSProperties = { minHeight: '100dvh', background: '#080a0f', color: '#e8e8ec', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' };
 
 /* ── Nav ── */
-const nav: CSSProperties = {
-  position: 'sticky',
-  top: 0,
-  zIndex: 100,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: W,
-  margin: '0 auto',
-  height: 64,
-  backdropFilter: 'blur(24px)',
-  WebkitBackdropFilter: 'blur(24px)',
-};
+const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: W, margin: '0 auto', height: 64, backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
 const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' };
 const navPill: CSSProperties = { display: 'flex', gap: 2, padding: '5px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
 const navItem: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 999 };
@@ -398,12 +460,15 @@ const navCta: CSSProperties = { color: '#000', textDecoration: 'none', backgroun
 
 /* ── Shared ── */
 const tag: CSSProperties = { fontFamily: MONO, fontSize: 13, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.08em' };
+const tagCenter: CSSProperties = { ...tag, textAlign: 'center' };
 const emCyan: CSSProperties = { fontFamily: SERIF, fontStyle: 'italic', color: '#5eead4' };
 const emRed: CSSProperties = { fontFamily: SERIF, fontStyle: 'italic', color: '#e06c6c' };
 const emWhite: CSSProperties = { fontFamily: SERIF, fontStyle: 'italic', color: '#ffffff' };
 const h1: CSSProperties = { margin: 0, fontSize: 'clamp(34px, 4.8vw, 58px)', fontWeight: 700, lineHeight: 1.08, letterSpacing: '-0.035em', color: '#fff' };
 const h2: CSSProperties = { margin: 0, fontSize: 'clamp(30px, 4.2vw, 52px)', fontWeight: 700, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#fff' };
+const h2Center: CSSProperties = { ...h2, textAlign: 'center' };
 const subMuted: CSSProperties = { margin: 0, fontSize: 17, color: 'rgba(255,255,255,0.38)', lineHeight: 1.6 };
+const subCenter: CSSProperties = { ...subMuted, textAlign: 'center' };
 const sect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0', display: 'grid', gap: 24, borderTop: '1px solid rgba(255,255,255,0.06)' };
 const btnPrimary: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 50, padding: '0 30px', borderRadius: 999, background: '#fff', color: '#000', textDecoration: 'none', fontWeight: 700, fontSize: 15 };
 const btnGhost: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 50, padding: '0 30px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', textDecoration: 'none', fontWeight: 600, fontSize: 15 };
@@ -447,7 +512,7 @@ const logoImg: CSSProperties = { height: 28, objectFit: 'contain', opacity: 0.35
 /* ── Pain ── */
 const painList: CSSProperties = { display: 'grid', gap: 0, marginTop: 12 };
 const painItem: CSSProperties = { padding: '24px 0', borderTop: '1px solid rgba(255,255,255,0.07)' };
-const painText: CSSProperties = { margin: 0, fontSize: 'clamp(16px, 1.8vw, 20px)', color: '#e06c6c', lineHeight: 1.5, fontWeight: 500 };
+const painTextStyle: CSSProperties = { margin: 0, fontSize: 'clamp(16px, 1.8vw, 20px)', color: '#e06c6c', lineHeight: 1.5, fontWeight: 500 };
 
 /* ── Steps ── */
 const stepsGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginTop: 16 };
@@ -463,20 +528,31 @@ const stepDesc: CSSProperties = { margin: 0, fontSize: 15, color: 'rgba(255,255,
 const forGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 48, marginTop: 24 };
 const forCol: CSSProperties = { display: 'grid', gap: 16, alignContent: 'start' };
 const forRule: CSSProperties = { width: 40, height: 2, background: 'rgba(255,255,255,0.15)' };
-const forLabel: CSSProperties = { fontFamily: MONO, fontSize: 12, fontWeight: 700, color: '#e06c6c', letterSpacing: '0.1em' };
+const forLabelRed: CSSProperties = { fontFamily: MONO, fontSize: 12, fontWeight: 700, color: '#e06c6c', letterSpacing: '0.1em' };
+const forLabelCyan: CSSProperties = { fontFamily: MONO, fontSize: 12, fontWeight: 700, color: '#5eead4', letterSpacing: '0.1em' };
 const forText: CSSProperties = { margin: 0, fontSize: 17, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 };
 const testimonial: CSSProperties = { display: 'grid', gap: 6, marginTop: 16 };
 const quoteText: CSSProperties = { margin: 0, fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: 'rgba(255,255,255,0.32)', lineHeight: 1.65 };
 const quoteName: CSSProperties = { fontSize: 14, color: '#fff' };
 const quoteRole: CSSProperties = { fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.22)', letterSpacing: '0.04em' };
 
-/* ── Social media / distribuidoras ── */
-const smGrid: CSSProperties = { ...forGrid };
-const smCol: CSSProperties = { ...forCol };
-const smLabel: CSSProperties = { ...forLabel, color: '#5eead4' };
+/* ── Reviews ── */
+const reviewsSect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0', display: 'grid', gap: 32, borderTop: '1px solid rgba(255,255,255,0.06)' };
+const reviewsBadge: CSSProperties = { display: 'flex', gap: 10, alignItems: 'center', justifyContent: 'center', padding: '8px 20px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', justifySelf: 'center' };
+const reviewStars: CSSProperties = { fontSize: 14, color: '#f59e0b', letterSpacing: 2 };
+const reviewScore: CSSProperties = { fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.04em' };
+const reviewsGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: 14 };
+const reviewCard: CSSProperties = { display: 'grid', gap: 16, padding: 24, borderRadius: 14, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', alignContent: 'start' };
+const reviewCardStars: CSSProperties = { fontSize: 14, color: '#f59e0b', letterSpacing: 2 };
+const reviewCardText: CSSProperties = { margin: 0, fontSize: 14, color: 'rgba(255,255,255,0.6)', lineHeight: 1.65 };
+const reviewCardDivider: CSSProperties = { width: '100%', height: 1, background: 'rgba(255,255,255,0.06)' };
+const reviewCardAuthor: CSSProperties = { display: 'flex', gap: 10, alignItems: 'center' };
+const reviewAvatar: CSSProperties = { width: 34, height: 34, borderRadius: '50%', background: 'rgba(94,234,212,0.12)', color: '#5eead4', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 };
+const reviewName: CSSProperties = { fontSize: 13, fontWeight: 600, color: '#fff' };
+const reviewRole: CSSProperties = { fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: MONO };
 
 /* ── Pricing ── */
-const cycleRow: CSSProperties = { display: 'inline-flex', gap: 4, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', justifySelf: 'start' };
+const cycleRow: CSSProperties = { display: 'inline-flex', gap: 4, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', justifySelf: 'center' };
 const cycleBtn: CSSProperties = { border: 'none', borderRadius: 10, background: 'transparent', color: 'rgba(255,255,255,0.4)', padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'grid', gap: 2, fontFamily: 'inherit' };
 const cycleBtnActive: CSSProperties = { ...cycleBtn, background: 'rgba(255,255,255,0.08)', color: '#fff' };
 const cycleSave: CSSProperties = { fontSize: 10, color: '#5eead4', fontWeight: 600 };
@@ -484,25 +560,36 @@ const plansGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat
 const planCard: CSSProperties = { position: 'relative', display: 'grid', gap: 18, padding: 28, borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' };
 const planFeatured: CSSProperties = { ...planCard, border: '1px solid rgba(94,234,212,0.3)', background: 'rgba(94,234,212,0.03)', boxShadow: '0 0 80px rgba(94,234,212,0.04)' };
 const planBadge: CSSProperties = { position: 'absolute', top: -11, left: 24, padding: '5px 14px', borderRadius: 999, background: '#5eead4', color: '#000', fontSize: 12, fontWeight: 700 };
-const planName: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 800 };
+const planTitleStyle: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 800 };
 const planDesc: CSSProperties = { margin: 0, color: 'rgba(255,255,255,0.38)', fontSize: 14, lineHeight: 1.5, minHeight: 42 };
 const planPriceVal: CSSProperties = { fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em' };
 const planPricePer: CSSProperties = { color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 2 };
 const planTokenBadge: CSSProperties = { padding: '7px 14px', borderRadius: 8, background: 'rgba(94,234,212,0.06)', border: '1px solid rgba(94,234,212,0.12)', color: '#5eead4', fontWeight: 700, fontSize: 13, justifySelf: 'start' };
 const planFeatures: CSSProperties = { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 9 };
 const planFeatureItem: CSSProperties = { display: 'flex', gap: 10, alignItems: 'center', color: 'rgba(255,255,255,0.48)', fontSize: 14 };
-const check: CSSProperties = { color: '#5eead4', fontWeight: 700, flexShrink: 0 };
+const checkIcon: CSSProperties = { color: '#5eead4', fontWeight: 700, flexShrink: 0 };
 const planBtnNorm: CSSProperties = { display: 'grid', placeItems: 'center', height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.06)', color: '#fff', textDecoration: 'none', fontWeight: 700, fontSize: 14, border: '1px solid rgba(255,255,255,0.08)' };
 const planBtnFeat: CSSProperties = { ...planBtnNorm, background: '#fff', color: '#000', border: '1px solid #fff' };
 
+/* ── FAQ ── */
+const faqSect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0', display: 'grid', gap: 40, borderTop: '1px solid rgba(255,255,255,0.06)' };
+const faqList: CSSProperties = { width: 'min(720px, 100%)', margin: '0 auto', display: 'grid', gap: 0 };
+const faqItem: CSSProperties = { borderTop: '1px solid rgba(255,255,255,0.07)' };
+const faqQuestion: CSSProperties = { width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 0', background: 'none', border: 'none', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' };
+const faqIcon: CSSProperties = { fontSize: 22, color: 'rgba(255,255,255,0.3)', fontWeight: 300, flexShrink: 0, marginLeft: 16 };
+const faqAnswer: CSSProperties = { padding: '0 0 22px', fontSize: 15, color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 };
+
 /* ── Final CTA ── */
-const finalSect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0 140px', display: 'grid', gap: 20, borderTop: '1px solid rgba(255,255,255,0.06)' };
+const finalSect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0 140px', display: 'grid', gap: 20, justifyItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' };
 
 /* ── Footer ── */
-const footer: CSSProperties = { width: W, margin: '0 auto', padding: '48px 0 40px', display: 'grid', gap: 32, borderTop: '1px solid rgba(255,255,255,0.06)' };
-const footerTop: CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 32, flexWrap: 'wrap' };
+const footer: CSSProperties = { width: W, margin: '0 auto', padding: '56px 0 40px', display: 'grid', gap: 40, borderTop: '1px solid rgba(255,255,255,0.06)' };
+const footerGrid: CSSProperties = { display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: 32 };
+const footerBrandCol: CSSProperties = { display: 'grid', gap: 8, alignContent: 'start' };
 const footerBrand: CSSProperties = { fontWeight: 800, fontSize: 16, color: '#fff' };
-const footerTagline: CSSProperties = { margin: '6px 0 0', color: 'rgba(255,255,255,0.25)', fontSize: 13 };
-const footerLinks: CSSProperties = { display: 'flex', gap: 24, alignItems: 'center' };
-const footerLink: CSSProperties = { color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: 13 };
-const footerBottom: CSSProperties = { color: 'rgba(255,255,255,0.15)', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 20 };
+const footerTagline: CSSProperties = { margin: 0, color: 'rgba(255,255,255,0.25)', fontSize: 13, lineHeight: 1.5 };
+const footerCol: CSSProperties = { display: 'grid', gap: 10, alignContent: 'start' };
+const footerColTitle: CSSProperties = { fontFamily: MONO, fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', marginBottom: 4 };
+const footerLink: CSSProperties = { color: 'rgba(255,255,255,0.35)', textDecoration: 'none', fontSize: 13 };
+const footerBottom: CSSProperties = { display: 'flex', justifyContent: 'space-between', color: 'rgba(255,255,255,0.15)', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 20 };
+const footerBuilt: CSSProperties = { color: 'rgba(255,255,255,0.15)' };
