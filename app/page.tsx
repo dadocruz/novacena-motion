@@ -28,6 +28,7 @@ import {
   getProject,
 } from '../remotion/project';
 import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../lib/fontCatalog';
+import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle } from '../lib/saasPlans';
 
 import {
   componentByTemplate,
@@ -148,6 +149,10 @@ type RenderEngine = 'desktop' | 'local' | 'lambda';
 const SAAS_EXPORT_MODE =
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+
+function formatBRL(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
 
 type LocalAssetRef = {
   id: string;
@@ -391,6 +396,10 @@ export default function Home() {
   const [rendering, setRendering] = useState(false);
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeCycle, setUpgradeCycle] = useState<BillingCycle>('monthly');
+  const [upgradeMessage, setUpgradeMessage] = useState('');
+  const [loadingUpgradePlan, setLoadingUpgradePlan] = useState<string | null>(null);
   const [renderEngine, setRenderEngine] = useState<RenderEngine>(() => {
     if (SAAS_EXPORT_MODE) return 'lambda';
     if (typeof window === 'undefined') return 'desktop';
@@ -3593,10 +3602,43 @@ export default function Home() {
 
   function formatSaasExportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error ?? 'falha');
+    if (/demonstração|tokens|planos|comprar|pacote/i.test(message)) {
+      return 'Seu teste gratuito acabou. Escolha um pacote para continuar exportando.';
+    }
     if (/aws|lambda|concurrency|rate exceeded|quota|remotion|main function|chunk|timed out|timeout/i.test(message)) {
       return 'O serviço de exportação está ocupado no momento. Tente novamente em alguns minutos.';
     }
     return message;
+  }
+
+  async function chooseUpgradePlan(planId: string) {
+    setLoadingUpgradePlan(planId);
+    setUpgradeMessage('');
+    try {
+      const response = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, cycle: upgradeCycle }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setUpgradeMessage(data.error || 'Não foi possível iniciar a compra.');
+        return;
+      }
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      }
+      if (data.manual && data.user) {
+        setSaasUser(data.user);
+        setShowUpgradeModal(false);
+        setRenderMessage('Pacote ativado. Você já pode exportar novamente.');
+      }
+    } catch {
+      setUpgradeMessage('Não foi possível iniciar a compra.');
+    } finally {
+      setLoadingUpgradePlan(null);
+    }
   }
 
   async function renderLambda(label: string) {
@@ -3632,6 +3674,15 @@ export default function Home() {
       });
       const startData = await startRes.json();
       if (!startData.ok) {
+        if (SAAS_EXPORT_MODE && startRes.status === 402) {
+          setShowUpgradeModal(true);
+          fetch('/api/auth/me')
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.ok && data.user) setSaasUser(data.user);
+            })
+            .catch(() => {});
+        }
         setRenderMessage(
           SAAS_EXPORT_MODE
             ? `Erro ao exportar: ${formatSaasExportError(startData.error)}`
@@ -6129,6 +6180,183 @@ return (
 
       {/* MODAL NOVO ARTISTA */}
       {showArtistModal && <ArtistModal onCreate={createArtist} onClose={() => setShowArtistModal(false)} />}
+
+      {SAAS_EXPORT_MODE && showUpgradeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 120,
+            display: 'grid',
+            placeItems: 'center',
+            padding: 18,
+            background: 'rgba(0,0,0,0.72)',
+            backdropFilter: 'blur(16px)',
+          }}
+        >
+          <div
+            style={{
+              width: 'min(980px, 100%)',
+              maxHeight: 'calc(100vh - 36px)',
+              overflow: 'auto',
+              borderRadius: 14,
+              border: '1px solid rgba(255,255,255,0.14)',
+              background: '#111217',
+              boxShadow: '0 34px 110px rgba(0,0,0,0.58)',
+              color: '#fff',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 18,
+                padding: 22,
+                borderBottom: '1px solid rgba(255,255,255,0.10)',
+              }}
+            >
+              <div>
+                <div style={{ color: '#70e0b1', fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  Demonstração finalizada
+                </div>
+                <h2 style={{ margin: '8px 0 0', fontSize: 28, lineHeight: 1.08 }}>
+                  Continue exportando com um pacote NovaCena
+                </h2>
+                <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.62)', maxWidth: 660, lineHeight: 1.45 }}>
+                  Seu render gratuito já foi usado. Escolha um plano e carregue renders na sua conta para exportar sem sair do estúdio.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#fff',
+                  fontWeight: 900,
+                  cursor: 'pointer',
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 22, display: 'grid', gap: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ color: 'rgba(255,255,255,0.68)', fontSize: 13 }}>
+                  {saasUser ? `${saasUser.name} · ${saasUser.tokens} renders disponíveis` : 'Escolha um pacote para continuar'}
+                </div>
+                <div style={{ display: 'flex', gap: 8, padding: 4, borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)' }}>
+                  {BILLING_CYCLES.map((cycle) => (
+                    <button
+                      key={cycle.id}
+                      type="button"
+                      onClick={() => setUpgradeCycle(cycle.id)}
+                      style={{
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '9px 12px',
+                        background: upgradeCycle === cycle.id ? '#fff' : 'transparent',
+                        color: upgradeCycle === cycle.id ? '#111' : 'rgba(255,255,255,0.72)',
+                        fontWeight: 900,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {cycle.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {upgradeMessage && (
+                <div style={{ padding: 12, borderRadius: 8, background: 'rgba(248,113,113,0.14)', color: '#fca5a5', fontSize: 13 }}>
+                  {upgradeMessage}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                {SAAS_PLANS.map((plan) => {
+                  const months = upgradeCycle === 'monthly' ? 1 : upgradeCycle === 'annual' ? 12 : 36;
+                  const selectedCycle = BILLING_CYCLES.find((cycle) => cycle.id === upgradeCycle);
+                  const featured = plan.id === 'pro';
+                  return (
+                    <article
+                      key={plan.id}
+                      style={{
+                        display: 'grid',
+                        gap: 13,
+                        padding: 18,
+                        borderRadius: 10,
+                        border: featured ? '1px solid rgba(244,211,94,0.66)' : '1px solid rgba(255,255,255,0.12)',
+                        background: featured ? 'rgba(244,211,94,0.08)' : 'rgba(255,255,255,0.045)',
+                      }}
+                    >
+                      {featured && (
+                        <div style={{ justifySelf: 'start', padding: '5px 9px', borderRadius: 999, background: 'rgba(112,224,177,0.14)', color: '#70e0b1', fontSize: 11, fontWeight: 900 }}>
+                          Mais escolhido
+                        </div>
+                      )}
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: 22 }}>{plan.name}</h3>
+                        <p style={{ minHeight: 42, margin: '7px 0 0', color: 'rgba(255,255,255,0.62)', lineHeight: 1.4, fontSize: 13 }}>
+                          {plan.description}
+                        </p>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 28, fontWeight: 950 }}>{formatBRL(planPrice(plan, upgradeCycle))}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: 12 }}>
+                          {upgradeCycle === 'monthly' ? 'por mês' : `por ${months} meses`}
+                          {selectedCycle?.discountLabel ? ` · ${selectedCycle.discountLabel}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ color: '#f4d35e', fontWeight: 900 }}>
+                        {plan.includedTokens * months} renders no ciclo
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => chooseUpgradePlan(plan.id)}
+                        disabled={loadingUpgradePlan === plan.id}
+                        style={{
+                          height: 42,
+                          borderRadius: 8,
+                          border: 'none',
+                          background: featured ? '#f4d35e' : '#fff',
+                          color: '#111',
+                          fontWeight: 950,
+                          cursor: loadingUpgradePlan === plan.id ? 'wait' : 'pointer',
+                          opacity: loadingUpgradePlan === plan.id ? 0.7 : 1,
+                        }}
+                      >
+                        {loadingUpgradePlan === plan.id ? 'Abrindo...' : `Comprar ${plan.name}`}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { window.location.href = '/billing'; }}
+                style={{
+                  justifySelf: 'center',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  background: 'transparent',
+                  color: 'rgba(255,255,255,0.78)',
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Ver todos os detalhes dos pacotes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     
       <div
         style={{
