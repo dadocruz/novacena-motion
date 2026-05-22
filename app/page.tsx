@@ -3461,10 +3461,10 @@ export default function Home() {
         previewMode: false,
       },
       posterFrame: {
-        enabled: posterFrameEnabled,
+        enabled: SAAS_EXPORT_MODE ? false : posterFrameEnabled,
         frameSec: posterFrameSec,
         holdSec: posterHoldSec,
-        outroEnabled: posterOutroEnabled,
+        outroEnabled: SAAS_EXPORT_MODE ? false : posterOutroEnabled,
       },
     };
   }
@@ -3574,7 +3574,7 @@ export default function Home() {
 
   function formatSaasExportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error ?? 'falha');
-    if (/aws|lambda|concurrency|rate exceeded|quota|remotion/i.test(message)) {
+    if (/aws|lambda|concurrency|rate exceeded|quota|remotion|main function|chunk|timed out|timeout/i.test(message)) {
       return 'O serviço de exportação está ocupado no momento. Tente novamente em alguns minutos.';
     }
     return message;
@@ -3582,7 +3582,11 @@ export default function Home() {
 
   async function renderLambda(label: string) {
     if (bgVideoNeedsTrim) {
-      setRenderMessage('⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
+      setRenderMessage(
+        SAAS_EXPORT_MODE
+          ? '⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
+          : '⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.'
+      );
       setRenderStatus('error');
       alert(
         SAAS_EXPORT_MODE
@@ -3720,7 +3724,7 @@ export default function Home() {
       return;
     }
     if (d.coverImage) setCoverImage(d.coverImage);
-    setSaveMessage('Projeto salvo. Pronto pra renderizar.');
+    setSaveMessage(SAAS_EXPORT_MODE ? 'Projeto salvo. Pronto para exportar.' : 'Projeto salvo. Pronto pra renderizar.');
   }
 
   // ============================================================
@@ -4429,97 +4433,98 @@ return (
           </div>
         </Section>
 
+            {!SAAS_EXPORT_MODE && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 12,
+                  borderRadius: 12,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-2)',
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Capa do vídeo / primeiro frame
+                </div>
 
-            <div
-              style={{
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--bg-2)',
-                display: 'grid',
-                gap: 10,
-              }}
-            >
-              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Capa do vídeo / primeiro frame
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
+                    Usar frame atual como capa
+                  </button>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                    <input
+                      type="checkbox"
+                      checked={posterFrameEnabled}
+                      onChange={(event) => setPosterFrameEnabled(event.target.checked)}
+                    />
+                    Renderizar capa no início
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
+                    <input
+                      type="checkbox"
+                      checked={posterOutroEnabled}
+                      onChange={(event) => setPosterOutroEnabled(event.target.checked)}
+                    />
+                    Repetir no final
+                  </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Segundo da capa
+                    <input
+                      type="number"
+                      min={0}
+                      max={durationSeconds}
+                      step={0.01}
+                      value={posterFrameSec}
+                      onChange={(event) => setPosterFrameSec(Number(event.target.value))}
+                      style={{
+                        width: '100%',
+                        marginTop: 6,
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-1)',
+                        color: 'var(--text-1)',
+                        padding: '7px 8px',
+                        fontSize: 12,
+                      }}
+                    />
+                  </label>
+
+                  <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                    Duração da capa
+                    <input
+                      type="number"
+                      min={0.1}
+                      max={5}
+                      step={0.1}
+                      value={posterHoldSec}
+                      onChange={(event) => setPosterHoldSec(Number(event.target.value))}
+                      style={{
+                        width: '100%',
+                        marginTop: 6,
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-1)',
+                        color: 'var(--text-1)',
+                        padding: '7px 8px',
+                        fontSize: 12,
+                      }}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
+                  O PNG da capa será salvo junto com os vídeos prontos.
+                </div>
               </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                <button type="button" onClick={useCurrentPlayerFrameAsPoster} style={ghostBtnStyle}>
-                  Usar frame atual como capa
-                </button>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterFrameEnabled}
-                    onChange={(event) => setPosterFrameEnabled(event.target.checked)}
-                  />
-                  Renderizar capa no início
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)' }}>
-                  <input
-                    type="checkbox"
-                    checked={posterOutroEnabled}
-                    onChange={(event) => setPosterOutroEnabled(event.target.checked)}
-                  />
-                  Repetir no final
-                </label>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Segundo da capa
-                  <input
-                    type="number"
-                    min={0}
-                    max={durationSeconds}
-                    step={0.01}
-                    value={posterFrameSec}
-                    onChange={(event) => setPosterFrameSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-
-                <label style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                  Duração da capa
-                  <input
-                    type="number"
-                    min={0.1}
-                    max={5}
-                    step={0.1}
-                    value={posterHoldSec}
-                    onChange={(event) => setPosterHoldSec(Number(event.target.value))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px solid var(--border)',
-                      background: 'var(--bg-1)',
-                      color: 'var(--text-1)',
-                      padding: '7px 8px',
-                      fontSize: 12,
-                    }}
-                  />
-                </label>
-              </div>
-
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                Atual: {posterFrameEnabled ? `${posterFrameSec}s por ${posterHoldSec}s` : 'desativada'}.
-                O PNG da capa será salvo junto com os vídeos prontos.
-              </div>
-            </div>
+            )}
 
 
         <div
@@ -4865,7 +4870,7 @@ return (
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
-                    <span>{renderStatus === 'done' ? '✓ Concluído' : renderStatus === 'error' ? '✗ Erro' : `Renderizando… ${renderProgress}%`}</span>
+                    <span>{renderStatus === 'done' ? '✓ Concluído' : renderStatus === 'error' ? '✗ Erro' : `${SAAS_EXPORT_MODE ? 'Exportando' : 'Renderizando'}… ${renderProgress}%`}</span>
                     <span>{renderProgress}%</span>
                   </div>
                   <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
@@ -4903,7 +4908,7 @@ return (
                 rel="noreferrer"
                 style={downloadVideoWideBtnStyle}
               >
-                Abrir vídeo renderizado
+                {SAAS_EXPORT_MODE ? 'Abrir vídeo' : 'Abrir vídeo renderizado'}
               </a>
             )}
             {!SAAS_EXPORT_MODE && renderFiles[0] && (
