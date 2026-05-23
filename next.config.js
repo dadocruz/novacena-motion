@@ -40,11 +40,6 @@ const nextConfig = {
     },
   },
 
-  async redirects() {
-    return [
-      { source: '/vendas', destination: '/motion', permanent: true },
-    ];
-  },
 };
 
 module.exports = nextConfig;
