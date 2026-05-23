@@ -3,6 +3,7 @@ import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { consumeUserTokens, getSaasUserById, SAAS_COOKIE_NAME, verifySessionToken } from '../../../../lib/saasUsers';
+import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -127,6 +128,8 @@ async function resolveLocalAssets(
 
 export async function POST(req: NextRequest) {
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const body = await req.json();
     const { template, target = 'story', inputProps } = body as {
       template: string;
@@ -220,6 +223,8 @@ export async function POST(req: NextRequest) {
     if (saasUserId) {
       await consumeUserTokens(saasUserId, 1);
     }
+
+    cleanupTransientFiles().catch(() => {});
 
     return NextResponse.json({
       ok: true,

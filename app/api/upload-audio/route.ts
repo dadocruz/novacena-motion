@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { PUBLIC_UPLOADS, safeFileName, saveFile, deleteOldFiles } from '../../../lib/uploadHelpers';
+import { cleanupTransientFiles } from '../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -22,6 +23,8 @@ const ALLOWED_TYPES = [
 
 export async function POST(req: NextRequest) {
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const form = await req.formData();
     const file = form.get('audio');
     if (!file || typeof file === 'string') {

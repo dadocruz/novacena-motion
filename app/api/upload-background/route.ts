@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
+import { cleanupTransientFiles } from '../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -11,6 +12,8 @@ const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 export async function POST(req: NextRequest) {
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const form = await req.formData();
     const file = form.get('background');
 

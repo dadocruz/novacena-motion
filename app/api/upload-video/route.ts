@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mkdir, writeFile, readdir, unlink } from 'fs/promises';
 import path from 'path';
+import { cleanupTransientFiles } from '../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -36,6 +37,8 @@ async function deleteOldVideos(dir: string, newFilename: string): Promise<void> 
 
 export async function POST(req: NextRequest) {
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const form = await req.formData();
     const file = form.get('video');
 

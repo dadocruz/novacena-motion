@@ -1,3 +1,12 @@
+const isSaasBuild =
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
+  process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+
+const uploadTrace = isSaasBuild ? [] : ['./public/uploads/**/*'];
+const publicTrace = isSaasBuild
+  ? ['./public/fonts/**/*', './public/logos/**/*']
+  : ['./public/**/*'];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Gera build standalone — empacota apenas o necessário para rodar.
@@ -7,18 +16,18 @@ const nextConfig = {
   // Inclui assets apenas nas rotas que realmente precisam deles.
   // Evita o Turbopack interpretar que toda rota /api depende do projeto inteiro.
   outputFileTracingIncludes: {
-    '/api/render': ['./public/**/*', './data/**/*', './remotion/**/*', './remotion-entry/**/*'],
-    '/api/uploads/[...path]': ['./public/uploads/**/*'],
-    '/api/video/trim': ['./public/uploads/**/*'],
-    '/api/upload-video/raw': ['./public/uploads/**/*'],
-    '/api/upload-video': ['./public/uploads/**/*'],
-    '/api/upload-audio': ['./public/uploads/**/*'],
-    '/api/upload-cover': ['./public/uploads/**/*'],
-    '/api/upload-overlay': ['./public/uploads/**/*', './data/**/*'],
-    '/api/platform-logos': ['./public/uploads/**/*', './data/**/*'],
-    '/api/fonts/upload': ['./public/uploads/**/*', './data/**/*'],
-    '/api/fonts/css': ['./public/uploads/**/*', './data/**/*'],
-    '/api/artists/**/*': ['./public/uploads/**/*', './data/**/*'],
+    '/api/render': [...publicTrace, './data/**/*', './remotion/**/*', './remotion-entry/**/*'],
+    '/api/uploads/[...path]': uploadTrace,
+    '/api/video/trim': uploadTrace,
+    '/api/upload-video/raw': uploadTrace,
+    '/api/upload-video': uploadTrace,
+    '/api/upload-audio': uploadTrace,
+    '/api/upload-cover': uploadTrace,
+    '/api/upload-overlay': [...uploadTrace, './data/**/*'],
+    '/api/platform-logos': [...uploadTrace, './data/**/*'],
+    '/api/fonts/upload': [...uploadTrace, './data/**/*'],
+    '/api/fonts/css': [...uploadTrace, './data/**/*'],
+    '/api/artists/**/*': [...uploadTrace, './data/**/*'],
     '/api/presets': ['./data/**/*'],
     '/api/genre-presets': ['./data/**/*'],
     '/api/render-files': ['./out/**/*'],

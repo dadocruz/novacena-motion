@@ -5,6 +5,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
+import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,6 +93,8 @@ export async function POST(req: NextRequest) {
   let localPath = '';
 
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const filenameParam = req.nextUrl.searchParams.get('filename') || 'video.mp4';
     const ext = path.extname(filenameParam).toLowerCase();
     const contentType = (req.headers.get('content-type') || '').split(';')[0].toLowerCase();

@@ -29,7 +29,8 @@
     "test:e2e": "playwright test",
     "lambda:validate": "remotion lambda policies validate",
     "lambda:functions": "remotion lambda functions",
-    "lambda:sites": "remotion lambda sites"
+    "lambda:sites": "remotion lambda sites",
+    "cleanup:transient": "node scripts/cleanup-transient.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.97.1",

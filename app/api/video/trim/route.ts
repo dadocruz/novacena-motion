@@ -4,6 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import { z } from 'zod';
+import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,6 +66,8 @@ function safeOutputBase(name: string) {
 
 export async function POST(req: NextRequest) {
   try {
+    cleanupTransientFiles().catch(() => {});
+
     const body = await req.json();
     const parsed = TrimSchema.parse(body);
     const { filename, filePath } = sourcePathToFile(parsed.sourcePath);
