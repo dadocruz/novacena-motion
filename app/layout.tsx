@@ -3,7 +3,7 @@ import './globals.css';
 import './fonts.css';
 import CookieConsent from './components/CookieConsent';
 
-const BASE_URL = 'https://srv1106082.hstgr.cloud';
+const BASE_URL = 'https://www.estudionovacena.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

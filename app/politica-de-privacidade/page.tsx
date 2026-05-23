@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <main style={page}>
       <article style={content}>
-        <a href="/vendas" style={back}>← Voltar</a>
+        <a href="/motion" style={back}>← Voltar</a>
         <h1 style={h1}>Política de Privacidade</h1>
         <p style={updated}>Última atualização: 22 de maio de 2026</p>
 

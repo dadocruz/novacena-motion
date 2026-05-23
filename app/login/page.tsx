@@ -57,7 +57,7 @@ export default function LoginPage() {
     <main style={page}>
       <div style={wrapper}>
         {/* ── Brand ── */}
-        <a href="/vendas" style={brandLink}>
+        <a href="/motion" style={brandLink}>
           <span style={brandName}>NovaCena</span>
           <span style={brandTag}>Motion Studio</span>
         </a>
@@ -127,7 +127,7 @@ export default function LoginPage() {
           </button>
 
           <div style={footerLinks}>
-            <a href="/vendas" style={footerLink}>← Voltar ao site</a>
+            <a href="/motion" style={footerLink}>← Voltar ao site</a>
             <a href="/billing" style={footerLink}>Ver planos</a>
           </div>
         </form>

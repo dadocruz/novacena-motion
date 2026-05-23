@@ -110,7 +110,7 @@ export default function BillingPage() {
     <main style={page}>
       {/* ── Nav ── */}
       <nav style={nav}>
-        <a href="/vendas" style={navLogo}>NovaCena</a>
+        <a href="/motion" style={navLogo}>NovaCena</a>
         <div style={navRight}>
           <a href="/login" style={navLink}>Entrar</a>
           <a href="/" style={navBtn}>Estúdio ↗</a>
@@ -241,7 +241,7 @@ export default function BillingPage() {
 
         {/* ── Footer ── */}
         <div style={footer}>
-          <a href="/vendas" style={footerLink}>← Voltar ao site</a>
+          <a href="/motion" style={footerLink}>← Voltar ao site</a>
           <a href="/termos-de-uso" style={footerLink}>Termos de Uso</a>
           <a href="/politica-de-privacidade" style={footerLink}>Privacidade</a>
         </div>

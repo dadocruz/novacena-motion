@@ -40,11 +40,9 @@ const nextConfig = {
     },
   },
 
-  async rewrites() {
+  async redirects() {
     return [
-      { source: '/motion', destination: '/vendas' },
-      { source: '/admin-motion', destination: '/admin' },
-      { source: '/admin/conteudo/motion', destination: '/admin/conteudo' },
+      { source: '/vendas', destination: '/motion', permanent: true },
     ];
   },
 };

@@ -11,6 +11,8 @@ function isPublicPath(pathname: string) {
   if (pathname === '/login') return true;
   if (pathname === '/vendas') return true;
   if (pathname === '/motion') return true;
+  if (pathname === '/admin') return true;
+  if (pathname === '/admin/conteudo') return true;
   if (pathname === '/favicon.ico') return true;
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/fonts/')) return true;

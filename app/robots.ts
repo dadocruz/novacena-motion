@@ -6,9 +6,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/admin', '/api/', '/_next/'],
+        disallow: ['/admin', '/admin-motion', '/admin/conteudo', '/api/', '/_next/'],
       },
     ],
-    sitemap: 'https://srv1106082.hstgr.cloud/sitemap.xml',
+    sitemap: 'https://www.estudionovacena.com/sitemap.xml',
   };
 }
