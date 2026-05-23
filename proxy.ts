@@ -7,7 +7,8 @@ function isSaasMode() {
     process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
 }
 
-function isPublicPath(pathname: string) {
+function isPublicPath(req: NextRequest) {
+  const { pathname } = req.nextUrl;
   if (pathname === '/login') return true;
   if (pathname === '/vendas') return true;
   if (pathname === '/motion') return true;
@@ -18,6 +19,7 @@ function isPublicPath(pathname: string) {
   if (pathname.startsWith('/fonts/')) return true;
   if (pathname === '/api/health') return true;
   if (pathname === '/api/fonts/css') return true;
+  if (pathname === '/api/site-content' && req.method === 'GET') return true;
   if (pathname.startsWith('/api/auth/')) return true;
   if (!pathname.startsWith('/api/') && /\.(css|js|map|ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|otf)$/i.test(pathname)) {
     return true;
@@ -69,7 +71,7 @@ export async function proxy(req: NextRequest) {
   if (!isSaasMode()) return NextResponse.next();
 
   const { pathname } = req.nextUrl;
-  if (isPublicPath(pathname)) return NextResponse.next();
+  if (isPublicPath(req)) return NextResponse.next();
 
   const currentToken = req.cookies.get(COOKIE_NAME)?.value;
   if (await isValidSession(currentToken)) {
