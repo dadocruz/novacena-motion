@@ -39,6 +39,14 @@ const nextConfig = {
       bodySizeLimit: '50mb',
     },
   },
+
+  async rewrites() {
+    return [
+      { source: '/motion', destination: '/vendas' },
+      { source: '/admin-motion', destination: '/admin' },
+      { source: '/admin/conteudo/motion', destination: '/admin/conteudo' },
+    ];
+  },
 };
 
 module.exports = nextConfig;
