@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
-import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle } from '../../lib/saasPlans';
+import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle, type SaasPlan } from '../../lib/saasPlans';
+import { trackMarketingEvent } from '../../lib/marketingEvents';
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -40,6 +41,22 @@ const steps = [
 
 const CTA_URL = '/login?mode=signup&next=/';
 const CTA_BILLING = `/login?mode=signup&next=${encodeURIComponent('/billing')}`;
+
+function trackTrialClick() {
+  trackMarketingEvent('Lead', {
+    content_name: 'NovaCena Motion trial',
+    content_category: 'signup',
+  });
+}
+
+function trackPlanClick(plan: SaasPlan, cycle: BillingCycle) {
+  trackMarketingEvent('InitiateCheckout', {
+    content_name: `NovaCena Motion ${plan.id}`,
+    content_category: 'plan',
+    currency: 'BRL',
+    value: planPrice(plan, cycle),
+  });
+}
 
 /* ── Dual-row auto-scroll hook ───────────────────────── */
 
@@ -140,7 +157,7 @@ export default function SalesPage() {
         )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {isMobile && <a href="/login" style={navItemMobile}>Entrar</a>}
-          <a href={CTA_URL} style={isMobile ? navCtaMobile : navCta}>
+          <a href={CTA_URL} onClick={trackTrialClick} style={isMobile ? navCtaMobile : navCta}>
             {isMobile ? 'Teste grátis ↗' : 'Teste gratuitamente ↗'}
           </a>
         </div>
@@ -161,7 +178,7 @@ export default function SalesPage() {
           </h1>
           <p style={heroSub}>{content.heroSubtitle}</p>
           <div style={heroBtns}>
-            <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
+            <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
             <a href="#como" style={btnGhost}>Veja como funciona</a>
           </div>
           <p style={trustLine}>{content.trustLine}</p>
@@ -223,7 +240,7 @@ export default function SalesPage() {
 
       {/* ── CTA Banner 1 ──────────────────────────── */}
       <section style={ctaBanner}>
-        <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
+        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
         <p style={trustLineCenter}>{'✓  1 render grátis · Sem cartão · Sem instalar nada'}</p>
       </section>
 
@@ -327,7 +344,7 @@ export default function SalesPage() {
 
       {/* ── CTA Banner 2 ──────────────────────────── */}
       <section style={ctaBanner}>
-        <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
+        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
         <p style={trustLineCenter}>{'✓  Crie sua conta em 30 segundos'}</p>
       </section>
 
@@ -435,7 +452,7 @@ export default function SalesPage() {
           Pronto pra criar seu{' '}
           <em style={emCyan}>primeiro motion</em>?
         </h2>
-        <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
+        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
         <p style={trustLineCenter}>{'✓  1 render grátis · Sem cartão de crédito'}</p>
       </section>
 
@@ -491,7 +508,11 @@ export default function SalesPage() {
                     <span style={checkIcon}>{'✓'}</span> Vídeos até {plan.maxVideoSeconds}s
                   </li>
                 </ul>
-                <a href={CTA_BILLING} style={featured ? planBtnFeat : planBtnNorm}>
+                <a
+                  href={CTA_BILLING}
+                  onClick={() => trackPlanClick(plan, cycle)}
+                  style={featured ? planBtnFeat : planBtnNorm}
+                >
                   Começar com {plan.name}
                 </a>
               </article>
@@ -531,7 +552,7 @@ export default function SalesPage() {
           <em style={emCyan}>Exporte na nuvem</em>.
         </h2>
         <p style={subCenter}>Teste grátis com 1 render de demonstração. Sem cartão.</p>
-        <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
+        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
         <p style={trustLineCenter}>{'✓  Comece em 30 segundos'}</p>
       </section>
 
@@ -546,12 +567,15 @@ export default function SalesPage() {
             <div style={footerColTitle}>PRODUTO</div>
             <a href="#como" style={footerLink}>Como funciona</a>
             <a href="#planos" style={footerLink}>Planos</a>
-            <a href={CTA_URL} style={footerLink}>Teste gratuitamente</a>
+            <a href={CTA_URL} onClick={trackTrialClick} style={footerLink}>Teste gratuitamente</a>
           </div>
           <div style={footerCol}>
             <div style={footerColTitle}>CONTA</div>
             <a href="/login" style={footerLink}>Entrar</a>
-            <a href={CTA_BILLING} style={footerLink}>Comprar renders</a>
+            <a href={CTA_BILLING} onClick={() => trackMarketingEvent('InitiateCheckout', {
+              content_name: 'NovaCena Motion footer',
+              content_category: 'billing',
+            })} style={footerLink}>Comprar renders</a>
           </div>
           <div style={footerCol}>
             <div style={footerColTitle}>LEGAL</div>
