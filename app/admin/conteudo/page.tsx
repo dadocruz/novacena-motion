@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
-import type { SiteContent } from '../../../lib/siteContentTypes';
+import type { SiteContent, SiteLogo, SiteTestimonialVideo, SiteReview, SiteFaq } from '../../../lib/siteContentTypes';
 
 const EMPTY_CONTENT: SiteContent = {
   heroVideoId: '',
