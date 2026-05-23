@@ -1,0 +1,68 @@
+/* ── Types e defaults do conteúdo do site ──────────── */
+/* Safe para import em client components                */
+
+export interface SiteLogo {
+  name: string;
+  src: string;
+}
+
+export interface SiteTestimonialVideo {
+  youtubeId: string;
+  label: string;
+}
+
+export interface SiteReview {
+  name: string;
+  initials: string;
+  role: string;
+  text: string;
+  verified: boolean;
+}
+
+export interface SiteFaq {
+  q: string;
+  a: string;
+}
+
+export interface SiteContent {
+  heroVideoId: string;
+  logos: SiteLogo[];
+  testimonialVideos: SiteTestimonialVideo[];
+  reviews: SiteReview[];
+  faqs: SiteFaq[];
+  heroTagline: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  trustLine: string;
+}
+
+export const DEFAULT_CONTENT: SiteContent = {
+  heroVideoId: '',
+  heroTagline: '// MOTION PARA LANÇAMENTOS MUSICAIS',
+  heroTitle: 'NovaCena cria o motion do seu lançamento. Você fica com o crédito.',
+  heroSubtitle:
+    'Templates profissionais de motion para divulgação musical. Troque a capa, ajuste o texto, exporte na nuvem em minutos. Sem instalar nada. Sem contratar ninguém.',
+  trustLine: '✓  1 render de demonstração grátis · Sem cartão de crédito',
+  logos: [],
+  testimonialVideos: [],
+  reviews: [
+    { name: 'Lucas Martins', initials: 'LM', role: 'Produtor musical', text: 'Em 5 minutos eu tinha o motion pronto. Antes eu gastava 2 horas no editor pra cada lançamento. Mudou completamente meu fluxo.', verified: true },
+    { name: 'Camila Rocha', initials: 'CR', role: 'Social media', text: 'Meus artistas ficaram impressionados. Parece que contratamos uma agência de motion design. Entrego tudo no mesmo dia agora.', verified: true },
+    { name: 'Pedro Gustavo', initials: 'PG', role: 'Artista independente', text: 'Eu não sei usar editor de vídeo. Aqui eu só troquei a capa e o texto. Ficou profissional.', verified: true },
+    { name: 'Rafaela Duarte', initials: 'RD', role: 'Distribuidora digital', text: 'A gente lança 40 singles por mês. Sem essa ferramenta a gente não dava conta. Virou parte do nosso processo.', verified: true },
+    { name: 'Marcos Vieira', initials: 'MV', role: 'Produtor musical', text: 'Substituiu completamente o freelancer de motion que eu pagava R$300 por vídeo. A qualidade é a mesma ou melhor.', verified: true },
+    { name: 'Ana Clara Santos', initials: 'AS', role: 'Cantora', text: 'Nunca pensei que eu mesma conseguiria fazer motion pro meu single. Fiz em 10 minutos e ficou incrível.', verified: false },
+    { name: 'Felipe Torres', initials: 'FT', role: 'Social media', text: 'Entrego material pra 12 artistas por semana. Antes eu terceirizava tudo. Agora resolvo sozinho em minutos.', verified: true },
+    { name: 'Julia Mendes', initials: 'JM', role: 'Cantora', text: 'Meu primeiro lançamento com motion profissional. A diferença no engajamento foi absurda. Todo mundo perguntou quem fez.', verified: false },
+    { name: 'Ricardo Alves', initials: 'RA', role: 'Produtor musical', text: 'A renderização na nuvem é absurda. Exporto do celular, do notebook velho, de qualquer lugar. Nunca trava.', verified: true },
+    { name: 'Beatriz Lima', initials: 'BL', role: 'Social media', text: 'Os templates são lindos. Cada lançamento parece que teve direção de arte. Meus clientes amam.', verified: true },
+  ],
+  faqs: [
+    { q: 'O que é a NovaCena?', a: 'Uma ferramenta online para criar motion graphics de divulgação musical. Você escolhe um template, personaliza com sua capa e texto, e exporta o vídeo na nuvem. Tudo no navegador.' },
+    { q: 'Preciso instalar algum software?', a: 'Não. A NovaCena funciona 100% no navegador. Chrome, Safari, Edge. Qualquer computador com internet.' },
+    { q: 'Quanto tempo leva pra exportar um vídeo?', a: 'Entre 2 e 5 minutos. A renderização é feita na nuvem — seu computador não trava e não precisa ficar aberto.' },
+    { q: 'Posso usar minha própria capa e vídeo de fundo?', a: 'Sim. Você faz upload da arte do lançamento, vídeo de fundo, e ajusta texto, cor, opacidade, blur e saturação no editor visual.' },
+    { q: 'O que é um render?', a: 'Um render é uma exportação de vídeo. Cada vez que você exporta um motion, consome 1 render do seu saldo. Você compra pacotes de renders nos planos.' },
+    { q: 'Como funciona o teste grátis?', a: 'Ao criar sua conta, você recebe 1 render de demonstração gratuito. Personalize qualquer template e exporte pra ver a qualidade antes de comprar.' },
+  ],
+};

@@ -20,15 +20,10 @@ function useIsMobile(breakpoint = 768) {
   return mobile;
 }
 
-/* ── Config ───────────────────────────────────────────── */
-
-/**
- * Cole aqui o ID do vídeo do YouTube (a parte depois de v=).
- * Ex: se a URL é https://youtu.be/abc123def → coloque 'abc123def'
- */
-const YOUTUBE_VIDEO_ID = '';
-
 /* ── Data ─────────────────────────────────────────────── */
+
+import type { SiteContent, SiteReview, SiteFaq } from '../../lib/siteContentTypes';
+import { DEFAULT_CONTENT } from '../../lib/siteContentTypes';
 
 const painPoints = [
   'Abrir o editor, importar assets, animar quadro a quadro, exportar, converter…',
@@ -41,44 +36,6 @@ const steps = [
   { n: '1', label: 'TEMPLATE', title: 'Escolha o template.', desc: 'Disponível Agora, Assista no YouTube, Marco de Streams, Spotify Print. Story e feed prontos pra usar.' },
   { n: '2', label: 'EDIÇÃO', title: 'Personalize no navegador.', desc: 'Troque capa, texto, vídeo de fundo, logos, cor, opacidade e blur. Tudo visual, sem timeline.' },
   { n: '3', label: 'EXPORTAÇÃO', title: 'Exporte na nuvem.', desc: 'O vídeo é renderizado em servidores na nuvem. Seu computador não trava. Baixe o MP4 pronto.' },
-];
-
-/**
- * Depoimentos — edite apenas o texto, nome e cargo.
- * Quando tiver vídeos, adicione o campo `videoId` com o ID do YouTube.
- */
-const reviews = [
-  { name: 'Lucas Martins', initials: 'LM', role: 'Produtor musical', text: 'Em 5 minutos eu tinha o motion pronto. Antes eu gastava 2 horas no editor pra cada lançamento. Mudou completamente meu fluxo.', verified: true },
-  { name: 'Camila Rocha', initials: 'CR', role: 'Social media', text: 'Meus artistas ficaram impressionados. Parece que contratamos uma agência de motion design. Entrego tudo no mesmo dia agora.', verified: true },
-  { name: 'Pedro Gustavo', initials: 'PG', role: 'Artista independente', text: 'Eu não sei usar editor de vídeo. Aqui eu só troquei a capa e o texto. Ficou profissional.', verified: true },
-  { name: 'Rafaela Duarte', initials: 'RD', role: 'Distribuidora digital', text: 'A gente lança 40 singles por mês. Sem essa ferramenta a gente não dava conta. Virou parte do nosso processo.', verified: true },
-  { name: 'Marcos Vieira', initials: 'MV', role: 'Produtor musical', text: 'Substituiu completamente o freelancer de motion que eu pagava R$300 por vídeo. A qualidade é a mesma ou melhor.', verified: true },
-  { name: 'Ana Clara Santos', initials: 'AS', role: 'Cantora', text: 'Nunca pensei que eu mesma conseguiria fazer motion pro meu single. Fiz em 10 minutos e ficou incrível.', verified: false },
-  { name: 'Felipe Torres', initials: 'FT', role: 'Social media', text: 'Entrego material pra 12 artistas por semana. Antes eu terceirizava tudo. Agora resolvo sozinho em minutos.', verified: true },
-  { name: 'Julia Mendes', initials: 'JM', role: 'Cantora', text: 'Meu primeiro lançamento com motion profissional. A diferença no engajamento foi absurda. Todo mundo perguntou quem fez.', verified: false },
-  { name: 'Ricardo Alves', initials: 'RA', role: 'Produtor musical', text: 'A renderização na nuvem é absurda. Exporto do celular, do notebook velho, de qualquer lugar. Nunca trava.', verified: true },
-  { name: 'Beatriz Lima', initials: 'BL', role: 'Social media', text: 'Os templates são lindos. Cada lançamento parece que teve direção de arte. Meus clientes amam.', verified: true },
-];
-
-const topRow = reviews.slice(0, 5);
-const bottomRow = reviews.slice(5);
-
-/**
- * Vídeos de depoimento para o carousel.
- * Adicione o ID do YouTube de cada vídeo enviado pelo cliente.
- * O carousel só aparece se tiver pelo menos 1 vídeo.
- */
-const testimonialVideos: Array<{ youtubeId: string; label: string }> = [
-  // { youtubeId: 'SEU_VIDEO_ID_AQUI', label: 'Lucas Martins — Produtor' },
-];
-
-const faqs = [
-  { q: 'O que é a NovaCena?', a: 'Uma ferramenta online para criar motion graphics de divulgação musical. Você escolhe um template, personaliza com sua capa e texto, e exporta o vídeo na nuvem. Tudo no navegador.' },
-  { q: 'Preciso instalar algum software?', a: 'Não. A NovaCena funciona 100% no navegador. Chrome, Safari, Edge. Qualquer computador com internet.' },
-  { q: 'Quanto tempo leva pra exportar um vídeo?', a: 'Entre 2 e 5 minutos. A renderização é feita na nuvem — seu computador não trava e não precisa ficar aberto.' },
-  { q: 'Posso usar minha própria capa e vídeo de fundo?', a: 'Sim. Você faz upload da arte do lançamento, vídeo de fundo, e ajusta texto, cor, opacidade, blur e saturação no editor visual.' },
-  { q: 'O que é um render?', a: 'Um render é uma exportação de vídeo. Cada vez que você exporta um motion, consome 1 render do seu saldo. Você compra pacotes de renders nos planos.' },
-  { q: 'Como funciona o teste grátis?', a: 'Ao criar sua conta, você recebe 1 render de demonstração gratuito. Personalize qualquer template e exporte pra ver a qualidade antes de comprar.' },
 ];
 
 const CTA_URL = '/login?mode=signup&next=/';
@@ -144,16 +101,30 @@ function useAutoScroll(speed = 0.5) {
 export default function SalesPage() {
   const [cycle, setCycle] = useState<BillingCycle>('annual');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const { topRef, bottomRef } = useDualScroll(0.4);
   const videoCarouselRef = useAutoScroll(0.4);
   const isMobile = useIsMobile();
+
+  // Fetch CMS content
+  useEffect(() => {
+    fetch('/api/site-content')
+      .then((r) => r.json())
+      .then((d) => { if (d.ok && d.content) setContent(d.content); })
+      .catch(() => {});
+  }, []);
+
+  const reviews: SiteReview[] = content.reviews;
+  const faqs: SiteFaq[] = content.faqs;
+  const topRow = reviews.slice(0, Math.ceil(reviews.length / 2));
+  const bottomRow = reviews.slice(Math.ceil(reviews.length / 2));
+  const activeVideos = content.testimonialVideos.filter((v) => v.youtubeId);
 
   const selectedCycle = useMemo(
     () => BILLING_CYCLES.find((item) => item.id === cycle) ?? BILLING_CYCLES[0],
     [cycle],
   );
   const months = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
-  const activeVideos = testimonialVideos.filter((v) => v.youtubeId);
 
   return (
     <main style={page}>
@@ -175,92 +146,59 @@ export default function SalesPage() {
         </div>
       </nav>
 
+      {/* ── Grid background overlay ─────────────── */}
+      <div style={gridBg} />
+
       {/* ── Hero ───────────────────────────────────── */}
       <section style={isMobile ? heroMobile : hero}>
         <div style={heroText}>
-          <div style={tag}>{'// MOTION PARA LANÇAMENTOS MUSICAIS'}</div>
+          <div style={tag}>{content.heroTagline}</div>
           <h1 style={h1}>
             NovaCena cria<br />
             o motion do seu<br />
             lançamento.<br />
             Você fica com <em style={emCyan}>o crédito</em>.
           </h1>
-          <p style={heroSub}>
-            Templates profissionais de motion para divulgação musical.
-            Troque a capa, ajuste o texto, exporte na nuvem em minutos.
-            Sem instalar nada. Sem contratar ninguém.
-          </p>
+          <p style={heroSub}>{content.heroSubtitle}</p>
           <div style={heroBtns}>
             <a href={CTA_URL} style={btnPrimary}>Teste gratuitamente ↗</a>
             <a href="#como" style={btnGhost}>Veja como funciona</a>
           </div>
-          <p style={trustLine}>{'✓  1 render de demonstração grátis · Sem cartão de crédito'}</p>
+          <p style={trustLine}>{content.trustLine}</p>
         </div>
 
         <div style={heroVisual}>
-          {YOUTUBE_VIDEO_ID ? (
-            <div style={videoWrapper}>
+          <div style={videoWrapper}>
+            {content.heroVideoId ? (
               <iframe
-                src={`https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?rel=0&modestbranding=1`}
+                src={`https://www.youtube.com/embed/${content.heroVideoId}?rel=0&modestbranding=1`}
                 title="NovaCena Motion Studio — Veja como funciona"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 style={videoIframe}
               />
-              <span style={videoLabel}>VEJA EM AÇÃO · 2 MIN</span>
-            </div>
-          ) : (
-            <div style={mockupFrame}>
-              <div style={mockupBar}>
-                <span style={dot} /><span style={dot} /><span style={dot} />
-                <span style={mockupUrl}>novacena.com/studio</span>
+            ) : (
+              <div style={videoPlaceholder}>
+                <div style={videoPlayBtn}>▶</div>
+                <span style={videoPlaceholderText}>VÍDEO EM BREVE</span>
               </div>
-              <div style={mockupBody}>
-                <div style={mockupSide}>
-                  {['Disponível Agora', 'YouTube', 'Milestone', 'Spotify Print'].map((t, i) => (
-                    <div key={t} style={i === 0 ? mockupSideActive : mockupSideItem}>{t}</div>
-                  ))}
-                </div>
-                <div style={mockupMain}>
-                  <div style={mockupPreview}>
-                    <div style={mockupPhone}>
-                      <div style={mockupPhoneScreen}>
-                        <div style={mockupCover} />
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#fff', textAlign: 'center' }}>Novo Single</div>
-                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>Seu Artista</div>
-                      </div>
-                    </div>
-                    <span style={mockupWatchLabel}>PREVIEW AO VIVO</span>
-                  </div>
-                  <div style={mockupProps}>
-                    {[['Capa', 'cover.jpg'], ['Texto', 'DISPONÍVEL AGORA'], ['Duração', '15s']].map(([k, v]) => (
-                      <div key={k} style={mockupPropItem}>
-                        <span style={mockupPropLabel}>{k}</span>
-                        <span style={mockupPropValue}>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+            <span style={videoLabel}>VEJA EM AÇÃO · 2 MIN</span>
+          </div>
         </div>
       </section>
 
       {/* ── Platform logos ──────────────────────────── */}
-      <section style={logosSection}>
-        <p style={logosLabel}>TEMPLATES COM LOGOS DAS PLATAFORMAS</p>
-        <div style={logosRow}>
-          {[
-            { name: 'Spotify', src: '/logos/spotify/logo-color.png' },
-            { name: 'Apple Music', src: '/logos/apple-music/logo-white.png' },
-            { name: 'YouTube Music', src: '/logos/youtube-music/logo-color.png' },
-            { name: 'Deezer', src: '/logos/deezer/logo-white.png' },
-          ].map((p) => (
-            <img key={p.name} src={p.src} alt={p.name} style={logoImg} />
-          ))}
-        </div>
-      </section>
+      {content.logos.length > 0 && (
+        <section style={logosSection}>
+          <p style={logosLabel}>COMPATÍVEL COM AS PLATAFORMAS</p>
+          <div style={logosRow}>
+            {content.logos.map((p) => (
+              <img key={p.name} src={p.src} alt={p.name} style={logoImg} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Reality Check ──────────────────────────── */}
       <section style={sect}>
@@ -453,16 +391,16 @@ export default function SalesPage() {
       </section>
 
       {/* ── Video testimonials carousel ────────────── */}
-      {activeVideos.length > 0 && (
-        <section style={videoCarouselSect}>
-          <div style={tag}>{'// NO YOUTUBE'}</div>
-          <h2 style={h2}>
-            Quem usa a NovaCena{' '}
-            <em style={emCyan}>mostra o resultado</em>.
-          </h2>
-          <div ref={videoCarouselRef} style={vidCarousel}>
-            <div style={vidCarouselTrack}>
-              {[...activeVideos, ...activeVideos].map((v, i) => (
+      <section style={videoCarouselSect}>
+        <div style={tag}>{'// NO YOUTUBE'}</div>
+        <h2 style={h2}>
+          Quem usa a NovaCena{' '}
+          <em style={emCyan}>mostra o resultado</em>.
+        </h2>
+        <div ref={videoCarouselRef} style={vidCarousel}>
+          <div style={vidCarouselTrack}>
+            {activeVideos.length > 0 ? (
+              [...activeVideos, ...activeVideos].map((v, i) => (
                 <a
                   key={`${v.youtubeId}-${i}`}
                   href={`https://www.youtube.com/watch?v=${v.youtubeId}`}
@@ -475,11 +413,21 @@ export default function SalesPage() {
                   <div style={vidLabel}>{v.label}</div>
                   <div style={vidYt}>ASSISTIR NO YOUTUBE</div>
                 </a>
-              ))}
-            </div>
+              ))
+            ) : (
+              [1, 2, 3, 4].map((i) => (
+                <div key={`ph-${i}`} style={vidCard}>
+                  <div style={vidPlaceholder}>
+                    <div style={vidPlay}>▶</div>
+                  </div>
+                  <div style={vidLabel}>Em breve</div>
+                  <div style={vidYt}>VÍDEO DE DEPOIMENTO</div>
+                </div>
+              ))
+            )}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
       {/* ── CTA Banner 3 ──────────────────────────── */}
       <section style={ctaBanner}>
@@ -631,10 +579,12 @@ const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans
 const ACCENT = '#7B93FF';
 const W = 'min(1200px, calc(100% - 48px))';
 
-const page: CSSProperties = { height: '100%', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS };
+const page: CSSProperties = { height: '100%', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS, position: 'relative' };
+const gridBg: CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(123,147,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(123,147,255,0.04) 1px, transparent 1px)', backgroundSize: '48px 48px', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)' };
 
 /* ── Nav ── */
 const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, margin: '0 auto', height: 64, padding: '0 24px', background: 'rgba(8,10,15,0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
+const sectionZ: CSSProperties = { position: 'relative', zIndex: 1 };
 const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' };
 const navPill: CSSProperties = { display: 'flex', gap: 2, padding: '5px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
 const navItem: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 999 };
@@ -674,6 +624,9 @@ const heroVisual: CSSProperties = { display: 'grid', alignItems: 'center' };
 const videoWrapper: CSSProperties = { position: 'relative', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#0c0e14', aspectRatio: '16 / 9' };
 const videoIframe: CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' };
 const videoLabel: CSSProperties = { position: 'absolute', bottom: 12, right: 16, fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em', zIndex: 2, pointerEvents: 'none' };
+const videoPlaceholder: CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'linear-gradient(135deg, rgba(123,147,255,0.08), rgba(123,147,255,0.02))' };
+const videoPlayBtn: CSSProperties = { width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', fontSize: 22, color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' };
+const videoPlaceholderText: CSSProperties = { position: 'absolute', bottom: 40, fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.12em' };
 
 /* Hero mockup fallback */
 const mockupFrame: CSSProperties = { borderRadius: 14, border: '1px solid rgba(255,255,255,0.08)', background: '#0c0e14', overflow: 'hidden' };
@@ -755,6 +708,7 @@ const vidOverlay: CSSProperties = { position: 'absolute', top: 0, left: 0, right
 const vidPlay: CSSProperties = { width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'grid', placeItems: 'center', fontSize: 18, color: '#fff', backdropFilter: 'blur(8px)' };
 const vidLabel: CSSProperties = { padding: '12px 16px 4px', fontSize: 14, fontWeight: 600, color: '#fff' };
 const vidYt: CSSProperties = { padding: '0 16px 14px', fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' };
+const vidPlaceholder: CSSProperties = { width: '100%', aspectRatio: '16 / 9', background: 'linear-gradient(135deg, rgba(123,147,255,0.06), rgba(123,147,255,0.02))', display: 'grid', placeItems: 'center' };
 
 /* ── Pricing ── */
 const cycleRow: CSSProperties = { display: 'inline-flex', gap: 4, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', justifySelf: 'center' };
