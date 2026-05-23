@@ -16,6 +16,16 @@ type AdminUser = {
   updatedAt: string;
 };
 
+type CleanupResult = {
+  ok: boolean;
+  dryRun?: boolean;
+  skipped?: boolean;
+  deletedCount: number;
+  deletedBytes: number;
+  deleted?: Array<{ path: string; size: number; ageHours: number; reason: 'ttl' | 'quota' }>;
+  error?: string;
+};
+
 const PLAN_OPTIONS = [
   { id: '', label: 'Manter plano' },
   { id: 'starter', label: 'Start' },
@@ -53,6 +63,13 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(days / 30)}m atrás`;
 }
 
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB';
+  const mb = bytes / (1024 * 1024);
+  if (mb < 1024) return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+  return `${(mb / 1024).toFixed(2)} GB`;
+}
+
 export default function AdminPage() {
   const [token, setToken] = useState('');
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -60,6 +77,11 @@ export default function AdminPage() {
   const [messageKind, setMessageKind] = useState<'info' | 'error' | 'success'>('info');
   const [loading, setLoading] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
+  const [lastCleanup, setLastCleanup] = useState<CleanupResult | null>(null);
+  const [cleanupMessage, setCleanupMessage] = useState('');
+  const [cleanupMessageKind, setCleanupMessageKind] = useState<'info' | 'error' | 'success'>('info');
 
   const stats = useMemo(() => {
     const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
@@ -98,11 +120,68 @@ export default function AdminPage() {
       setHasLoaded(true);
       setMessageKind('success');
       setMessage('Clientes carregados.');
+      void loadCleanupStatus(authToken);
     } catch {
       setMessageKind('error');
       setMessage('Não foi possível carregar clientes.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadCleanupStatus(authToken = token) {
+    if (!authToken) return;
+    setCleanupLoading(true);
+    setCleanupMessage('');
+    try {
+      const response = await fetch('/api/admin/cleanup', {
+        headers: { 'x-novacena-admin-token': authToken },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setCleanupMessageKind('error');
+        setCleanupMessage(data.error || 'Não foi possível consultar temporários.');
+        return;
+      }
+      setCleanupPreview(data);
+      setCleanupMessageKind('info');
+      setCleanupMessage('Prévia de temporários atualizada.');
+    } catch {
+      setCleanupMessageKind('error');
+      setCleanupMessage('Não foi possível consultar temporários.');
+    } finally {
+      setCleanupLoading(false);
+    }
+  }
+
+  async function runCleanup() {
+    if (!token) return;
+    setCleanupLoading(true);
+    setCleanupMessage('');
+    try {
+      const response = await fetch('/api/admin/cleanup', {
+        method: 'POST',
+        headers: { 'x-novacena-admin-token': token },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        setCleanupMessageKind('error');
+        setCleanupMessage(data.error || 'Não foi possível limpar temporários.');
+        return;
+      }
+      setLastCleanup(data);
+      setCleanupPreview({ ...data, dryRun: true });
+      setCleanupMessageKind('success');
+      setCleanupMessage(
+        data.deletedCount > 0
+          ? `${data.deletedCount} arquivos temporários apagados (${formatBytes(data.deletedBytes)}).`
+          : 'Limpeza executada. Não havia temporários para apagar.'
+      );
+    } catch {
+      setCleanupMessageKind('error');
+      setCleanupMessage('Não foi possível limpar temporários.');
+    } finally {
+      setCleanupLoading(false);
     }
   }
 
@@ -198,6 +277,55 @@ export default function AdminPage() {
                 <strong style={statValue}>{s.value}</strong>
               </div>
             ))}
+          </section>
+        )}
+
+        {/* ── Maintenance ── */}
+        {hasLoaded && (
+          <section style={maintenanceCard}>
+            <div style={maintenanceHeader}>
+              <div>
+                <h2 style={cardTitle}>Saúde da VPS</h2>
+                <p style={cardDesc}>Limpeza de uploads, renders e saídas temporárias. Volumes, clientes, templates e biblioteca ficam preservados.</p>
+              </div>
+              <div style={maintenanceActions}>
+                <button onClick={() => loadCleanupStatus()} disabled={cleanupLoading} style={btnGhost}>
+                  Atualizar prévia
+                </button>
+                <button onClick={runCleanup} disabled={cleanupLoading} style={btnAction}>
+                  {cleanupLoading ? 'Limpando…' : 'Limpar agora'}
+                </button>
+              </div>
+            </div>
+
+            <div style={maintenanceGrid}>
+              <div style={metricCard}>
+                <span style={statLabel}>Pode liberar agora</span>
+                <strong style={statValueSmall}>{formatBytes(cleanupPreview?.deletedBytes ?? 0)}</strong>
+                <span style={metricHint}>{cleanupPreview?.deletedCount ?? 0} arquivos temporários</span>
+              </div>
+              <div style={metricCard}>
+                <span style={statLabel}>Última limpeza manual</span>
+                <strong style={statValueSmall}>{lastCleanup ? formatBytes(lastCleanup.deletedBytes) : '—'}</strong>
+                <span style={metricHint}>{lastCleanup ? `${lastCleanup.deletedCount} arquivos apagados` : 'Ainda não executada nesta sessão'}</span>
+              </div>
+              <div style={metricCard}>
+                <span style={statLabel}>Política ativa</span>
+                <strong style={statValueSmall}>Automática</strong>
+                <span style={metricHint}>Cron de hora em hora + prune Docker de madrugada</span>
+              </div>
+            </div>
+
+            {cleanupMessage && (
+              <div style={cleanupMessageKind === 'error' ? noticeError : cleanupMessageKind === 'success' ? noticeSuccess : noticeInfo}>
+                {cleanupMessage}
+              </div>
+            )}
+
+            <div style={protectedNote}>
+              <span style={protectedDot} />
+              Protegido: contas, saldos, planos, dados administrativos, biblioteca e templates oficiais.
+            </div>
           </section>
         )}
 
@@ -301,6 +429,7 @@ const inputSm: CSSProperties = { ...input, height: 38, fontSize: 13, minWidth: 0
 
 const btnPrimary: CSSProperties = { height: 44, borderRadius: 10, border: 'none', background: '#fff', color: '#000', fontWeight: 700, fontSize: 14, padding: '0 22px', cursor: 'pointer', fontFamily: 'inherit' };
 const btnAction: CSSProperties = { height: 38, borderRadius: 10, border: 'none', background: ACCENT, color: '#000', fontWeight: 700, fontSize: 13, padding: '0 16px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' };
+const btnGhost: CSSProperties = { height: 38, borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.72)', fontWeight: 700, fontSize: 13, padding: '0 16px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' };
 
 /* ── Notices ── */
 const noticeBase: CSSProperties = { padding: '12px 16px', borderRadius: 10, fontSize: 14, fontWeight: 500 };
@@ -313,6 +442,17 @@ const statsRow: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(
 const statCard: CSSProperties = { display: 'grid', gap: 6, padding: '20px 22px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' };
 const statLabel: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.35)', fontWeight: 600 };
 const statValue: CSSProperties = { fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' };
+
+/* ── Maintenance ── */
+const maintenanceCard: CSSProperties = { display: 'grid', gap: 16, padding: '22px', borderRadius: 14, border: '1px solid rgba(94,234,212,0.12)', background: 'linear-gradient(135deg, rgba(94,234,212,0.08), rgba(255,255,255,0.02) 42%, rgba(255,255,255,0.015))' };
+const maintenanceHeader: CSSProperties = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' };
+const maintenanceActions: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' };
+const maintenanceGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 };
+const metricCard: CSSProperties = { display: 'grid', gap: 6, padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.18)' };
+const statValueSmall: CSSProperties = { fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' };
+const metricHint: CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.34)', lineHeight: 1.45 };
+const protectedNote: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.48)', lineHeight: 1.45 };
+const protectedDot: CSSProperties = { width: 7, height: 7, borderRadius: 99, background: ACCENT, boxShadow: '0 0 16px rgba(94,234,212,0.55)', flexShrink: 0 };
 
 /* ── Users ── */
 const usersSection: CSSProperties = { display: 'grid', gap: 16 };

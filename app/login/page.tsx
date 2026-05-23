@@ -4,7 +4,7 @@ import { type CSSProperties, FormEvent, useEffect, useState } from 'react';
 
 const MONO = '"SF Mono", "Fira Code", Menlo, monospace';
 const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-const ACCENT = '#5eead4';
+const ACCENT = '#7B93FF';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');

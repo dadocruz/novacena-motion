@@ -14,3 +14,11 @@ export async function POST(req: NextRequest) {
   const result = await cleanupTransientFiles({ dryRun });
   return NextResponse.json(result);
 }
+
+export async function GET(req: NextRequest) {
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
+  const result = await cleanupTransientFiles({ dryRun: true });
+  return NextResponse.json(result);
+}

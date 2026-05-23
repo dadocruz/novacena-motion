@@ -37,8 +37,8 @@ function formatBRL(value: number) {
 
 const MONO = '"SF Mono", "Fira Code", Menlo, monospace';
 const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-const SERIF = 'Newsreader, Georgia, "Times New Roman", serif';
-const ACCENT = '#5eead4';
+const SERIF = '"Playfair Display", Georgia, "Times New Roman", serif';
+const ACCENT = '#7B93FF';
 
 export default function BillingPage() {
   const [plans, setPlans] = useState<SaasPlan[]>([]);
@@ -275,10 +275,10 @@ const sub: CSSProperties = { margin: 0, fontSize: 16, color: 'rgba(255,255,255,0
 /* ── User bar ── */
 const userBar: CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap', padding: '18px 24px', borderRadius: 14, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' };
 const userInfo: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12 };
-const userAvatar: CSSProperties = { width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(94,234,212,0.12)', color: ACCENT, fontWeight: 700, fontSize: 15, flexShrink: 0 };
+const userAvatar: CSSProperties = { width: 40, height: 40, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'rgba(123,147,255,0.12)', color: ACCENT, fontWeight: 700, fontSize: 15, flexShrink: 0 };
 const userNameStyle: CSSProperties = { fontSize: 15, fontWeight: 700, color: '#fff' };
 const userMeta: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 2 };
-const balanceBox: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'rgba(94,234,212,0.06)', border: '1px solid rgba(94,234,212,0.12)' };
+const balanceBox: CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'rgba(123,147,255,0.06)', border: '1px solid rgba(123,147,255,0.12)' };
 const balanceLabel: CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: MONO };
 const balanceValue: CSSProperties = { fontSize: 22, fontWeight: 800, color: ACCENT, letterSpacing: '-0.02em' };
 const balanceUnit: CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.3)' };
@@ -293,7 +293,7 @@ const cycleSave: CSSProperties = { fontSize: 10, color: ACCENT, fontWeight: 600 
 const noticeError: CSSProperties = { padding: '12px 16px', borderRadius: 10, background: 'rgba(224,108,108,0.1)', border: '1px solid rgba(224,108,108,0.2)', color: '#e06c6c', fontSize: 14 };
 
 /* ── Pix ── */
-const pixCard: CSSProperties = { display: 'grid', gap: 18, padding: '24px 28px', borderRadius: 16, border: `1px solid rgba(94,234,212,0.25)`, background: 'rgba(94,234,212,0.04)' };
+const pixCard: CSSProperties = { display: 'grid', gap: 18, padding: '24px 28px', borderRadius: 16, border: `1px solid rgba(123,147,255,0.25)`, background: 'rgba(123,147,255,0.04)' };
 const pixTag: CSSProperties = { fontFamily: MONO, fontSize: 11, fontWeight: 700, color: ACCENT, letterSpacing: '0.08em' };
 const pixTitle: CSSProperties = { margin: '8px 0 0', fontSize: 22, fontWeight: 700, color: '#fff' };
 const pixDesc: CSSProperties = { margin: '6px 0 0', fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 };
@@ -308,13 +308,13 @@ const pixWhatsapp: CSSProperties = { color: ACCENT, fontWeight: 700, fontSize: 1
 /* ── Plans ── */
 const plansGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 };
 const planCard: CSSProperties = { position: 'relative', display: 'grid', gap: 18, padding: 28, borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' };
-const planFeatured: CSSProperties = { ...planCard, border: `1px solid rgba(94,234,212,0.3)`, background: 'rgba(94,234,212,0.03)', boxShadow: '0 0 80px rgba(94,234,212,0.04)' };
+const planFeatured: CSSProperties = { ...planCard, border: `1px solid rgba(123,147,255,0.3)`, background: 'rgba(123,147,255,0.03)', boxShadow: '0 0 80px rgba(123,147,255,0.04)' };
 const planBadge: CSSProperties = { position: 'absolute', top: -11, left: 24, padding: '5px 14px', borderRadius: 999, background: ACCENT, color: '#000', fontSize: 12, fontWeight: 700 };
 const planTitle: CSSProperties = { margin: 0, fontSize: 22, fontWeight: 800 };
 const planDesc: CSSProperties = { margin: 0, color: 'rgba(255,255,255,0.38)', fontSize: 14, lineHeight: 1.5, minHeight: 42 };
 const planPrice: CSSProperties = { fontSize: 36, fontWeight: 900, letterSpacing: '-0.02em' };
 const planPer: CSSProperties = { color: 'rgba(255,255,255,0.3)', fontSize: 13, marginTop: 2 };
-const planTokenBadge: CSSProperties = { padding: '7px 14px', borderRadius: 8, background: 'rgba(94,234,212,0.06)', border: '1px solid rgba(94,234,212,0.12)', color: ACCENT, fontWeight: 700, fontSize: 13, justifySelf: 'start' };
+const planTokenBadge: CSSProperties = { padding: '7px 14px', borderRadius: 8, background: 'rgba(123,147,255,0.06)', border: '1px solid rgba(123,147,255,0.12)', color: ACCENT, fontWeight: 700, fontSize: 13, justifySelf: 'start' };
 const planFeatures: CSSProperties = { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 9 };
 const planFeatureItem: CSSProperties = { display: 'flex', gap: 10, alignItems: 'center', color: 'rgba(255,255,255,0.48)', fontSize: 14 };
 const checkIcon: CSSProperties = { color: ACCENT, fontWeight: 700, flexShrink: 0 };
