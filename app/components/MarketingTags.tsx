@@ -1,19 +1,38 @@
+'use client';
+
 import Script from 'next/script';
+import { usePathname } from 'next/navigation';
 
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || '';
-const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
-const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || '';
-const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || '';
+const MOTION_GTM_ID = process.env.NEXT_PUBLIC_MOTION_GTM_ID || process.env.NEXT_PUBLIC_GTM_ID || '';
+const MOTION_GA_ID = process.env.NEXT_PUBLIC_MOTION_GA_ID || process.env.NEXT_PUBLIC_GA_ID || '';
+const MOTION_GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID || process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || '';
+const MOTION_META_PIXEL_ID = process.env.NEXT_PUBLIC_MOTION_META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || '';
 
-const GOOGLE_TAG_IDS = Array.from(new Set([GA_ID, GOOGLE_ADS_ID].filter(Boolean)));
+const MOTION_GOOGLE_TAG_IDS = Array.from(new Set([MOTION_GA_ID, MOTION_GOOGLE_ADS_ID].filter(Boolean)));
+
+function isMotionMarketingPath(pathname: string) {
+  return (
+    pathname === '/motion' ||
+    pathname === '/vendas' ||
+    pathname === '/login' ||
+    pathname === '/billing' ||
+    pathname.startsWith('/motion/') ||
+    pathname.startsWith('/login/') ||
+    pathname.startsWith('/billing/')
+  );
+}
 
 export default function MarketingTags() {
+  const pathname = usePathname() || '/';
+
+  if (!isMotionMarketingPath(pathname)) return null;
+
   return (
     <>
-      {GTM_ID && (
+      {MOTION_GTM_ID && (
         <>
           <Script
-            id="novacena-gtm"
+            id="novacena-motion-gtm"
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
@@ -21,13 +40,13 @@ export default function MarketingTags() {
                 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
                 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer',${JSON.stringify(GTM_ID)});
+                })(window,document,'script','dataLayer',${JSON.stringify(MOTION_GTM_ID)});
               `,
             }}
           />
           <noscript>
             <iframe
-              src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+              src={`https://www.googletagmanager.com/ns.html?id=${MOTION_GTM_ID}`}
               height="0"
               width="0"
               style={{ display: 'none', visibility: 'hidden' }}
@@ -36,15 +55,15 @@ export default function MarketingTags() {
         </>
       )}
 
-      {GOOGLE_TAG_IDS.length > 0 && (
+      {MOTION_GOOGLE_TAG_IDS.length > 0 && (
         <>
           <Script
-            id="novacena-google-tag-src"
-            src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_TAG_IDS[0]}`}
+            id="novacena-motion-google-tag-src"
+            src={`https://www.googletagmanager.com/gtag/js?id=${MOTION_GOOGLE_TAG_IDS[0]}`}
             strategy="afterInteractive"
           />
           <Script
-            id="novacena-google-tag"
+            id="novacena-motion-google-tag"
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
@@ -52,17 +71,17 @@ export default function MarketingTags() {
                 function gtag(){dataLayer.push(arguments);}
                 window.gtag = window.gtag || gtag;
                 gtag('js', new Date());
-                ${GOOGLE_TAG_IDS.map((id) => `gtag('config', ${JSON.stringify(id)});`).join('\n')}
+                ${MOTION_GOOGLE_TAG_IDS.map((id) => `gtag('config', ${JSON.stringify(id)});`).join('\n')}
               `,
             }}
           />
         </>
       )}
 
-      {META_PIXEL_ID && (
+      {MOTION_META_PIXEL_ID && (
         <>
           <Script
-            id="novacena-meta-pixel"
+            id="novacena-motion-meta-pixel"
             strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
@@ -74,7 +93,7 @@ export default function MarketingTags() {
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', ${JSON.stringify(META_PIXEL_ID)});
+                fbq('init', ${JSON.stringify(MOTION_META_PIXEL_ID)});
                 fbq('track', 'PageView');
               `,
             }}
@@ -84,7 +103,7 @@ export default function MarketingTags() {
               height="1"
               width="1"
               style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`}
+              src={`https://www.facebook.com/tr?id=${MOTION_META_PIXEL_ID}&ev=PageView&noscript=1`}
               alt=""
             />
           </noscript>
