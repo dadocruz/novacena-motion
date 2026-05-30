@@ -4386,6 +4386,18 @@ return (
           </button>
           {SAAS_EXPORT_MODE && (
             <>
+              <a
+                href="/monitor"
+                style={{
+                  ...topTab,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                Monitor
+              </a>
               <button
                 onClick={() => openUpgradeOffer('Escolha um pacote para carregar renders na sua conta.')}
                 style={{
