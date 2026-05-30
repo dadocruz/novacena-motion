@@ -255,6 +255,7 @@ export default function Home() {
 
   // ─── PROJETO ──────────────────────────────────────────────
   const [template, setTemplate] = useState<TemplateId>('available_now');
+  const [layoutPreset, setLayoutPreset] = useState<string>(factoryMotion.layoutPreset ?? '');
   const [target, setTarget] = useState<RenderTarget>('story');
   const [showSafeArea, setShowSafeArea] = useState(false);
 
@@ -1047,6 +1048,7 @@ export default function Home() {
       activeStudioTool,
       activeTextRole,
       template,
+      layoutPreset,
       target,
       showSafeArea,
       releaseDate,
@@ -1168,6 +1170,7 @@ export default function Home() {
     setActiveStudioTool((snapshot.activeStudioTool ?? 'cover') as StudioToolId);
     setActiveTextRole((snapshot.activeTextRole ?? 'headline') as FontRole);
     setTemplate((snapshot.template ?? 'available_now') as TemplateId);
+    setLayoutPreset(typeof snapshot.layoutPreset === 'string' ? snapshot.layoutPreset : '');
     setTarget((snapshot.target ?? 'story') as RenderTarget);
     setShowSafeArea(Boolean(snapshot.showSafeArea));
     setReleaseDate(snapshot.releaseDate ?? '');
@@ -1377,6 +1380,7 @@ export default function Home() {
       fontCta,
       fontCta1,
       fontCta2,
+      layoutPreset,
       customFonts: userFonts.map(userFontToFontDef),
       strokeHeadline: { ...strokeHeadline },
       strokeDate: { ...strokeDate },
@@ -1463,6 +1467,7 @@ export default function Home() {
       fontCta,
       fontCta1,
       fontCta2,
+      layoutPreset,
       userFonts,
       strokeHeadline,
       strokeDate,
@@ -3202,6 +3207,28 @@ export default function Home() {
   const previewLayerHotspots = React.useMemo<PreviewLayerHotspot[]>(() => {
     const pct = (value: number) => `${Math.round(value * 10) / 10}%`;
     const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const roleRect = (left: number, top: number, width: number, height: number, role: FontRole): React.CSSProperties => {
+      const scale = clamp(Number(txScale[role] ?? 1), 0.2, 4);
+      const offsetX = (Number(txOX[role] ?? 0) / 1080) * 100;
+      const offsetY = (Number(txOY[role] ?? 0) / compositionHeight) * 100;
+      const scaledWidth = clamp(width * scale, 4, 96);
+      const scaledHeight = clamp(height * scale, 3, 80);
+      const centerX = left + width / 2 + offsetX;
+      const centerY = top + height / 2 + offsetY;
+
+      return {
+        left: pct(clamp(centerX - scaledWidth / 2, -12, 112)),
+        top: pct(clamp(centerY - scaledHeight / 2, -12, 112)),
+        width: pct(scaledWidth),
+        height: pct(scaledHeight),
+      };
+    };
+    const mediaRect = (centerX: number, centerY: number, width: number, height: number, offsetX = 0, offsetY = 0): React.CSSProperties => ({
+      left: pct(clamp(centerX + (offsetX / 1080) * 100 - width / 2, -12, 112)),
+      top: pct(clamp(centerY + (offsetY / compositionHeight) * 100 - height / 2, -12, 112)),
+      width: pct(clamp(width, 4, 96)),
+      height: pct(clamp(height, 3, 92)),
+    });
     const visibleLogoPlatforms = platformsSel.filter((p) => Boolean(customLogos[p]));
     const logoSizes = (visibleLogoPlatforms.length ? visibleLogoPlatforms : platformsSel).map((p) =>
       Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))
@@ -3255,36 +3282,42 @@ export default function Home() {
       });
 
     if (template === 'spotify_print') {
+      const phoneWidthPct = clamp((phoneSize / 1080) * 100, 26, 78);
       return [
-        { id: 'spotify-date', kind: 'text', role: 'date', label: 'Texto acima', rect: { left: '12%', top: '15%', width: '76%', height: '8%' } },
-        { id: 'spotify-number', kind: 'text', role: 'headline', label: 'Número', rect: { left: '7%', top: '22%', width: '86%', height: '16%' } },
-        { id: 'spotify-metric', kind: 'text', role: 'cta1', label: 'Métrica', rect: { left: '12%', top: '37%', width: '76%', height: '8%' } },
-        { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: { left: '18%', top: '42%', width: '64%', height: '38%' } },
+        { id: 'spotify-date', kind: 'text', role: 'date', label: 'Texto acima', rect: roleRect(12, 15, 76, 8, 'date') },
+        { id: 'spotify-number', kind: 'text', role: 'headline', label: 'Número', rect: roleRect(7, 22, 86, 16, 'headline') },
+        { id: 'spotify-metric', kind: 'text', role: 'cta1', label: 'Métrica', rect: roleRect(12, 37, 76, 8, 'cta1') },
+        { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: mediaRect(50, 62, phoneWidthPct, 40, phoneX, phoneY) },
         { id: 'spotify-logo', kind: 'logos', label: 'Logos', rect: { left: '34%', top: '82%', width: '32%', height: '8%' } },
         ...elementHotspots,
       ];
     }
 
     if (template === 'milestone') {
+      const coverPct = clamp((Math.min(coverSize, 460) / 1080) * 100, 22, 64);
+      const coverHeightPct = clamp((Math.min(coverSize, 460) / compositionHeight) * 100, 14, 38);
       return [
-        { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: { left: '12%', top: '12%', width: '76%', height: '8%' } },
-        { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: { left: '22%', top: '24%', width: '56%', height: '26%' } },
-        { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: { left: '6%', top: '52%', width: '88%', height: '16%' } },
-        { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: { left: '14%', top: '68%', width: '72%', height: '9%' } },
+        { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: roleRect(12, 12, 76, 8, 'date') },
+        { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 37, coverPct, coverHeightPct, coverX, coverY) },
+        { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: roleRect(6, 52, 88, 16, 'headline') },
+        { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: roleRect(14, 68, 72, 9, 'cta1') },
         ...elementHotspots,
       ];
     }
 
+    const coverPct = clamp((coverSize / 1080) * 100, 18, 86);
+    const coverHeightPct = clamp((coverSize / compositionHeight) * 100, 12, 66);
+
     return [
-      { id: 'headline', kind: 'text', role: 'headline', label: 'Headline', rect: { left: '8%', top: '13%', width: '84%', height: '13%' } },
-      { id: 'date', kind: 'text', role: 'date', label: 'Data', rect: { left: '22%', top: '25%', width: '56%', height: '7%' } },
-      { id: 'cover', kind: 'cover', label: 'Capa', rect: { left: '18%', top: '34%', width: '64%', height: '31%' } },
-      { id: 'cta1', kind: 'text', role: 'cta1', label: 'Chamada 1', rect: { left: '8%', top: '68%', width: '84%', height: '9%' } },
-      { id: 'cta2', kind: 'text', role: 'cta2', label: 'Chamada 2', rect: { left: '8%', top: '76%', width: '84%', height: '10%' } },
+      { id: 'headline', kind: 'text', role: 'headline', label: 'Headline', rect: roleRect(8, 13, 84, 13, 'headline') },
+      { id: 'date', kind: 'text', role: 'date', label: 'Data', rect: roleRect(22, 25, 56, 7, 'date') },
+      { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY) },
+      { id: 'cta1', kind: 'text', role: 'cta1', label: 'Chamada 1', rect: roleRect(8, 68, 84, 9, 'cta1') },
+      { id: 'cta2', kind: 'text', role: 'cta2', label: 'Chamada 2', rect: roleRect(8, 76, 84, 10, 'cta2') },
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, compositionHeight, overlays]);
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();

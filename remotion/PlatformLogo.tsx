@@ -15,6 +15,7 @@ type PlatformLogoProps = {
 export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   name,
   size = 58,
+  variant,
   delay = 0,
   customSrc,
   index = 0,
@@ -61,11 +62,15 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
 
   if (!src) return null;
 
+  const isCustomWordmark = Boolean(customSrc) && variant !== 'icon';
+  const boxWidth = isCustomWordmark ? Math.round(size * 2.8) : size;
+  const boxHeight = size;
+
   return (
     <div
       style={{
-        width: size,
-        height: size,
+        width: boxWidth,
+        height: boxHeight,
         opacity,
         transform: `translateY(${y}px) rotate(${rotate}deg) scale(${scale * breatheScale})`,
         display: 'flex',

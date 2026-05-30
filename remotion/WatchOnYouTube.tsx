@@ -86,6 +86,106 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     { left: 870, top: 1510, size: 102, off: 130 },
   ];
 
+  if (props.motion?.layoutPreset === 'novacena_youtube_card') {
+    return (
+      <AbsoluteFill style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#fff', overflow: 'hidden' }}>
+        <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
+        <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={M.particlesEnabled ? 0.72 : 0} background={M.background} />
+        <OverlayLayer overlays={props.motion?.overlays} />
+        {floatingYT.map((f, i) => {
+          const appear = eased(frame, 20 + i * 4, 20 + i * 4 + 18, easings.outCubic);
+          return (
+            <div key={i} style={{ position: 'absolute', left: f.left, top: f.top, opacity: appear * 0.72, transform: loopFloat(frame, f.off, 0.9) }}>
+              <PlatformLogo name="YouTube" size={f.size + 18} variant="icon" customSrc={M.customLogos?.YouTube} />
+            </div>
+          );
+        })}
+        <div
+          style={{
+            position: 'absolute',
+            top: 408,
+            left: 120,
+            right: 120,
+            textAlign: 'center',
+            fontFamily: ff(M.fontHeadline.family),
+            fontSize: 82,
+            lineHeight: 0.9,
+            fontWeight: M.fontHeadline.weight,
+            letterSpacing: 2.4,
+            color: '#d8f4f0',
+            textShadow: '0 4px 0 rgba(0,0,0,0.28), 0 18px 46px rgba(0,0,0,0.46)',
+            textTransform: 'uppercase',
+            ...textStrokeStyle(M.strokeHeadline),
+            ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
+            ...applyTextStyle(props.motion?.styleHeadline),
+            ...(showAll ? {} : headlineMask),
+            ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
+          }}
+        >
+          ASSISTA NO<br />YOUTUBE
+        </div>
+        <div data-cover-position-wrapper style={{ position: 'absolute', top: 675 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
+          <PremiumCover
+            src={props.coverImage}
+            size={props.motion?.coverSize ?? 590}
+            entryFrame={COVER_IN}
+            spinStart={COVER_IN + 14}
+            spinEnd={FINAL_HIT - 4}
+            spinTurns={M.spinTurns}
+            wiggleIntensity={M.wiggleIntensity}
+            accentFrames={accents}
+            glowColor={M.glowColor}
+          />
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 1420,
+            left: 250,
+            right: 250,
+            minHeight: 62,
+            display: 'grid',
+            placeItems: 'center',
+            borderRadius: 16,
+            background: '#ff1616',
+            color: '#fff',
+            fontFamily: ff(M.fontDate.family),
+            fontSize: 40,
+            fontWeight: M.fontDate.weight,
+            letterSpacing: 0.8,
+            boxShadow: '0 18px 42px rgba(0,0,0,0.36)',
+            ...applyTextStyle(props.motion?.styleDate),
+            ...(showAll ? {} : channelAnim),
+            ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
+          }}
+        >
+          {channel}
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            top: 1514,
+            left: 96,
+            right: 96,
+            textAlign: 'center',
+            fontFamily: ff(ctaFont.family),
+            fontSize: 34,
+            fontWeight: ctaFont.weight,
+            letterSpacing: 1.8,
+            textTransform: 'uppercase',
+            ...textStrokeStyle(ctaStroke),
+            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+            ...applyTextStyle(ctaStyle),
+            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
+          }}
+        >
+          {cta}
+        </div>
+        <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
+      </AbsoluteFill>
+    );
+  }
+
   return (
     <AbsoluteFill
       style={{

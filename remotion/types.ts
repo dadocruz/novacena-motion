@@ -247,6 +247,11 @@ export type TextStyle = {
  * Configurações do motion controláveis pelo usuário.
  */
 export type MotionConfig = {
+  /**
+   * Preset interno de composição baseado nas artes de referência NovaCena.
+   * Não aparece como controle solto no editor; vem dos templates salvos.
+   */
+  layoutPreset?: string;
   fontHeadline?: string;
   strokeHeadline?: TextStroke;
   strokeDate?: TextStroke;

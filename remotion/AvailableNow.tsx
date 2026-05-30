@@ -85,6 +85,76 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
   const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
 
+  if (motion.layoutPreset === 'novacena_presave_typographic') {
+    const textShadow = '0 2px 0 rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.10)';
+    const renderText = (
+      text: string,
+      top: number,
+      font: typeof fontHeadline,
+      style: React.CSSProperties,
+      anim: any,
+      userStyle?: any
+    ) => (
+      <div
+        style={{
+          position: 'absolute',
+          top,
+          left: 74,
+          right: 74,
+          display: 'grid',
+          placeItems: 'center',
+          textAlign: 'center',
+          whiteSpace: 'pre-line',
+          fontFamily: `'${font?.family ?? 'Arial'}', Arial, sans-serif`,
+          fontWeight: font?.weight ?? 900,
+          color: '#f4f1e9',
+          textShadow,
+          ...style,
+          ...applyTextStyle(userStyle),
+          ...anim,
+          ...userTextTransform(userStyle, anim),
+        }}
+      >
+        {text}
+      </div>
+    );
+
+    return (
+      <AbsoluteFill style={{ fontFamily: 'Inter, Arial, sans-serif', color: '#fff', overflow: 'hidden', background: '#f8f7f2' }}>
+        <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
+        <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={0} background={motion.background} />
+        <OverlayLayer overlays={motion.overlays} />
+        {renderText(props.headline || 'LANÇAMENTO', 360, fontHeadline, {
+          fontSize: 92,
+          lineHeight: 0.94,
+          letterSpacing: 0,
+          textTransform: 'uppercase',
+        }, showAll ? {} : tH, motion.styleHeadline)}
+        {props.releaseDate ? renderText(props.releaseDate, 472, fontDate, {
+          fontSize: 62,
+          lineHeight: 0.98,
+          letterSpacing: 0,
+          textTransform: 'uppercase',
+        }, showAll ? {} : tD, motion.styleDate) : null}
+        {renderText(cta1Text, 1398, fontCta1, {
+          fontSize: 58,
+          lineHeight: 0.96,
+          letterSpacing: 0,
+          textTransform: 'uppercase',
+          opacity: showAll ? 1 : cta1Opacity,
+        }, showAll ? {} : tC1, motion.styleCta1 ?? motion.styleCta)}
+        {renderText(cta2Text, 1568, fontCta2, {
+          fontSize: 28,
+          lineHeight: 1.1,
+          letterSpacing: 1.4,
+          textTransform: 'uppercase',
+          opacity: showAll ? 1 : cta2Opacity,
+        }, showAll ? {} : tC2, motion.styleCta2 ?? motion.styleCta)}
+        <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
+      </AbsoluteFill>
+    );
+  }
+
   return (
     <AbsoluteFill style={{ fontFamily: 'Inter, Arial, sans-serif', color: '#fff', overflow: 'hidden' }}>
       <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
