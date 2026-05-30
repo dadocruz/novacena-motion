@@ -121,7 +121,7 @@ import {
   tinySelect,
   photoDelBtn,
   logBoxStyle,
-} from './editorStyles';
+} from '../editorStyles';
 
 import {
   DragSlider,
