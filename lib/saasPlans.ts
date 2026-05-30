@@ -33,7 +33,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monitorArtistLimit: 10,
     monitorDailyRefreshLimit: 10,
     maxVideoSeconds: 20,
-    features: ['30 renders por ciclo', 'Até 10 artistas monitorados', 'Atualização dos dados a cada 24h', 'Templates essenciais', 'Exportação em story e feed'],
+    features: ['30 renders por ciclo', 'Até 10 artistas monitorados no YouTube e Spotify', 'Atualização dos dados a cada 24h', 'Templates essenciais', 'Exportação em story e feed'],
   },
   {
     id: 'pro',
@@ -44,7 +44,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monitorArtistLimit: 35,
     monitorDailyRefreshLimit: 35,
     maxVideoSeconds: 40,
-    features: ['100 renders por ciclo', 'Até 35 artistas monitorados', 'Atualização dos dados a cada 24h', 'Todos os templates', 'Galeria de projetos', 'Uploads pesados'],
+    features: ['100 renders por ciclo', 'Até 35 artistas monitorados no YouTube e Spotify', 'Atualização dos dados a cada 24h', 'Todos os templates', 'Galeria de projetos', 'Uploads pesados'],
   },
   {
     id: 'studio',
@@ -55,7 +55,7 @@ export const SAAS_PLANS: SaasPlan[] = [
     monitorArtistLimit: 100,
     monitorDailyRefreshLimit: 100,
     maxVideoSeconds: 60,
-    features: ['350 renders por ciclo', 'Até 100 artistas monitorados', 'Atualização dos dados a cada 24h', 'Prioridade na fila', 'Biblioteca avançada', 'Suporte de implantação'],
+    features: ['350 renders por ciclo', 'Até 100 artistas monitorados no YouTube e Spotify', 'Atualização dos dados a cada 24h', 'Prioridade na fila', 'Biblioteca avançada', 'Suporte de implantação'],
   },
 ];
 

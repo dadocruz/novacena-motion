@@ -44,7 +44,7 @@ export default function BillingPage() {
   const [plans, setPlans] = useState<SaasPlan[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [user, setUser] = useState<BillingUser | null>(null);
-  const [cycle, setCycle] = useState<BillingCycle>('annual');
+  const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [message, setMessage] = useState('');
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);

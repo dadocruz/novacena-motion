@@ -116,7 +116,7 @@ function useAutoScroll(speed = 0.5) {
 /* ── Page ─────────────────────────────────────────────── */
 
 export default function SalesPage() {
-  const [cycle, setCycle] = useState<BillingCycle>('annual');
+  const [cycle, setCycle] = useState<BillingCycle>('monthly');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const { topRef, bottomRef } = useDualScroll(0.4);
