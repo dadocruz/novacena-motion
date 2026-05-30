@@ -19,19 +19,33 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(health);
 }
 
-/** POST /api/monitor/dashboard — busca dados completos dos artistas do usuario */
+/** POST /api/monitor/dashboard — busca dados completos
+ *  Aceita artists no body (frontend gaveta) OU usa lista salva do usuario */
 export async function POST(req: NextRequest) {
   const session = getSession(req);
   if (!session) return NextResponse.json({ ok: false, error: 'Nao autenticado.' }, { status: 401 });
 
   try {
-    const artists = await listUserArtists(session.sub);
+    const body = await req.json().catch(() => ({}));
+    const bodyArtists = Array.isArray(body?.artists) ? body.artists : null;
 
-    const inputs = artists.map((a) => ({
-      artistName: a.artistName,
-      spotifyUrl: a.spotifyUrl,
-      youtubeUrl: a.youtubeUrl,
-    }));
+    let inputs;
+    if (bodyArtists && bodyArtists.length > 0) {
+      // Frontend gaveta envia artists no body
+      inputs = bodyArtists.map((a: Record<string, string>) => ({
+        artistName: a.artistName || a.name || '',
+        spotifyUrl: a.spotifyUrl || '',
+        youtubeUrl: a.youtubeUrl || '',
+      }));
+    } else {
+      // Fallback: usa lista salva do usuario
+      const saved = await listUserArtists(session.sub);
+      inputs = saved.map((a) => ({
+        artistName: a.artistName,
+        spotifyUrl: a.spotifyUrl,
+        youtubeUrl: a.youtubeUrl,
+      }));
+    }
 
     const dashboard = await fetchDashboard(inputs);
     return NextResponse.json(dashboard);
