@@ -341,6 +341,7 @@
       <button class="btn dark" id="exportBtn">Exportar lista</button>
       <button class="btn dark" id="importBtn">Importar lista</button>
       <button class="btn dark" id="manageBtn">Artistas</button>
+      <button class="btn dark" id="calendarBtn" title="Conectar Google Agenda">&#128197; Agenda</button>
       <button class="btn red" id="addBtn">+ Cadastrar</button>
       <input id="importInput" type="file" accept="application/json" class="hidden" />
     </div>
@@ -2598,6 +2599,50 @@
     loadDashboard({ forceRefresh: true });
   });
   qs('manageBtn').addEventListener('click', () => openDrawer(manageDrawer));
+
+  // ── Google Calendar integration ──
+  const calendarBtn = qs('calendarBtn');
+  let calendarConnected = false;
+
+  async function checkCalendarStatus() {
+    try {
+      const r = await fetch('/api/auth/google/calendar?check=1');
+      const d = await r.json();
+      calendarConnected = d.connected;
+      if (calendarConnected) {
+        calendarBtn.textContent = '\u{1F4C5} Agenda conectada';
+        calendarBtn.style.borderColor = 'rgba(29,185,84,.3)';
+        calendarBtn.style.color = '#6ddf9e';
+      } else {
+        calendarBtn.textContent = '\u{1F4C5} Conectar Agenda';
+      }
+    } catch { /* silent */ }
+  }
+
+  calendarBtn.addEventListener('click', () => {
+    if (calendarConnected) {
+      showToast('Google Agenda ja esta conectada. Eventos de "Pedir arte" serao criados no seu calendario.', 'success');
+    } else {
+      window.location.href = '/api/auth/google/calendar';
+    }
+  });
+
+  // Check on load
+  checkCalendarStatus();
+
+  // Check URL params for calendar connection result
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('calendar') === 'connected') {
+    showToast('Google Agenda conectada com sucesso! Agora voce pode usar "Pedir arte".', 'success');
+    calendarConnected = true;
+    calendarBtn.textContent = '\u{1F4C5} Agenda conectada';
+    calendarBtn.style.borderColor = 'rgba(29,185,84,.3)';
+    calendarBtn.style.color = '#6ddf9e';
+    window.history.replaceState({}, '', '/monitor');
+  } else if (urlParams.get('calendar') === 'error') {
+    showToast('Erro ao conectar Google Agenda. Tente novamente.', 'error');
+    window.history.replaceState({}, '', '/monitor');
+  }
   qs('closeAdd').addEventListener('click', closeDrawers);
   qs('closeManage').addEventListener('click', closeDrawers);
   closeRequestBtn?.addEventListener('click', closeDrawers);
