@@ -271,7 +271,12 @@ export default function Home() {
   const [metricPrefix, setMetricPrefix] = useState(factoryAvailableNow.metricPrefix ?? 'ULTRAPASSAMOS');
   const [metricNumber, setMetricNumber] = useState(factoryAvailableNow.metricNumber ?? '100.000');
   const [metricLabel, setMetricLabel] = useState(factoryAvailableNow.metricLabel ?? 'OUVINTES');
-  const [platformsSel, setPlatformsSel] = useState<PlatformName[]>(factoryAvailableNow.platforms);
+  const [platformsSel, setPlatformsSel] = useState<PlatformName[]>(() => {
+    const saved: PlatformName[] = factoryAvailableNow.platforms ?? [];
+    const logos = (factoryMotion.customLogos ?? {}) as Record<string, string>;
+    const fromLogos = (Object.keys(logos) as PlatformName[]).filter((p) => allPlatforms.includes(p) && !saved.includes(p));
+    return [...saved, ...fromLogos];
+  });
 
   // ─── MOTION CONFIG ────────────────────────────────────────
   const [fontHeadline, setFontHeadline] = useState<string>(factoryMotion.fontHeadline ?? DEFAULT_FONTS.headline);
@@ -741,9 +746,7 @@ export default function Home() {
       .then((d) => {
         if (d.ok) {
           setArtists(d.artists);
-          if (d.artists.length > 0 && !activeSlug) {
-            setActiveSlug(d.artists[0].slug);
-          }
+          setActiveSlug((current) => (current && d.artists.some((artist: ArtistRecord) => artist.slug === current) ? current : null));
         }
       });
     // user fonts
@@ -2516,6 +2519,7 @@ export default function Home() {
     const d = await r.json();
     if (d.ok) {
       setCustomLogos((m) => ({ ...m, [platform]: d.logo.path }));
+      setPlatformsSel((prev) => prev.includes(platform as PlatformName) ? prev : [...prev, platform as PlatformName]);
     } else {
       alert(`Erro: ${d.error}`);
     }
@@ -4257,7 +4261,7 @@ return (
         margin: '0 auto',
         overflow: 'hidden',
         display: 'grid',
-        gridTemplateColumns: 'minmax(260px, clamp(300px, 20vw, 420px)) minmax(320px, 1fr) minmax(260px, clamp(300px, 19vw, 420px))',
+        gridTemplateColumns: 'minmax(220px, clamp(260px, 20vw, 420px)) minmax(240px, 1fr) minmax(220px, clamp(260px, 19vw, 420px))',
         gridTemplateRows: '56px 1fr',
         gridTemplateAreas: `
           "topbar topbar topbar"
@@ -4890,6 +4894,7 @@ return (
               }}
             >
               <div
+                data-preview-frame
                 ref={previewFrameRef}
                 onClickCapture={(event) => {
                   const target = event.target as HTMLElement | null;
@@ -4901,8 +4906,10 @@ return (
                 }}
                 style={{
                   position: 'relative',
-                  width: target === 'story' ? 380 : 460,
-                  flex: '0 0 auto',
+                  width: target === 'story'
+                    ? 'min(380px, 100%, calc((100dvh - 160px) * 9 / 16))'
+                    : 'min(460px, 100%, calc((100dvh - 160px) * 1080 / 1350))',
+                  flex: '0 1 auto',
                   aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
                   borderRadius: 22,
                   overflow: 'hidden',

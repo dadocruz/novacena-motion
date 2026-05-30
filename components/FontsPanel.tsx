@@ -733,13 +733,12 @@ export default function FontsPanel({
             style={{
               fontFamily: `'${font.family}', sans-serif`,
               fontWeight: font.weight || 700,
-              fontSize: 21,
-              lineHeight: 1,
+              fontSize: 28,
+              lineHeight: 1.1,
               color: '#fff',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              maxWidth: 210,
             }}
           >
             {sample}

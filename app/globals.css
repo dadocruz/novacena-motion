@@ -228,3 +228,8 @@ input[type='range']::-moz-range-thumb {
     min-height: 58dvh !important;
   }
 }
+
+/* Remotion Player: controls must stack above preview hotspot buttons (z-index: 15) */
+[data-preview-frame] > div:first-of-type > div:not(.__remotion-player) {
+  z-index: 16 !important;
+}
