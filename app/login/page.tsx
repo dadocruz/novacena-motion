@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nextPath, setNextPath] = useState('/');
+  const [nextPath, setNextPath] = useState('/estudio');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

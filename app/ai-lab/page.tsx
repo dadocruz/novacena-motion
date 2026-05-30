@@ -267,7 +267,7 @@ export default function AILabPage() {
           </p>
         </div>
 
-        <a href="/" style={backLink}>
+        <a href="/estudio" style={backLink}>
           Voltar ao Studio
         </a>
       </section>
@@ -766,4 +766,3 @@ const previewMeta: React.CSSProperties = {
   lineHeight: 1.5,
   textAlign: 'center',
 };
-

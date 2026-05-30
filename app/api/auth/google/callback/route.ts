@@ -12,7 +12,7 @@ type GoogleUserInfo = {
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
-  const next = req.nextUrl.searchParams.get('state') || '/';
+  const next = req.nextUrl.searchParams.get('state') || '/estudio';
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const appOrigin = process.env.NOVACENA_APP_ORIGIN || req.nextUrl.origin;
@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     googleSub: googleUser.sub,
   });
 
-  const response = NextResponse.redirect(new URL(next.startsWith('/') ? next : '/', redirectOrigin));
+  const response = NextResponse.redirect(new URL(next.startsWith('/') ? next : '/estudio', redirectOrigin));
   response.cookies.set({
     name: SAAS_COOKIE_NAME,
     value: createSessionToken(user),

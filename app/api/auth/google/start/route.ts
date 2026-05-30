@@ -17,6 +17,6 @@ export async function GET(req: NextRequest) {
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('prompt', 'select_account');
-  url.searchParams.set('state', req.nextUrl.searchParams.get('next') || '/');
+  url.searchParams.set('state', req.nextUrl.searchParams.get('next') || '/estudio');
   return NextResponse.redirect(url);
 }

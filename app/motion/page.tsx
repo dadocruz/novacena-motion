@@ -39,7 +39,7 @@ const steps = [
   { n: '3', label: 'EXPORTAÇÃO', title: 'Exporte na nuvem.', desc: 'O vídeo é renderizado em servidores na nuvem. Seu computador não trava. Baixe o MP4 pronto.' },
 ];
 
-const CTA_URL = '/login?mode=signup&next=/';
+const CTA_URL = '/login?mode=signup&next=/estudio';
 const CTA_BILLING = `/login?mode=signup&next=${encodeURIComponent('/billing')}`;
 
 function trackTrialClick() {
@@ -141,7 +141,7 @@ export default function SalesPage() {
     () => BILLING_CYCLES.find((item) => item.id === cycle) ?? BILLING_CYCLES[0],
     [cycle],
   );
-  const months = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
+  const months = selectedCycle.multiplier;
 
   return (
     <main style={page}>

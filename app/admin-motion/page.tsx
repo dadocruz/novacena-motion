@@ -224,7 +224,7 @@ export default function AdminPage() {
         <a href="/motion" style={navLogo}>NovaCena</a>
         <div style={navRight}>
           <span style={navBadge}>Admin</span>
-          <a href="/" style={navLink}>Estúdio</a>
+          <a href="/estudio" style={navLink}>Estúdio</a>
         </div>
       </nav>
 

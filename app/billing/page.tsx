@@ -71,7 +71,7 @@ export default function BillingPage() {
 
     setCheckoutSucceeded(true);
     const redirect = window.setTimeout(() => {
-      window.location.href = '/studio?checkout=success';
+      window.location.href = '/estudio?checkout=success';
     }, 1200);
 
     return () => window.clearTimeout(redirect);
@@ -125,7 +125,7 @@ export default function BillingPage() {
         <nav style={nav}>
           <a href="/motion" style={navLogo}>NovaCena</a>
           <div style={navRight}>
-            <a href="/studio" style={navBtn}>Abrir Studio ↗</a>
+            <a href="/estudio" style={navBtn}>Abrir Studio ↗</a>
           </div>
         </nav>
 
@@ -136,7 +136,7 @@ export default function BillingPage() {
             Estamos abrindo o Motion Studio. O painel de monitoramento tambem ja fica disponivel na sua conta.
           </p>
           <div style={successActions}>
-            <a href="/studio?checkout=success" style={successPrimary}>Abrir Studio</a>
+            <a href="/estudio?checkout=success" style={successPrimary}>Abrir Studio</a>
             <a href="/monitor" style={successSecondary}>Abrir Monitor</a>
           </div>
         </section>
@@ -151,7 +151,7 @@ export default function BillingPage() {
         <a href="/motion" style={navLogo}>NovaCena</a>
         <div style={navRight}>
           <a href="/login" style={navLink}>Entrar</a>
-          <a href="/studio" style={navBtn}>Abrir Studio ↗</a>
+          <a href="/estudio" style={navBtn}>Abrir Studio ↗</a>
         </div>
       </nav>
 
