@@ -48,6 +48,7 @@ export default function BillingPage() {
   const [message, setMessage] = useState('');
   const [pixPayment, setPixPayment] = useState<PixPayment | null>(null);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [checkoutSucceeded, setCheckoutSucceeded] = useState(false);
 
   useEffect(() => {
     fetch('/api/billing/plans')
@@ -62,6 +63,18 @@ export default function BillingPage() {
         setUser(data.user);
       })
       .catch(() => setMessage('Não foi possível carregar os planos.'));
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('status') !== 'success') return;
+
+    setCheckoutSucceeded(true);
+    const redirect = window.setTimeout(() => {
+      window.location.href = '/studio?checkout=success';
+    }, 1200);
+
+    return () => window.clearTimeout(redirect);
   }, []);
 
   const selectedCycle = useMemo(
@@ -104,7 +117,32 @@ export default function BillingPage() {
     }
   }
 
-  const months = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
+  const months = selectedCycle?.multiplier ?? (cycle === 'annual' ? 12 : cycle === 'quarterly' ? 3 : 1);
+
+  if (checkoutSucceeded) {
+    return (
+      <main style={page}>
+        <nav style={nav}>
+          <a href="/motion" style={navLogo}>NovaCena</a>
+          <div style={navRight}>
+            <a href="/studio" style={navBtn}>Abrir Studio ↗</a>
+          </div>
+        </nav>
+
+        <section style={successShell}>
+          <div style={successTag}>{'// COMPRA CONFIRMADA'}</div>
+          <h1 style={successTitle}>Seus renders foram adicionados.</h1>
+          <p style={successText}>
+            Estamos abrindo o Motion Studio. O painel de monitoramento tambem ja fica disponivel na sua conta.
+          </p>
+          <div style={successActions}>
+            <a href="/studio?checkout=success" style={successPrimary}>Abrir Studio</a>
+            <a href="/monitor" style={successSecondary}>Abrir Monitor</a>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main style={page}>
@@ -113,7 +151,7 @@ export default function BillingPage() {
         <a href="/motion" style={navLogo}>NovaCena</a>
         <div style={navRight}>
           <a href="/login" style={navLink}>Entrar</a>
-          <a href="/" style={navBtn}>Estúdio ↗</a>
+          <a href="/studio" style={navBtn}>Abrir Studio ↗</a>
         </div>
       </nav>
 
@@ -262,6 +300,15 @@ const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeig
 const navRight: CSSProperties = { display: 'flex', gap: 12, alignItems: 'center' };
 const navLink: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 14, fontWeight: 600 };
 const navBtn: CSSProperties = { color: '#000', textDecoration: 'none', background: '#fff', borderRadius: 999, padding: '7px 18px', fontWeight: 700, fontSize: 13 };
+
+/* ── Success ── */
+const successShell: CSSProperties = { minHeight: 'calc(100vh - 56px)', maxWidth: 760, width: '100%', margin: '0 auto', padding: '72px 24px 96px', display: 'grid', alignContent: 'center', justifyItems: 'center', gap: 18, textAlign: 'center' };
+const successTag: CSSProperties = { fontFamily: MONO, fontSize: 12, color: ACCENT, letterSpacing: '0.12em', fontWeight: 800 };
+const successTitle: CSSProperties = { margin: 0, color: '#fff', fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 850, letterSpacing: '-0.03em' };
+const successText: CSSProperties = { margin: 0, maxWidth: 560, color: 'rgba(255,255,255,0.52)', fontSize: 16, lineHeight: 1.65 };
+const successActions: CSSProperties = { display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 };
+const successPrimary: CSSProperties = { display: 'grid', placeItems: 'center', minHeight: 44, padding: '0 22px', borderRadius: 999, background: '#fff', color: '#000', fontWeight: 800, fontSize: 14, textDecoration: 'none' };
+const successSecondary: CSSProperties = { ...successPrimary, background: 'rgba(123,147,255,0.12)', color: '#fff', border: '1px solid rgba(123,147,255,0.22)' };
 
 /* ── Shared ── */
 const tag: CSSProperties = { fontFamily: MONO, fontSize: 13, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.08em', textAlign: 'center' };

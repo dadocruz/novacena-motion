@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
           cycle,
           userId: user.id,
           userEmail: user.email,
-          successUrl: `${appOrigin}/billing?status=success`,
+          successUrl: `${appOrigin}/studio?checkout=success`,
           cancelUrl: `${appOrigin}/billing?status=cancelled`,
         });
         return NextResponse.json({ ok: true, checkoutUrl });
