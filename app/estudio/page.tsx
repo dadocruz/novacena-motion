@@ -3178,23 +3178,15 @@ export default function Home() {
       const stickyDock = rightPanel.querySelector('[data-studio-tool-dock="right"]') as HTMLElement | null;
       const dockHeight = stickyDock?.getBoundingClientRect().height ?? 0;
 
+      target.scrollIntoView({ block: 'start', inline: 'nearest' });
+
       const panelRect = rightPanel.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
-      const currentScroll = rightPanel.scrollTop;
-      const nextTop = currentScroll + (targetRect.top - panelRect.top) - dockHeight - 8;
+      const correction = (targetRect.top - panelRect.top) - dockHeight - 8;
 
-      const targetTop = Math.max(0, nextTop);
-
-      rightPanel.scrollTo({
-        top: targetTop,
-        behavior: 'smooth',
-      });
-
-      window.setTimeout(() => {
-        if (Math.abs(rightPanel.scrollTop - targetTop) > 24) {
-          rightPanel.scrollTop = targetTop;
-        }
-      }, 280);
+      if (Math.abs(correction) > 1) {
+        rightPanel.scrollTop = Math.max(0, rightPanel.scrollTop + correction);
+      }
     }, 80);
   }
 
