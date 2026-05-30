@@ -152,6 +152,7 @@ export const fieldInputStyle: React.CSSProperties = {
   width: '100%', padding: '8px 11px', background: 'var(--surface-1)',
   border: '1px solid var(--border-1)', borderRadius: 8,
   color: 'var(--text-1)', fontSize: 12, outline: 'none',
+  colorScheme: 'dark',
 };
 
 export const segBtn: React.CSSProperties = {
@@ -241,6 +242,7 @@ export const tinySelect: React.CSSProperties = {
   padding: '4px 6px', background: 'var(--surface-1)',
   border: '1px solid var(--border-1)', borderRadius: 4,
   color: 'var(--text-1)', fontSize: 11, outline: 'none',
+  colorScheme: 'dark',
 };
 
 export const photoDelBtn: React.CSSProperties = {

@@ -13,8 +13,8 @@ export const maxDuration = 300;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
-const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
-const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'application/octet-stream'];
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v'];
+const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/octet-stream'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
   : existsSync('/usr/bin/ffprobe')

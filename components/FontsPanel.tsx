@@ -192,6 +192,7 @@ const fpInputStyle: React.CSSProperties = {
   borderRadius: 8,
   outline: 'none',
   fontSize: 12,
+  colorScheme: 'dark',
 };
 
 const DEFAULT_ROLE_LABELS: Record<TextTransitionRole, string> = {
@@ -274,8 +275,10 @@ function TextTransitionEditor({
 }) {
   return (
     <div
+      data-text-panel-anchor="transition"
       style={{
         borderTop: '1px solid var(--border-1)',
+        scrollMarginTop: 78,
         paddingTop: 12,
         display: 'grid',
         gap: 8,

@@ -6,8 +6,8 @@ import {
   SIMPLE_MODE_SECTIONS,
   STUDIO_TOOL_DOCK,
   type StudioMode,
-} from '../lib/studioWorkflow';
-import FontsPanel, { type FontRole } from '../components/FontsPanel';
+} from '../../lib/studioWorkflow';
+import FontsPanel, { type FontRole } from '../../components/FontsPanel';
 
 import { Player } from '@remotion/player';
 import {
@@ -21,14 +21,14 @@ import {
   type TextTransitionTuning,
   type MotionConfig,
   type TemplateProps,
-} from '../remotion/types'
+} from '../../remotion/types'
 import {
   templateOrder,
   templateLabels,
   getProject,
-} from '../remotion/project';
-import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../lib/fontCatalog';
-import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle } from '../lib/saasPlans';
+} from '../../remotion/project';
+import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../../lib/fontCatalog';
+import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle } from '../../lib/saasPlans';
 
 import {
   componentByTemplate,
@@ -78,7 +78,7 @@ import {
   type EditorHistorySnapshot,
   type TextTransitionTuningState,
   type StudioToolId,
-} from './editorConstants';
+} from '../editorConstants';
 
 import {
   topbarStyle,
@@ -121,7 +121,7 @@ import {
   tinySelect,
   photoDelBtn,
   logBoxStyle,
-} from './editorStyles';
+} from '../editorStyles';
 
 import {
   DragSlider,
@@ -142,7 +142,7 @@ import {
   SegmentedControl,
   ToggleRow,
   FontPicker,
-} from '../components/editor';
+} from '../../components/editor';
 
 type RenderEngine = 'desktop' | 'local' | 'lambda';
 

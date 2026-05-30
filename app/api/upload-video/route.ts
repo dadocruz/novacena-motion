@@ -10,8 +10,8 @@ const VIDEOS_DIR = path.join(process.cwd(), 'public', 'uploads', 'videos');
 
 // Limite suficiente para vídeos curtos de fundo sem deixar upload gigante travar o app.
 const MAX_SIZE = 500 * 1024 * 1024; // 500MB
-const ALLOWED_EXT = ['.mp4', '.mov', '.webm'];
-const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'];
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v'];
+const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v'];
 
 function safeFileName(name: string): string {
   const ext = path.extname(name || '.mp4').toLowerCase() || '.mp4';
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV ou WEBM.`,
+          error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV, WEBM ou M4V.`,
         },
         { status: 400 }
       );
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Tipo não suportado: ${file.type}. Use MP4, MOV ou WEBM.`,
+          error: `Tipo não suportado: ${file.type}. Use MP4, MOV, WEBM ou M4V.`,
         },
         { status: 400 }
       );

@@ -95,6 +95,18 @@ textarea {
   color: inherit;
 }
 
+select {
+  color-scheme: dark;
+  background-color: var(--bg-2);
+  color: var(--text-1);
+}
+
+select option,
+select optgroup {
+  background-color: #111114;
+  color: rgba(255, 255, 255, 0.92);
+}
+
 button {
   cursor: pointer;
 }
@@ -150,4 +162,59 @@ input[type='range']::-moz-range-thumb {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+@media (max-width: 1180px) {
+  [data-novacena-editor-shell='true'] {
+    width: 100vw !important;
+    grid-template-columns: minmax(230px, 300px) minmax(300px, 1fr) minmax(260px, 340px) !important;
+  }
+
+  [data-novacena-editor-shell='true'] [data-novacena-topbar='true'] {
+    padding-inline: 12px !important;
+  }
+}
+
+@media (max-width: 920px) {
+  html,
+  body {
+    overflow: auto !important;
+    height: auto !important;
+    min-height: 100%;
+  }
+
+  [data-novacena-editor-shell='true'] {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto auto auto !important;
+    grid-template-areas:
+      "topbar"
+      "center"
+      "left"
+      "right" !important;
+  }
+
+  [data-novacena-editor-shell='true'] [data-novacena-topbar='true'] {
+    position: sticky !important;
+    top: 0 !important;
+    min-height: 56px !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  [data-novacena-editor-shell='true'] [data-novacena-left-panel='true'],
+  [data-novacena-editor-shell='true'] [data-novacena-center-panel='true'],
+  [data-novacena-editor-shell='true'] [data-novacena-right-panel='true'] {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  [data-novacena-editor-shell='true'] [data-novacena-center-panel='true'] {
+    min-height: 58dvh !important;
+  }
 }
