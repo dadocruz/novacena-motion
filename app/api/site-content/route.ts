@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../../../lib/adminAuth';
-import { readSiteContent, writeSiteContent, type SiteContent } from '../../../lib/siteContent';
+import { readSiteContent, writeSiteContent, normalizeSiteContent, type SiteContent } from '../../../lib/siteContent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,8 +21,9 @@ export async function PUT(req: NextRequest) {
     if (!body.content) {
       return NextResponse.json({ ok: false, error: 'Campo "content" obrigatório.' }, { status: 400 });
     }
-    await writeSiteContent(body.content);
-    return NextResponse.json({ ok: true, content: body.content });
+    const content = normalizeSiteContent(body.content);
+    await writeSiteContent(content);
+    return NextResponse.json({ ok: true, content });
   } catch {
     return NextResponse.json({ ok: false, error: 'JSON inválido.' }, { status: 400 });
   }

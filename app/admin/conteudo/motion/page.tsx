@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
+import { extractYouTubeVideoId } from '../../../../lib/siteContentTypes';
 import type { SiteContent, SiteLogo, SiteTestimonialVideo, SiteReview, SiteFaq } from '../../../../lib/siteContentTypes';
 
 const EMPTY_CONTENT: SiteContent = {
@@ -93,6 +94,7 @@ export default function ConteudoPage() {
         setMessage(data.error || 'Nao foi possivel salvar.');
         return;
       }
+      if (data.content) setContent(data.content);
       setMessageKind('success');
       setMessage('Conteudo salvo com sucesso!');
     } catch {
@@ -111,6 +113,10 @@ export default function ConteudoPage() {
   /* ── Field updaters ── */
   function updateField<K extends keyof SiteContent>(key: K, value: SiteContent[K]) {
     setContent((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateHeroVideo(value: string) {
+    updateField('heroVideoId', extractYouTubeVideoId(value));
   }
 
   /* ── Logo helpers ── */
@@ -132,7 +138,7 @@ export default function ConteudoPage() {
   }
   function updateVideo(i: number, field: keyof SiteTestimonialVideo, value: string) {
     const next = [...content.testimonialVideos];
-    next[i] = { ...next[i], [field]: value };
+    next[i] = { ...next[i], [field]: field === 'youtubeId' ? extractYouTubeVideoId(value) : value };
     updateField('testimonialVideos', next);
   }
   function removeVideo(i: number) {
@@ -266,13 +272,16 @@ export default function ConteudoPage() {
               {!collapsed.hero && (
                 <div style={sectionBody}>
                   <div style={fieldGroup}>
-                    <label style={label}>Video ID (YouTube)</label>
+                    <label style={label}>Video do hero (URL ou ID do YouTube)</label>
                     <input
                       style={input}
-                      placeholder="Ex: dQw4w9WgXcQ"
+                      placeholder="Cole a URL do YouTube ou o ID do video"
                       value={content.heroVideoId}
-                      onChange={(e) => updateField('heroVideoId', e.target.value)}
+                      onChange={(e) => updateHeroVideo(e.target.value)}
                     />
+                    <p style={fieldHint}>
+                      Aceita youtube.com/watch, youtu.be, Shorts, Live, Embed ou apenas o ID.
+                    </p>
                     {content.heroVideoId && (
                       <img
                         src={`https://img.youtube.com/vi/${content.heroVideoId}/mqdefault.jpg`}
@@ -376,7 +385,7 @@ export default function ConteudoPage() {
                       <div style={itemFields}>
                         <input
                           style={inputSm}
-                          placeholder="YouTube Video ID"
+                          placeholder="URL ou ID do YouTube"
                           value={vid.youtubeId}
                           onChange={(e) => updateVideo(i, 'youtubeId', e.target.value)}
                         />
@@ -730,6 +739,13 @@ const labelSm: CSSProperties = {
   fontWeight: 600,
   color: 'rgba(255,255,255,0.4)',
   marginBottom: 2,
+};
+
+const fieldHint: CSSProperties = {
+  margin: '6px 0 0',
+  fontSize: 12,
+  color: 'rgba(255,255,255,0.34)',
+  lineHeight: 1.5,
 };
 
 /* ── Buttons ── */

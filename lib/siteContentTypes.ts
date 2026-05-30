@@ -36,6 +36,50 @@ export interface SiteContent {
   trustLine: string;
 }
 
+export function extractYouTubeVideoId(input: string): string {
+  const value = input.trim();
+  if (!value) return '';
+  if (/^[A-Za-z0-9_-]{11}$/.test(value)) return value;
+
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, '');
+
+    if (host === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0] || '';
+      return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : value;
+    }
+
+    if (host.endsWith('youtube.com')) {
+      const watchId = url.searchParams.get('v') || '';
+      if (/^[A-Za-z0-9_-]{11}$/.test(watchId)) return watchId;
+
+      const parts = url.pathname.split('/').filter(Boolean);
+      for (const marker of ['embed', 'shorts', 'live']) {
+        const markerIndex = parts.indexOf(marker);
+        const id = markerIndex >= 0 ? parts[markerIndex + 1] || '' : '';
+        if (/^[A-Za-z0-9_-]{11}$/.test(id)) return id;
+      }
+    }
+  } catch {
+    // Keep accepting pasted fragments that contain a recognizable video id.
+  }
+
+  const match = value.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+  return match?.[1] || value;
+}
+
+export function normalizeSiteContent(content: SiteContent): SiteContent {
+  return {
+    ...content,
+    heroVideoId: extractYouTubeVideoId(content.heroVideoId || ''),
+    testimonialVideos: content.testimonialVideos.map((video) => ({
+      ...video,
+      youtubeId: extractYouTubeVideoId(video.youtubeId || ''),
+    })),
+  };
+}
+
 export const DEFAULT_CONTENT: SiteContent = {
   heroVideoId: '',
   heroTagline: '// MOTION PARA LANÇAMENTOS MUSICAIS',

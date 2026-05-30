@@ -5,7 +5,7 @@
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { DATA_DIR } from './storage';
-import { DEFAULT_CONTENT } from './siteContentTypes';
+import { DEFAULT_CONTENT, normalizeSiteContent } from './siteContentTypes';
 import type { SiteContent } from './siteContentTypes';
 
 // Re-export tudo do types para uso na API
@@ -17,7 +17,7 @@ export async function readSiteContent(): Promise<SiteContent> {
   try {
     const raw = await readFile(CONTENT_FILE, 'utf-8');
     const saved = JSON.parse(raw) as Partial<SiteContent>;
-    return { ...DEFAULT_CONTENT, ...saved };
+    return normalizeSiteContent({ ...DEFAULT_CONTENT, ...saved });
   } catch {
     return { ...DEFAULT_CONTENT };
   }
@@ -25,5 +25,5 @@ export async function readSiteContent(): Promise<SiteContent> {
 
 export async function writeSiteContent(content: SiteContent): Promise<void> {
   await mkdir(path.dirname(CONTENT_FILE), { recursive: true });
-  await writeFile(CONTENT_FILE, JSON.stringify(content, null, 2), 'utf-8');
+  await writeFile(CONTENT_FILE, JSON.stringify(normalizeSiteContent(content), null, 2), 'utf-8');
 }
