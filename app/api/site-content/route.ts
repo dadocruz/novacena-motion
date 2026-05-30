@@ -6,7 +6,12 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /** GET /api/site-content — público, retorna conteúdo do site */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (req.headers.has('x-novacena-admin-token')) {
+    const denied = requireAdmin(req);
+    if (denied) return denied;
+  }
+
   const content = await readSiteContent();
   return NextResponse.json({ ok: true, content });
 }
