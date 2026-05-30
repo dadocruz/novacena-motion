@@ -3,6 +3,9 @@
  * Ported from gaveta-monitor/server.js
  * Server-only (uses env vars for API keys)
  */
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import path from 'path';
+import { DATA_DIR } from './storage';
 
 // ── Types ──────────────────────────────────────────
 export interface MonitorStat {
@@ -100,6 +103,9 @@ const TTL = {
   youtube: 6 * 60 * 60 * 1000,
 };
 
+const ARTIST_DAILY_CACHE_MS = 24 * 60 * 60 * 1000;
+const MONITOR_CACHE_DIR = path.join(DATA_DIR, 'monitor-cache');
+
 const cache = new Map<string, { value: unknown; expiresAt: number }>();
 const inflight = new Map<string, Promise<unknown>>();
 
@@ -154,6 +160,41 @@ export function extractSpotifyArtistId(input: string): string | null {
 
 function isValidSpotifyArtistId(value: unknown): boolean {
   return /^[A-Za-z0-9]{22}$/.test(String(value ?? '').trim());
+}
+
+function artistCacheFile(spotifyArtistId: string) {
+  return path.join(MONITOR_CACHE_DIR, `${spotifyArtistId}.json`);
+}
+
+async function readArtistDailyCache(spotifyArtistId: string): Promise<MonitorArtistResult | null> {
+  try {
+    const raw = await readFile(artistCacheFile(spotifyArtistId), 'utf-8');
+    const record = JSON.parse(raw) as { savedAt?: string; artist?: MonitorArtistResult };
+    if (!record.artist || !record.savedAt) return null;
+    if (Date.now() - new Date(record.savedAt).getTime() > ARTIST_DAILY_CACHE_MS) return null;
+    return record.artist;
+  } catch {
+    return null;
+  }
+}
+
+async function readArtistStaleCache(spotifyArtistId: string): Promise<MonitorArtistResult | null> {
+  try {
+    const raw = await readFile(artistCacheFile(spotifyArtistId), 'utf-8');
+    const record = JSON.parse(raw) as { artist?: MonitorArtistResult };
+    return record.artist || null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeArtistDailyCache(spotifyArtistId: string, artist: MonitorArtistResult) {
+  await mkdir(MONITOR_CACHE_DIR, { recursive: true });
+  await writeFile(
+    artistCacheFile(spotifyArtistId),
+    JSON.stringify({ savedAt: new Date().toISOString(), artist }, null, 2),
+    'utf-8'
+  );
 }
 
 function extractYouTubeChannelId(input: string): string | null {
@@ -468,6 +509,16 @@ export async function fetchDashboard(inputArtists: MonitorArtistInput[]): Promis
         };
       }
 
+      const cachedArtist = await readArtistDailyCache(spotifyArtistId);
+      if (cachedArtist) {
+        return {
+          ...cachedArtist,
+          artistName,
+          spotifyArtistId,
+          spotifyArtistUrl: `https://open.spotify.com/artist/${spotifyArtistId}`,
+        };
+      }
+
       try {
         if (!cmArtistId) {
           cmArtistId = await getChartmetricArtistIdFromSpotify(spotifyArtistId);
@@ -496,7 +547,7 @@ export async function fetchDashboard(inputArtists: MonitorArtistInput[]): Promis
           getYouTubeChannelBundle(youtubeUrl),
         ]);
 
-        return {
+        const result = {
           artistName,
           spotifyArtistId,
           spotifyArtistUrl: `https://open.spotify.com/artist/${spotifyArtistId}`,
@@ -513,7 +564,20 @@ export async function fetchDashboard(inputArtists: MonitorArtistInput[]): Promis
             latestVideos: youtube.latestVideos,
           },
         };
+
+        await writeArtistDailyCache(spotifyArtistId, result);
+        return result;
       } catch (error) {
+        const staleArtist = await readArtistStaleCache(spotifyArtistId);
+        if (staleArtist) {
+          return {
+            ...staleArtist,
+            artistName,
+            spotifyArtistId,
+            spotifyArtistUrl: `https://open.spotify.com/artist/${spotifyArtistId}`,
+          };
+        }
+
         return {
           artistName,
           spotifyArtistId,

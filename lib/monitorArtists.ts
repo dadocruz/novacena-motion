@@ -13,6 +13,8 @@ export interface MonitoredArtist {
   artistName: string;
   spotifyUrl: string;
   youtubeUrl: string;
+  spotifyArtistId?: string;
+  cmArtistId?: number;
   addedAt: string;
 }
 
@@ -34,11 +36,63 @@ async function saveUserArtists(userId: string, artists: MonitoredArtist[]) {
   await writeFile(userFile(userId), JSON.stringify(artists, null, 2), 'utf-8');
 }
 
+function normalizeArtistInput(input: {
+  artistName?: string;
+  name?: string;
+  spotifyUrl?: string;
+  youtubeUrl?: string;
+  spotifyArtistId?: string;
+  cmArtistId?: number;
+}): MonitoredArtist | null {
+  const artistName = String(input.artistName || input.name || '').trim();
+  const spotifyUrl = String(input.spotifyUrl || '').trim();
+  if (!artistName || !spotifyUrl) return null;
+
+  const rawCmId = Number(input.cmArtistId || 0);
+  return {
+    id: uid('ma_'),
+    artistName,
+    spotifyUrl,
+    youtubeUrl: String(input.youtubeUrl || '').trim(),
+    spotifyArtistId: String(input.spotifyArtistId || '').trim() || undefined,
+    cmArtistId: Number.isFinite(rawCmId) && rawCmId > 0 ? rawCmId : undefined,
+    addedAt: new Date().toISOString(),
+  };
+}
+
+export async function replaceUserArtists(
+  userId: string,
+  inputs: Array<{
+    artistName?: string;
+    name?: string;
+    spotifyUrl?: string;
+    youtubeUrl?: string;
+    spotifyArtistId?: string;
+    cmArtistId?: number;
+  }>,
+  limit: number
+): Promise<MonitoredArtist[]> {
+  const bySpotify = new Map<string, MonitoredArtist>();
+  for (const input of inputs) {
+    const artist = normalizeArtistInput(input);
+    if (!artist) continue;
+    bySpotify.set(artist.spotifyUrl.trim().toLowerCase(), artist);
+  }
+
+  const artists = [...bySpotify.values()].slice(0, limit);
+  await saveUserArtists(userId, artists);
+  return artists;
+}
+
 export async function addUserArtist(
   userId: string,
-  input: { artistName: string; spotifyUrl: string; youtubeUrl?: string }
+  input: { artistName: string; spotifyUrl: string; youtubeUrl?: string; spotifyArtistId?: string; cmArtistId?: number },
+  limit = 10
 ): Promise<MonitoredArtist> {
   const artists = await listUserArtists(userId);
+  if (artists.length >= limit) {
+    throw new Error(`Seu plano permite ate ${limit} artistas monitorados.`);
+  }
 
   const duplicate = artists.find(
     (a) => a.spotifyUrl.trim().toLowerCase() === input.spotifyUrl.trim().toLowerCase()
@@ -50,6 +104,8 @@ export async function addUserArtist(
     artistName: input.artistName.trim(),
     spotifyUrl: input.spotifyUrl.trim(),
     youtubeUrl: (input.youtubeUrl || '').trim(),
+    spotifyArtistId: String(input.spotifyArtistId || '').trim() || undefined,
+    cmArtistId: Number.isFinite(Number(input.cmArtistId || 0)) && Number(input.cmArtistId || 0) > 0 ? Number(input.cmArtistId) : undefined,
     addedAt: new Date().toISOString(),
   };
 

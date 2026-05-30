@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
         artistName: a.artistName || a.name || '',
         spotifyUrl: a.spotifyUrl || '',
         youtubeUrl: a.youtubeUrl || '',
+        spotifyArtistId: a.spotifyArtistId || '',
+        cmArtistId: Number(a.cmArtistId || 0) || undefined,
       }));
     } else {
       // Fallback: usa lista salva do usuario
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest) {
         artistName: a.artistName,
         spotifyUrl: a.spotifyUrl,
         youtubeUrl: a.youtubeUrl,
+        spotifyArtistId: a.spotifyArtistId,
+        cmArtistId: a.cmArtistId,
       }));
     }
 

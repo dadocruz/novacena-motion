@@ -1129,12 +1129,12 @@
   }
 
   async function fetchCloudArtists() {
-    const data = await fetchBackendJson('/api/artists');
+    const data = await fetchBackendJson('/api/monitor/artists');
     return sanitizeArtists(data.artists);
   }
 
   async function pushCloudArtists(artists) {
-    const data = await fetchBackendJson('/api/artists', {
+    const data = await fetchBackendJson('/api/monitor/artists', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ artists: sanitizeArtists(artists) }),
@@ -1369,8 +1369,11 @@
     normalized.forEach(item => dedupe.set(item.artistName.toLowerCase(), item));
     const finalList = [...dedupe.values()];
 
-    saveArtists(finalList);
-    await loadDashboard();
+    const saved = saveArtists(finalList, { sync: false });
+    const synced = await pushCloudArtists(saved);
+    saveArtists(synced, { sync: false });
+    qs('artistGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">Lista importada. Clique em "Atualizar agora" para buscar dados respeitando o cache de 24h.</div>';
+    qs('lastSync').textContent = `${synced.length} artista(s) importado(s)`;
   }
 
   function mergeArtistIdsFromResponse(responseArtists) {
