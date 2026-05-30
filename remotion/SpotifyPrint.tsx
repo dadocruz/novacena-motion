@@ -13,19 +13,76 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PhoneMockup } from './PhoneMockup';
-import { PlatformLogo } from './PlatformLogo';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
 
 const PREFIX_IN = 14;
-const PHONE_IN = 36;
-const NUMBER_IN = 78;
-const LABEL_IN = 106;
+const BADGE_IN = 34;
+const NUMBER_IN = 54;
+const LABEL_IN = 76;
+const PHONE_IN = 98;
 const MID_HIT = 130;
-const LOGO_IN = 150;
+const LOGO_IN = 6;
 const FINAL_HIT = 208;
 const FINAL_POSTER = 222;
+
+function fittedFontSize(text: string, maxWidth: number, preferred: number, min: number, ratio = 0.58) {
+  const clean = text.trim().replace(/\s+/g, ' ');
+  if (!clean) return preferred;
+  return Math.max(min, Math.min(preferred, maxWidth / (clean.length * ratio)));
+}
+
+const SpotifyWordmark: React.FC<{ delay: number; compact?: boolean }> = ({ delay, compact = false }) => {
+  const frame = useCurrentFrame();
+  const anim = scaleInBack(frame, delay, 16);
+  const green = '#1ED760';
+
+  return (
+    <div
+      style={{
+        ...anim,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: compact ? 10 : 14,
+        color: green,
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontWeight: 900,
+        fontSize: compact ? 34 : 48,
+        lineHeight: 1,
+      }}
+    >
+      <div
+        style={{
+          width: compact ? 44 : 62,
+          height: compact ? 44 : 62,
+          borderRadius: '50%',
+          background: green,
+          position: 'relative',
+          boxShadow: '0 0 28px rgba(30, 215, 96, 0.26)',
+          flex: '0 0 auto',
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              left: compact ? 10 + i * 1.5 : 14 + i * 2,
+              top: compact ? 13 + i * 7 : 18 + i * 9,
+              width: compact ? 25 - i * 3 : 35 - i * 4,
+              height: compact ? 8 : 10,
+              borderTop: `${compact ? 3 : 4}px solid #050706`,
+              borderRadius: '50%',
+              transform: 'rotate(8deg)',
+            }}
+          />
+        ))}
+      </div>
+      <span>Spotify</span>
+    </div>
+  );
+};
 
 /**
  * Template SpotifyPrint: o "coverImage" enviado pelo usuário é tratado como
@@ -44,10 +101,10 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
 
   const previewMode = props.motion?.previewMode === true;
   const prefixMask = previewSafeAnim(maskReveal(frame, prefixIn, 24), previewMode);
+  const badgeAnim = previewSafeAnim(scaleInBack(frame, BADGE_IN, 14), previewMode);
   const numberAnim = previewSafeAnim(scaleInBack(frame, numberIn, 26), previewMode);
   const numberChar = charStagger(frame, numberIn + 4, 1.4);
   const labelMask = previewSafeAnim(maskReveal(frame, labelIn, 22), previewMode);
-  const logoAnim = previewSafeAnim(scaleInBack(frame, logoIn, 18), previewMode);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -94,15 +151,24 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
 
   const isStory = props.renderTarget === 'story';
   const phoneCfg = (props.motion as any) ?? {};
-  const phoneWidth = phoneCfg.phoneSize ?? (isStory ? 520 : 460);
-  const tilt = phoneCfg.phoneTilt ?? -6;
+  const phoneWidth = phoneCfg.phoneSize ?? (isStory ? 610 : 420);
+  const tilt = phoneCfg.phoneTilt ?? -4;
   const phoneMotion = phoneCfg.phoneMotion ?? 'zoom_bounce';
   const phoneSpinTurns = phoneCfg.phoneSpinTurns ?? 0;
   const phoneWiggle = (phoneCfg.phoneWiggle ?? 1) * M.wiggleIntensity;
   const phoneDynamicIsland = phoneCfg.phoneDynamicIsland ?? true;
   const phoneX = phoneCfg.phoneX ?? 0;
   const phoneY = phoneCfg.phoneY ?? 0;
-  const spotifyLogoSize = props.motion?.platformLogoSize ?? 72;
+  const canvasW = 1080;
+  const safeX = isStory ? 78 : 72;
+  const textMaxWidth = canvasW - safeX * 2;
+  const prefixSize = fittedFontSize(prefixText, textMaxWidth, isStory ? 102 : 66, isStory ? 58 : 42, 0.56);
+  const numberSize = fittedFontSize(numberText, textMaxWidth, isStory ? 138 : 92, isStory ? 72 : 56, 0.58);
+  const labelSize = fittedFontSize(labelText, textMaxWidth * 0.84, isStory ? 58 : 40, isStory ? 34 : 28, 0.58);
+  const topSafe = isStory ? 132 : 58;
+  const phoneTop = isStory ? 760 : 440;
+  const phoneLeft = (canvasW - phoneWidth) / 2;
+  const textShadow = '0 10px 34px rgba(0,0,0,0.38), 0 2px 8px rgba(0,0,0,0.28)';
 
   return (
     <AbsoluteFill
@@ -132,22 +198,41 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
 
       <AbsoluteFill
         style={{
-          padding: '0 60px',
-          paddingTop: isStory ? 220 : 90,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          padding: `0 ${safeX}px`,
           textAlign: 'center',
+          pointerEvents: 'none',
         }}
       >
+        <div
+          style={{
+            position: 'absolute',
+            top: topSafe,
+            left: safeX,
+            right: safeX,
+            display: 'flex',
+            justifyContent: 'center',
+            zIndex: 5,
+          }}
+        >
+          <SpotifyWordmark delay={logoIn} compact={!isStory} />
+        </div>
+
         {/* PREFIX — ULTRAPASSAMOS */}
         <div
           style={{
+            position: 'absolute',
+            top: isStory ? topSafe + 150 : topSafe + 92,
+            left: safeX,
+            right: safeX,
             fontFamily: ff(M.fontDate.family),
-            fontSize: 50,
+            fontSize: prefixSize,
             fontWeight: M.fontDate.weight,
-            letterSpacing: 2.5,
-            textShadow: 'none',
+            lineHeight: 0.88,
+            letterSpacing: 0,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            textShadow,
+            zIndex: 5,
             ...textStrokeStyle(M.strokeDate),
             ...applyTextStyle(props.motion?.styleDate),
             ...textFillStyle(M.strokeDate),
@@ -161,21 +246,55 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
           {prefixText}
         </div>
 
+        <div
+          style={{
+            position: 'absolute',
+            top: isStory ? topSafe + 270 : topSafe + 164,
+            left: '50%',
+            width: isStory ? 310 : 220,
+            height: isStory ? 44 : 32,
+            marginLeft: isStory ? -155 : -110,
+            display: 'grid',
+            placeItems: 'center',
+            background: '#57ff1f',
+            color: '#050706',
+            fontFamily: ff(labelFont.family),
+            fontSize: isStory ? 34 : 24,
+            fontWeight: 900,
+            fontStyle: 'italic',
+            lineHeight: 1,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+            transform: `${badgeAnim.transform ?? ''} rotate(-1deg)`,
+            opacity: badgeAnim.opacity,
+            zIndex: 6,
+            boxShadow: '0 12px 26px rgba(0,0,0,0.20)',
+          }}
+        >
+          A MARCA DE
+        </div>
+
         {/* NÚMERO GIGANTE */}
         <div
           style={{
-            marginTop: 28,
+            position: 'absolute',
+            top: isStory ? topSafe + 300 : topSafe + 188,
+            left: safeX,
+            right: safeX,
+            zIndex: 5,
           }}
         >
           <div
             style={{
               fontFamily: ff(M.fontHeadline.family),
-              fontSize: 168,
-              lineHeight: 0.92,
+              fontSize: numberSize,
+              lineHeight: 0.86,
               fontWeight: M.fontHeadline.weight,
-              letterSpacing: -6,
+              letterSpacing: -2,
               color: '#fff',
-              textShadow: 'none',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              textShadow,
               overflow: 'visible',
               ...textStrokeStyle(M.strokeHeadline),
               ...applyTextStyle(props.motion?.styleHeadline),
@@ -200,12 +319,19 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
         {/* LABEL */}
         <div
           style={{
+            position: 'absolute',
+            top: isStory ? topSafe + 430 : topSafe + 278,
+            left: safeX,
+            right: safeX,
             fontFamily: ff(labelFont.family),
-            marginTop: 14,
-            fontSize: 42,
+            fontSize: labelSize,
             fontWeight: labelFont.weight,
-            letterSpacing: 4,
-            textShadow: 'none',
+            lineHeight: 0.9,
+            letterSpacing: 1.2,
+            textTransform: 'uppercase',
+            whiteSpace: 'pre-line',
+            textShadow,
+            zIndex: 5,
             ...textStrokeStyle(labelStroke),
             ...applyTextStyle(labelStyle),
             ...textFillStyle(labelStroke),
@@ -220,9 +346,13 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
         <div
           data-cover-position-wrapper
           style={{
-            marginTop: isStory ? 60 : 30,
+            position: 'absolute',
+            top: phoneTop,
+            left: phoneLeft,
+            width: phoneWidth,
             transform: `translate(${phoneX}px, ${phoneY}px)`,
             willChange: 'transform',
+            zIndex: 4,
           }}
         >
           <PhoneMockup
@@ -239,16 +369,6 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             motionId={phoneMotion}
             dynamicIsland={phoneDynamicIsland}
           />
-        </div>
-
-        {/* LOGO SPOTIFY */}
-        <div
-          style={{
-            marginTop: 36,
-            ...(showAll ? {} : logoAnim),
-          }}
-        >
-          <PlatformLogo name="Spotify" size={spotifyLogoSize} customSrc={M.customLogos?.Spotify} />
         </div>
       </AbsoluteFill>
       <AbsoluteFill
