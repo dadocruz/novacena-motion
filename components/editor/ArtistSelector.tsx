@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import type { ArtistRecord } from '../../app/editorConstants';
 
 export function ArtistSelector({
@@ -11,9 +11,36 @@ export function ArtistSelector({
 }) {
   const active = artists.find((a) => a.slug === activeSlug);
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [menuRect, setMenuRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const updatePosition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      setMenuRect({
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: Math.max(240, rect.width),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open]);
+
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen((o) => !o)} style={{
+      <button ref={buttonRef} onClick={() => setOpen((o) => !o)} style={{
         padding: '6px 14px', background: 'var(--surface-1)',
         border: '1px solid var(--border-1)', borderRadius: 8,
         display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-1)',
@@ -24,10 +51,14 @@ export function ArtistSelector({
       </button>
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, marginTop: 4,
-          minWidth: 220, background: 'var(--bg-2)',
+          position: 'fixed',
+          top: menuRect?.top ?? 52,
+          left: menuRect?.left ?? 0,
+          width: menuRect?.width ?? 240,
+          background: 'var(--bg-2)',
           border: '1px solid var(--border-1)', borderRadius: 8,
-          padding: 4, zIndex: 100, maxHeight: 320, overflow: 'auto',
+          padding: 4, zIndex: 10000, maxHeight: 320, overflow: 'auto',
+          boxShadow: '0 18px 48px rgba(0,0,0,0.52)',
         }}>
           {artists.map((a) => (
             <button
