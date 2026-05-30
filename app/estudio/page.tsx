@@ -3183,10 +3183,18 @@ export default function Home() {
       const currentScroll = rightPanel.scrollTop;
       const nextTop = currentScroll + (targetRect.top - panelRect.top) - dockHeight - 8;
 
+      const targetTop = Math.max(0, nextTop);
+
       rightPanel.scrollTo({
-        top: Math.max(0, nextTop),
+        top: targetTop,
         behavior: 'smooth',
       });
+
+      window.setTimeout(() => {
+        if (Math.abs(rightPanel.scrollTop - targetTop) > 24) {
+          rightPanel.scrollTop = targetTop;
+        }
+      }, 280);
     }, 80);
   }
 
@@ -5439,7 +5447,7 @@ return (
               )}
             </div>
 
-            <div style={{ marginTop: 12 }}>
+            <div data-right-panel-section="Overlay" style={{ marginTop: 12, scrollMarginTop: 78 }}>
               <div style={miniLabel}>Overlays / elementos livres</div>
               <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
                 + Subir overlay ou elemento
@@ -6139,10 +6147,11 @@ return (
                     height: 42,
                     borderRadius: 10,
                     border: '1px solid var(--border-1)',
-                    background: 'rgba(255,255,255,0.04)',
-                    color: 'var(--text-main)',
+                    background: '#16161b',
+                    color: 'var(--text-1)',
                     padding: '0 12px',
                     outline: 'none',
+                    colorScheme: 'dark',
                   }}
                 >
                   {COVER_MOTION_OPTIONS.map((opt) => (

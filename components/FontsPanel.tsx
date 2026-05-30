@@ -186,7 +186,7 @@ const fpInputStyle: React.CSSProperties = {
   minWidth: 0,
   height: 32,
   padding: '0 10px',
-  background: 'var(--surface-1)',
+  background: '#16161b',
   color: 'var(--text-1)',
   border: '1px solid var(--border-1)',
   borderRadius: 8,

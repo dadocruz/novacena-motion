@@ -53,7 +53,7 @@ export const STUDIO_TOOL_DOCK = [
   { id: 'text', label: 'Texto', section: 'Texto' },
   { id: 'logos', label: 'Logos', section: 'Logos das plataformas' },
   { id: 'motion', label: 'Motion', section: 'Ritmo CTA (Disponível)' },
-  { id: 'overlay', label: 'Overlay', section: 'Overlays (filmburn / película)' },
+  { id: 'overlay', label: 'Overlay', section: 'Overlay' },
   { id: 'render', label: 'Render', section: 'Projeto' },
 ] as const;
 
