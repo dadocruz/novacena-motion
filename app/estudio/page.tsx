@@ -1215,11 +1215,11 @@ export default function Home() {
     setTrCta1((snapshot.trCta1 ?? 'scale_pop') as TextTransitionId);
     setTrCta2((snapshot.trCta2 ?? 'split_letters') as TextTransitionId);
     setTransitionTuning(normalizeTransitionTuningState(snapshot.transitionTuning));
-    setStyleHeadline(cloneHistoryValue(snapshot.styleHeadline ?? HEADLINE_STYLE_DEFAULTS));
-    setStyleDate(cloneHistoryValue(snapshot.styleDate ?? DATE_STYLE_DEFAULTS));
-    setStyleCta(cloneHistoryValue(snapshot.styleCta ?? CTA_STYLE_DEFAULTS));
-    setStyleCta1(cloneHistoryValue(snapshot.styleCta1 ?? CTA_STYLE_DEFAULTS));
-    setStyleCta2(cloneHistoryValue(snapshot.styleCta2 ?? CTA_STYLE_DEFAULTS));
+    setStyleHeadline(cloneHistoryValue(mergeTextStyle(HEADLINE_STYLE_DEFAULTS, snapshot.styleHeadline as TextStyle)));
+    setStyleDate(cloneHistoryValue(mergeTextStyle(DATE_STYLE_DEFAULTS, snapshot.styleDate as TextStyle)));
+    setStyleCta(cloneHistoryValue(mergeTextStyle(CTA_STYLE_DEFAULTS, snapshot.styleCta as TextStyle)));
+    setStyleCta1(cloneHistoryValue(mergeTextStyle(CTA_STYLE_DEFAULTS, snapshot.styleCta1 as TextStyle)));
+    setStyleCta2(cloneHistoryValue(mergeTextStyle(CTA_STYLE_DEFAULTS, snapshot.styleCta2 as TextStyle)));
     setStrokeHeadline(cloneHistoryValue(snapshot.strokeHeadline ?? defaultTextStroke));
     setStrokeDate(cloneHistoryValue(snapshot.strokeDate ?? defaultTextStroke));
     setStrokeCta(cloneHistoryValue(snapshot.strokeCta ?? defaultTextStroke));
@@ -4236,7 +4236,7 @@ return (
       }}
     >
       {/* ─── TOPBAR ─── */}
-      <header data-novacena-topbar="true" style={{ ...topbarStyle, position: 'relative', zIndex: 80 }}>
+      <header data-novacena-topbar="true" style={{ ...topbarStyle, overflow: 'visible', position: 'relative', zIndex: 80 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <BrandSmall />
           <div style={separator} />

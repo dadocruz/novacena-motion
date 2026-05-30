@@ -7,7 +7,11 @@ import {
   saveFile,
   deleteOldFiles,
 } from '../../../lib/uploadHelpers';
-import { listPlatformLogos, setPlatformLogo } from '../../../lib/storage';
+import {
+  listPlatformLogos,
+  setPlatformLogo,
+  type CustomPlatformLogo,
+} from '../../../lib/storage';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -16,6 +20,33 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXT = ['.png', '.svg', '.webp', '.jpg', '.jpeg'];
 const ALLOWED_TYPES = ['image/png', 'image/svg+xml', 'image/webp', 'image/jpeg'];
 const ALLOWED_PLATFORMS = new Set(['Spotify', 'Deezer', 'Apple Music', 'YouTube Music']);
+
+const DEFAULT_PLATFORM_LOGOS: CustomPlatformLogo[] = [
+  {
+    platform: 'Spotify',
+    path: '/logos/spotify/logo-color.png',
+    filename: 'logo-color.png',
+    uploadedAt: 'factory',
+  },
+  {
+    platform: 'Deezer',
+    path: '/logos/deezer/logo-color.png',
+    filename: 'logo-color.png',
+    uploadedAt: 'factory',
+  },
+  {
+    platform: 'Apple Music',
+    path: '/logos/apple-music/logo-color.png',
+    filename: 'logo-color.png',
+    uploadedAt: 'factory',
+  },
+  {
+    platform: 'YouTube Music',
+    path: '/logos/youtube-music/logo-color.png',
+    filename: 'logo-color.png',
+    uploadedAt: 'factory',
+  },
+];
 
 /**
  * Normaliza o path de um logo:
@@ -32,6 +63,17 @@ function normalizeLogoPath(p: string): string {
   return p;
 }
 
+function logoFilePath(publicPath: string): string {
+  const normalized = normalizeLogoPath(publicPath);
+  if (normalized.startsWith('/api/uploads/') || normalized.startsWith('/uploads/')) {
+    const relPath = normalized
+      .replace(/^\/api\/uploads\//, '')
+      .replace(/^\/uploads\//, '');
+    return path.join(PUBLIC_UPLOADS, relPath);
+  }
+  return path.join(process.cwd(), 'public', normalized.replace(/^\/+/, ''));
+}
+
 /**
  * GET /api/platform-logos
  *
@@ -41,30 +83,37 @@ function normalizeLogoPath(p: string): string {
  */
 export async function GET() {
   const logos = await listPlatformLogos();
-  const existing: typeof logos = [];
+  const existing = new Map<string, CustomPlatformLogo>();
 
-  for (const logo of logos) {
+  for (const logo of DEFAULT_PLATFORM_LOGOS) {
     const normalized = normalizeLogoPath(logo.path);
-
-    // Resolve o path real no disco a partir da URL normalizada
-    const relPath = normalized
-      .replace(/^\/api\/uploads\//, '')
-      .replace(/^\/uploads\//, '');
-    const filePath = path.join(PUBLIC_UPLOADS, relPath);
-
     try {
-      await access(filePath);
-      existing.push({
+      await access(logoFilePath(normalized));
+      existing.set(logo.platform, {
         ...logo,
         path: normalized,
       });
     } catch {
-      // Logo apontado no JSON mas arquivo não existe: ignora silenciosamente.
+      // Logo de fábrica não encontrado no build atual: segue sem travar.
+    }
+  }
+
+  for (const logo of logos) {
+    const normalized = normalizeLogoPath(logo.path);
+
+    try {
+      await access(logoFilePath(normalized));
+      existing.set(logo.platform, {
+        ...logo,
+        path: normalized,
+      });
+    } catch {
+      // Logo apontado no JSON mas arquivo não existe: mantém o padrão.
       // Assim o render não trava com 404 nem erro de asset.
     }
   }
 
-  return NextResponse.json({ ok: true, logos: existing });
+  return NextResponse.json({ ok: true, logos: Array.from(existing.values()) });
 }
 
 /**
