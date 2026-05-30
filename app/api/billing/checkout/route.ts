@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function isBillingCycle(value: unknown): value is BillingCycle {
-  return value === 'monthly' || value === 'annual' || value === 'triennial';
+  return value === 'monthly' || value === 'quarterly' || value === 'annual';
 }
 
 export async function POST(req: NextRequest) {
@@ -28,67 +28,91 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Conta não encontrada.' }, { status: 404 });
   }
 
-  // 1. Stripe Checkout (prioridade se configurado)
-  if (process.env.STRIPE_SECRET_KEY) {
-    try {
-      const appOrigin = process.env.NOVACENA_APP_ORIGIN || req.nextUrl.origin;
-      const checkoutUrl = await createCheckoutSession({
-        planId: plan.id,
-        cycle,
-        userId: user.id,
-        userEmail: user.email,
-        successUrl: `${appOrigin}/billing?status=success`,
-        cancelUrl: `${appOrigin}/billing?status=cancelled`,
-      });
-      return NextResponse.json({ ok: true, checkoutUrl });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Erro no Stripe.';
-      // Fall through to other payment methods if Stripe price not configured
-      if (!msg.includes('Price ID')) {
-        return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  const appOrigin = process.env.NOVACENA_APP_ORIGIN || req.nextUrl.origin;
+  const paymentMethod = body.paymentMethod as string | undefined; // 'stripe' | 'pix' | undefined
+  const cycleInfo = BILLING_CYCLES.find((c) => c.id === cycle);
+  const months = cycleInfo?.multiplier || 1;
+  const totalBRL = planPrice(plan, cycle);
+  const totalTokens = plan.includedTokens * months;
+
+  // ── Stripe payment ───────────────────────────────
+  if (paymentMethod === 'stripe' || (!paymentMethod && process.env.STRIPE_SECRET_KEY)) {
+    if (process.env.STRIPE_SECRET_KEY) {
+      try {
+        const checkoutUrl = await createCheckoutSession({
+          planId: plan.id,
+          cycle,
+          userId: user.id,
+          userEmail: user.email,
+          successUrl: `${appOrigin}/billing?status=success`,
+          cancelUrl: `${appOrigin}/billing?status=cancelled`,
+        });
+        return NextResponse.json({ ok: true, checkoutUrl });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erro no Stripe.';
+        if (paymentMethod === 'stripe') {
+          return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+        }
+        // Fall through to other methods
       }
     }
   }
 
-  // 2. Legacy checkout URL (env var)
-  const checkoutUrl = process.env[checkoutEnvName(plan.id, cycle)];
-  if (checkoutUrl) {
-    return NextResponse.json({ ok: true, checkoutUrl });
+  // ── Pix payment ──────────────────────────────────
+  const pixKey = process.env.NOVACENA_PIX_KEY;
+  if (paymentMethod === 'pix' || (!paymentMethod && pixKey)) {
+    if (pixKey) {
+      return NextResponse.json({
+        ok: true,
+        payment: {
+          type: 'pix',
+          key: pixKey,
+          name: process.env.NOVACENA_PIX_NAME || 'NovaCena',
+          whatsapp: process.env.NOVACENA_PIX_WHATSAPP || '',
+          amountBRL: totalBRL,
+          planName: plan.name,
+          cycle,
+          renders: totalTokens,
+          reference: `${user.email} - ${plan.name} ${cycle}`,
+        },
+      });
+    }
   }
 
-  // 3. Manual billing (dev/testing)
+  // ── Legacy checkout URL ──────────────────────────
+  const legacyUrl = process.env[checkoutEnvName(plan.id, cycle)];
+  if (legacyUrl) {
+    return NextResponse.json({ ok: true, checkoutUrl: legacyUrl });
+  }
+
+  // ── Manual billing (dev) ─────────────────────────
   if (process.env.NOVACENA_ENABLE_MANUAL_BILLING === '1') {
-    const multiplier = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
     const updated = await updateUserPlan(user.id, {
       planId: plan.id,
       billingCycle: cycle,
-      tokensToAdd: plan.includedTokens * multiplier,
+      tokensToAdd: totalTokens,
     });
     return NextResponse.json({ ok: true, manual: true, user: updated });
   }
 
-  // 4. Pix
-  const pixKey = process.env.NOVACENA_PIX_KEY;
-  if (pixKey) {
-    const months = cycle === 'monthly' ? 1 : cycle === 'annual' ? 12 : 36;
+  // ── Return available methods ─────────────────────
+  const methods: string[] = [];
+  if (process.env.STRIPE_SECRET_KEY) methods.push('stripe');
+  if (pixKey) methods.push('pix');
+
+  if (methods.length > 0) {
     return NextResponse.json({
       ok: true,
-      payment: {
-        type: 'pix',
-        key: pixKey,
-        name: process.env.NOVACENA_PIX_NAME || 'NovaCena',
-        whatsapp: process.env.NOVACENA_PIX_WHATSAPP || '',
-        amountBRL: planPrice(plan, cycle),
-        planName: plan.name,
-        cycle,
-        renders: plan.includedTokens * months,
-        reference: `${user.email} - ${plan.name} ${cycle}`,
-      },
+      availableMethods: methods,
+      plan: { name: plan.name, id: plan.id },
+      cycle,
+      totalBRL,
+      totalTokens,
     });
   }
 
   return NextResponse.json({
     ok: false,
-    error: 'Nenhum metodo de pagamento configurado. Configure STRIPE_SECRET_KEY ou NOVACENA_PIX_KEY.',
+    error: 'Nenhum metodo de pagamento configurado.',
   }, { status: 400 });
 }

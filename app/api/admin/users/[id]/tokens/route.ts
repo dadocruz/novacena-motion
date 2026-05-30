@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function isBillingCycle(value: unknown): value is BillingCycle {
-  return value === 'monthly' || value === 'annual' || value === 'triennial';
+  return value === 'monthly' || value === 'quarterly' || value === 'annual';
 }
 
 export async function POST(

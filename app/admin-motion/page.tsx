@@ -36,14 +36,14 @@ const PLAN_OPTIONS = [
 const CYCLE_OPTIONS = [
   { id: '', label: 'Manter ciclo' },
   { id: 'monthly', label: 'Mensal' },
+  { id: 'quarterly', label: 'Trimestral' },
   { id: 'annual', label: 'Anual' },
-  { id: 'triennial', label: 'Trienal' },
 ];
 
 function cycleLabel(cycle: BillingCycle | null) {
   if (cycle === 'monthly') return 'Mensal';
+  if (cycle === 'quarterly') return 'Trimestral';
   if (cycle === 'annual') return 'Anual';
-  if (cycle === 'triennial') return 'Trienal';
   return '—';
 }
 

@@ -1,4 +1,4 @@
-export type BillingCycle = 'monthly' | 'annual' | 'triennial';
+export type BillingCycle = 'monthly' | 'quarterly' | 'annual';
 
 export type SaasPlan = {
   id: 'starter' | 'pro' | 'studio';
@@ -17,8 +17,8 @@ export const BILLING_CYCLES: Array<{
   discountLabel: string;
 }> = [
   { id: 'monthly', label: 'Mensal', multiplier: 1, discountLabel: '' },
+  { id: 'quarterly', label: 'Trimestral', multiplier: 3, discountLabel: '1 mês grátis' },
   { id: 'annual', label: 'Anual', multiplier: 10, discountLabel: '2 meses grátis' },
-  { id: 'triennial', label: 'Trienal', multiplier: 24, discountLabel: '12 meses grátis' },
 ];
 
 export const SAAS_PLANS: SaasPlan[] = [
