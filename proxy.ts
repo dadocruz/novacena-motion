@@ -9,6 +9,7 @@ function isSaasMode() {
 
 function isPublicPath(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (pathname === '/') return true;
   if (pathname === '/login') return true;
   if (pathname === '/vendas') return true;
   if (pathname === '/motion') return true;
@@ -20,6 +21,7 @@ function isPublicPath(req: NextRequest) {
   if (pathname === '/api/health') return true;
   if (pathname === '/api/fonts/css') return true;
   if (pathname === '/api/site-content' && req.method === 'GET') return true;
+  if (pathname === '/api/stripe/webhook') return true;
   if (pathname.startsWith('/api/auth/')) return true;
   if (!pathname.startsWith('/api/') && /\.(css|js|map|ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|otf)$/i.test(pathname)) {
     return true;
