@@ -409,6 +409,8 @@ export default function Home() {
   };
   const textRoleLabels = useMemo(() => getTextRoleLabels(template), [template]);
   const visibleTextRoles = VISIBLE_TEXT_ROLES_BY_TEMPLATE[template];
+  const hasOptionalCta1 = template === 'available_now' || template === 'watch_youtube' || template === 'out_now';
+  const hasOptionalCta2 = template === 'available_now';
 
   // Project settings
   const [durationSeconds, setDurationSeconds] = useState<number>(
@@ -3424,7 +3426,7 @@ export default function Home() {
         { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(12, 16, 76, 13, 'headline') },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0) },
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date') },
-        { id: 'youtube-cta', kind: 'text', role: 'cta1', label: 'CTA do video', rect: roleRect(12, ctaTopPct, 76, 5.8, 'cta1') },
+        ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: roleRect(12, ctaTopPct, 76, 5.8, 'cta1') }] : []),
         ...elementHotspots,
       ];
     }
@@ -3433,7 +3435,7 @@ export default function Home() {
       return [
         { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(6, 11, 88, 18, 'headline') },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY) },
-        { id: 'outnow-cta', kind: 'text', role: 'cta1', label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta1') },
+        ...(showCta1 ? [{ id: 'outnow-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta1') }] : []),
         { id: 'outnow-date', kind: 'text', role: 'date', label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') },
         { id: 'logos', kind: 'logos', label: 'Logos', rect: { left: '30%', top: '84%', width: '40%', height: '8%' } },
         ...elementHotspots,
@@ -3444,12 +3446,12 @@ export default function Home() {
       { id: 'headline', kind: 'text', role: 'headline', label: textRoleLabels.headline ?? 'Headline', rect: roleRect(8, 11, 84, 9, 'headline') },
       { id: 'date', kind: 'text', role: 'date', label: textRoleLabels.date ?? 'Data', rect: roleRect(22, 19, 56, 6, 'date') },
       { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY) },
-      { id: 'cta1', kind: 'text', role: 'cta1', label: textRoleLabels.cta1 ?? 'Chamada 1', rect: roleRect(8, 68, 84, 8, 'cta1') },
-      { id: 'cta2', kind: 'text', role: 'cta2', label: textRoleLabels.cta2 ?? 'Chamada 2', rect: roleRect(8, 77, 84, 8, 'cta2') },
+      ...(showCta1 ? [{ id: 'cta1', kind: 'text' as const, role: 'cta1' as const, label: textRoleLabels.cta1 ?? 'Chamada 1', rect: roleRect(8, 68, 84, 8, 'cta1') }] : []),
+      ...(showCta2 ? [{ id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: roleRect(8, 77, 84, 8, 'cta2') }] : []),
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -4741,7 +4743,10 @@ return (
                 Este template usa campos proprios de YouTube. O titulo "ASSISTA NO YOUTUBE" e fixo; aqui voce edita canal e chamada.
               </div>
               <Field label="Canal do YouTube / @handle" value={channelName} onChange={setChannelName} placeholder="GRUPO FACANHA OFICIAL" />
-              <TextAreaField label="CTA do video" value={cta} onChange={setCta} placeholder="CLIPE OFICIAL DISPONIVEL" rows={2} />
+              <ToggleRow label="Mostrar CTA do video" value={showCta1} onChange={setShowCta1} />
+              {showCta1 && (
+                <TextAreaField label="CTA do video" value={cta} onChange={setCta} placeholder="CLIPE OFICIAL DISPONIVEL" rows={2} />
+              )}
             </>
           ) : template === 'milestone' ? (
             <>
@@ -4764,15 +4769,24 @@ return (
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
                 Este template tem o titulo fixo "OUCA AGORA". Edite a chamada e a data opcional abaixo.
               </div>
-              <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              <ToggleRow label="Mostrar CTA de plataformas" value={showCta1} onChange={setShowCta1} />
+              {showCta1 && (
+                <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              )}
               <Field label="Data / desde (opcional)" value={releaseDate} onChange={setReleaseDate} placeholder="DESDE 07/06" />
             </>
           ) : (
             <>
               <Field label="Data de lancamento" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
               <TextAreaField label="Titulo" value={headline} onChange={setHeadline} placeholder={"LANCAMENTO"} rows={2} />
-              <TextAreaField label="CTA principal" value={cta} onChange={setCta} placeholder={"FACA O\nPRE-SAVE"} rows={2} />
-              <TextAreaField label="CTA secundario" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              <ToggleRow label="Mostrar CTA principal" value={showCta1} onChange={setShowCta1} />
+              {showCta1 && (
+                <TextAreaField label="CTA principal" value={cta} onChange={setCta} placeholder={"FACA O\nPRE-SAVE"} rows={2} />
+              )}
+              <ToggleRow label="Mostrar CTA secundario" value={showCta2} onChange={setShowCta2} />
+              {showCta2 && (
+                <TextAreaField label="CTA secundario" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              )}
             </>
           )}
         </Section>
@@ -6279,7 +6293,7 @@ return (
             onApplyTransitionPreset={applyTextTransitionTuningPreset}
             roleLabels={textRoleLabels}
             visibleRoles={visibleTextRoles}
-            showCtaToggles={template === 'available_now'}
+            showCtaToggles={hasOptionalCta1 || hasOptionalCta2}
             showCta1={showCta1}
             showCta2={showCta2}
             onToggleCta1={() => setShowCta1((v) => !v)}

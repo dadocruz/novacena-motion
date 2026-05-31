@@ -53,7 +53,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     : 0;
 
   const showAll = frame >= FINAL_POSTER;
-  const cta = props.cta || 'CLIPE OFICIAL DISPONÍVEL';
+  const cta = props.cta ?? '';
+  const hasCta = cta.trim().length > 0;
   const channel = props.channelName || 'CANAL OFICIAL';
   const channelCompactLength = channel.replace(/\s+/g, '').length;
   const channelFontSize = clamp(640 / Math.max(16, channelCompactLength), 25, 36);
@@ -62,7 +63,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const coverLeftOffset = clamp(props.motion?.coverX ?? 0, -220, 220);
   const channelTop = clamp(coverTop + coverSize + 34, SAFE_TOP + 720, SAFE_BOTTOM - 220);
   const ctaTop = clamp(channelTop + 84, SAFE_TOP + 840, SAFE_BOTTOM - 110);
-  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 0.82 + 76, 300, 720);
+  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 0.92 + 128, 360, 820);
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -134,7 +135,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         style={{
           width: 'fit-content',
           maxWidth: channelMaxWidth,
-          minHeight: 58,
+          minHeight: 66,
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -146,7 +147,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           fontWeight: M.fontDate.weight,
           letterSpacing: 1.2,
           lineHeight: 1,
-          padding: '12px 30px',
+          padding: '15px 46px',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -206,26 +207,28 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           />
         </div>
         {channelPill}
-        <div
-          style={{
-            position: 'absolute',
-            top: ctaTop,
-            left: 96,
-            right: 96,
-            textAlign: 'center',
-            fontFamily: ff(ctaFont.family),
-            fontSize: 30,
-            fontWeight: ctaFont.weight,
-            letterSpacing: 2.4,
-            textTransform: 'uppercase',
-            ...textStrokeStyle(ctaStroke),
-            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
-            ...applyTextStyle(ctaStyle),
-            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
-          }}
-        >
-          {cta}
-        </div>
+        {hasCta && (
+          <div
+            style={{
+              position: 'absolute',
+              top: ctaTop,
+              left: 96,
+              right: 96,
+              textAlign: 'center',
+              fontFamily: ff(ctaFont.family),
+              fontSize: 30,
+              fontWeight: ctaFont.weight,
+              letterSpacing: 2.4,
+              textTransform: 'uppercase',
+              ...textStrokeStyle(ctaStroke),
+              ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+              ...applyTextStyle(ctaStyle),
+              ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
+            }}
+          >
+            {cta}
+          </div>
+        )}
         <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
       </AbsoluteFill>
     );
@@ -294,32 +297,34 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       {channelPill}
 
       {/* CTA */}
-      <div
-        style={{
-          position: 'absolute',
-          top: ctaTop,
-          left: 96,
-          right: 96,
-          textAlign: 'center',
-          fontFamily: ff(ctaFont.family),
-          fontSize: 30,
-          fontWeight: ctaFont.weight,
-          letterSpacing: 2.4,
-          textTransform: 'uppercase',
-          ...textStrokeStyle(ctaStroke),
-          ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
-          ...applyTextStyle(ctaStyle),
-          ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
-        }}
-      >
-        {showAll
-          ? cta
-          : cta.split('').map((char, i) => (
-              <span key={i} style={ctaChar(i)}>
-                {char === ' ' ? ' ' : char}
-              </span>
-            ))}
-      </div>
+      {hasCta && (
+        <div
+          style={{
+            position: 'absolute',
+            top: ctaTop,
+            left: 96,
+            right: 96,
+            textAlign: 'center',
+            fontFamily: ff(ctaFont.family),
+            fontSize: 30,
+            fontWeight: ctaFont.weight,
+            letterSpacing: 2.4,
+            textTransform: 'uppercase',
+            ...textStrokeStyle(ctaStroke),
+            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+            ...applyTextStyle(ctaStyle),
+            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
+          }}
+        >
+          {showAll
+            ? cta
+            : cta.split('').map((char, i) => (
+                <span key={i} style={ctaChar(i)}>
+                  {char === ' ' ? ' ' : char}
+                </span>
+              ))}
+        </div>
+      )}
 
       <AbsoluteFill
         style={{
