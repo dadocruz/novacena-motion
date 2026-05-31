@@ -188,6 +188,57 @@ type PixPayment = {
   reference: string;
 };
 
+const DEFAULT_TEXT_ROLE_LABELS: Partial<Record<FontRole, string>> = {
+  headline: 'Headline',
+  date: 'Data',
+  cta1: 'Chamada 1',
+  cta2: 'Chamada 2',
+};
+type EditorTextTransitionRole = 'headline' | 'date' | 'cta1' | 'cta2';
+
+const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<FontRole, string>>>> = {
+  available_now: {
+    headline: 'Titulo',
+    date: 'Data de lancamento',
+    cta1: 'CTA principal',
+    cta2: 'CTA secundario',
+  },
+  watch_youtube: {
+    headline: 'Titulo fixo',
+    date: 'Canal do YouTube',
+    cta1: 'CTA do video',
+  },
+  milestone: {
+    date: 'Texto acima',
+    headline: 'Numero',
+    cta1: 'Metrica',
+  },
+  out_now: {
+    headline: 'Titulo fixo',
+    date: 'Data / desde',
+    cta1: 'CTA de plataformas',
+  },
+  spotify_print: {
+    date: 'Texto acima',
+    headline: 'Numero',
+    cta1: 'Metrica',
+  },
+};
+
+const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
+  watch_youtube: ['headline', 'date', 'cta1'],
+  milestone: ['date', 'headline', 'cta1'],
+  out_now: ['headline', 'cta1', 'date'],
+  spotify_print: ['date', 'headline', 'cta1'],
+};
+
+function getTextRoleLabels(template: TemplateId): Partial<Record<FontRole, string>> {
+  return {
+    ...DEFAULT_TEXT_ROLE_LABELS,
+    ...(TEXT_ROLE_LABELS_BY_TEMPLATE[template] ?? {}),
+  };
+}
+
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
@@ -356,6 +407,8 @@ export default function Home() {
     cta1: textInFrames.cta1 ?? (template === 'available_now' ? cta1InFrame : textTimingDefaults.cta1),
     cta2: textInFrames.cta2 ?? (template === 'available_now' ? cta2InFrame : textTimingDefaults.cta2),
   };
+  const textRoleLabels = useMemo(() => getTextRoleLabels(template), [template]);
+  const visibleTextRoles = VISIBLE_TEXT_ROLES_BY_TEMPLATE[template];
 
   // Project settings
   const [durationSeconds, setDurationSeconds] = useState<number>(
@@ -3353,16 +3406,37 @@ export default function Home() {
     const coverPct = clamp((coverSize / 1080) * 100, 18, 86);
     const coverHeightPct = clamp((coverSize / compositionHeight) * 100, 12, 66);
 
+    if (template === 'watch_youtube') {
+      return [
+        { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(12, 16, 76, 13, 'headline') },
+        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 47, coverPct, coverHeightPct, coverX, coverY) },
+        { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect(17, 68, 66, 8, 'date') },
+        { id: 'youtube-cta', kind: 'text', role: 'cta1', label: 'CTA do video', rect: roleRect(12, 75, 76, 8, 'cta1') },
+        ...elementHotspots,
+      ];
+    }
+
+    if (template === 'out_now') {
+      return [
+        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(6, 11, 88, 18, 'headline') },
+        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY) },
+        { id: 'outnow-cta', kind: 'text', role: 'cta1', label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta1') },
+        { id: 'outnow-date', kind: 'text', role: 'date', label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') },
+        { id: 'logos', kind: 'logos', label: 'Logos', rect: { left: '30%', top: '84%', width: '40%', height: '8%' } },
+        ...elementHotspots,
+      ];
+    }
+
     return [
-      { id: 'headline', kind: 'text', role: 'headline', label: 'Headline', rect: roleRect(8, 13, 84, 13, 'headline') },
-      { id: 'date', kind: 'text', role: 'date', label: 'Data', rect: roleRect(22, 25, 56, 7, 'date') },
+      { id: 'headline', kind: 'text', role: 'headline', label: textRoleLabels.headline ?? 'Headline', rect: roleRect(8, 11, 84, 9, 'headline') },
+      { id: 'date', kind: 'text', role: 'date', label: textRoleLabels.date ?? 'Data', rect: roleRect(22, 19, 56, 6, 'date') },
       { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY) },
-      { id: 'cta1', kind: 'text', role: 'cta1', label: 'Chamada 1', rect: roleRect(8, 68, 84, 9, 'cta1') },
-      { id: 'cta2', kind: 'text', role: 'cta2', label: 'Chamada 2', rect: roleRect(8, 76, 84, 10, 'cta2') },
+      { id: 'cta1', kind: 'text', role: 'cta1', label: textRoleLabels.cta1 ?? 'Chamada 1', rect: roleRect(8, 68, 84, 8, 'cta1') },
+      { id: 'cta2', kind: 'text', role: 'cta2', label: textRoleLabels.cta2 ?? 'Chamada 2', rect: roleRect(8, 77, 84, 8, 'cta2') },
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY]);
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -3532,10 +3606,24 @@ export default function Home() {
   }
 
   function getPreviewTextValue(role: FontRole) {
-    if (template === 'spotify_print') {
+    if (template === 'spotify_print' || template === 'milestone') {
       if (role === 'headline') return metricNumber;
       if (role === 'date') return metricPrefix;
       if (role === 'cta' || role === 'cta1') return metricLabel;
+      return cta2;
+    }
+
+    if (template === 'watch_youtube') {
+      if (role === 'headline') return 'ASSISTA NO YOUTUBE';
+      if (role === 'date') return channelName;
+      if (role === 'cta' || role === 'cta1') return cta;
+      return cta2;
+    }
+
+    if (template === 'out_now') {
+      if (role === 'headline') return 'OUCA AGORA';
+      if (role === 'date') return releaseDate;
+      if (role === 'cta' || role === 'cta1') return cta;
       return cta2;
     }
 
@@ -3546,11 +3634,23 @@ export default function Home() {
   }
 
   function setPreviewTextValue(role: FontRole, value: string) {
-    if (template === 'spotify_print') {
+    if (template === 'spotify_print' || template === 'milestone') {
       if (role === 'headline') setMetricNumber(value);
       else if (role === 'date') setMetricPrefix(value);
       else if (role === 'cta' || role === 'cta1') setMetricLabel(value);
       else setCta2(value);
+      return;
+    }
+
+    if (template === 'watch_youtube') {
+      if (role === 'date') setChannelName(value);
+      else if (role === 'cta' || role === 'cta1') setCta(value);
+      return;
+    }
+
+    if (template === 'out_now') {
+      if (role === 'date') setReleaseDate(value);
+      else if (role === 'cta' || role === 'cta1') setCta(value);
       return;
     }
 
@@ -4292,6 +4392,21 @@ export default function Home() {
     </div>
   );
 
+  const leftEditorSections = [
+    { id: 'Template', label: 'Template' },
+    { id: 'Capa principal', label: 'Capa' },
+    { id: 'Conteúdo', label: 'Conteudo' },
+    { id: 'Plataformas', label: 'Plataformas' },
+  ];
+
+  function scrollToLeftSidebarSection(title: string) {
+    const panel = document.querySelector('[data-novacena-left-panel="true"]');
+    const targetSection = panel?.querySelector(`[data-editor-section="${title}"]`);
+    if (targetSection instanceof HTMLElement) {
+      targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
 
 return (
     <main
@@ -4511,6 +4626,38 @@ return (
 
       {/* ─── SIDEBAR ESQUERDA ─── */}
       <aside style={leftSidebar} data-novacena-left-panel="true">
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 25,
+            padding: '10px 14px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 6,
+            background: 'linear-gradient(180deg, rgba(16,16,20,0.98), rgba(16,16,20,0.92))',
+            borderBottom: '1px solid var(--border-1)',
+            backdropFilter: 'blur(14px)',
+          }}
+        >
+          {leftEditorSections.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => scrollToLeftSidebarSection(item.id)}
+              style={{
+                ...ghostBtnStyle,
+                minHeight: 30,
+                padding: '7px 8px',
+                borderRadius: 8,
+                fontSize: 11,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
         <Section title="Template">
           <div style={gridTwoCols}>
             {templateOrder.map((id) => (
@@ -4622,38 +4769,44 @@ return (
 
 
         <Section title="Conteúdo">
-          {template === 'spotify_print' ? (
+          {template === 'watch_youtube' ? (
+            <>
+              <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
+                Este template usa campos proprios de YouTube. O titulo "ASSISTA NO YOUTUBE" e fixo; aqui voce edita canal e chamada.
+              </div>
+              <Field label="Canal do YouTube / @handle" value={channelName} onChange={setChannelName} placeholder="GRUPO FACANHA OFICIAL" />
+              <TextAreaField label="CTA do video" value={cta} onChange={setCta} placeholder="CLIPE OFICIAL DISPONIVEL" rows={2} />
+            </>
+          ) : template === 'milestone' ? (
             <>
               <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} placeholder="ULTRAPASSAMOS" />
               <div style={gridTwoCols}>
-                <Field label="Número" value={metricNumber} onChange={setMetricNumber} placeholder="10.000" />
-                <Field label="Métrica" value={metricLabel} onChange={setMetricLabel} placeholder="OUVINTES MENSAIS" />
+                <Field label="Numero" value={metricNumber} onChange={setMetricNumber} placeholder="100K" />
+                <Field label="Metrica" value={metricLabel} onChange={setMetricLabel} placeholder="PLAYS" />
               </div>
+            </>
+          ) : template === 'spotify_print' ? (
+            <>
+              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} placeholder="ULTRAPASSAMOS" />
+              <div style={gridTwoCols}>
+                <Field label="Numero" value={metricNumber} onChange={setMetricNumber} placeholder="10.000" />
+                <Field label="Metrica" value={metricLabel} onChange={setMetricLabel} placeholder="OUVINTES MENSAIS" />
+              </div>
+            </>
+          ) : template === 'out_now' ? (
+            <>
+              <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
+                Este template tem o titulo fixo "OUCA AGORA". Edite a chamada e a data opcional abaixo.
+              </div>
+              <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+              <Field label="Data / desde (opcional)" value={releaseDate} onChange={setReleaseDate} placeholder="DESDE 07/06" />
             </>
           ) : (
             <>
-              <Field label="Data" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
-              <TextAreaField label="Headline" value={headline} onChange={setHeadline} placeholder={"LANÇAMENTO"} rows={2} />
-              {template === 'available_now' ? (
-                <>
-                  <TextAreaField label="Chamada / CTA 1" value={cta} onChange={setCta} placeholder={"FAÇA O\nPRÉ-SAVE"} rows={2} />
-                  <TextAreaField label="Chamada / CTA 2" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
-                </>
-              ) : (
-                <TextAreaField label="Chamada / CTA" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
-              )}
-            </>
-          )}
-          {template === 'watch_youtube' && (
-            <Field label="Canal" value={channelName} onChange={setChannelName} />
-          )}
-          {template === 'milestone' && (
-            <>
-              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} />
-              <div style={gridTwoCols}>
-                <Field label="Número" value={metricNumber} onChange={setMetricNumber} />
-                <Field label="Métrica" value={metricLabel} onChange={setMetricLabel} />
-              </div>
+              <Field label="Data de lancamento" value={releaseDate} onChange={setReleaseDate} placeholder="07.JANEIRO" />
+              <TextAreaField label="Titulo" value={headline} onChange={setHeadline} placeholder={"LANCAMENTO"} rows={2} />
+              <TextAreaField label="CTA principal" value={cta} onChange={setCta} placeholder={"FACA O\nPRE-SAVE"} rows={2} />
+              <TextAreaField label="CTA secundario" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
             </>
           )}
         </Section>
@@ -6125,9 +6278,9 @@ return (
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={template === 'spotify_print' ? metricNumber : headline}
-            sampleDate={template === 'spotify_print' ? metricPrefix : releaseDate}
-            sampleCta={template === 'spotify_print' ? metricLabel : cta}
+            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : template === 'out_now' ? 'OUCA AGORA' : headline}
+            sampleDate={template === 'spotify_print' || template === 'milestone' ? metricPrefix : template === 'watch_youtube' ? channelName : releaseDate}
+            sampleCta={template === 'spotify_print' || template === 'milestone' ? metricLabel : cta}
             sampleCta2={cta2}
             txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}
             txWiggle={{ headline: wiggleH, date: wiggleD, cta: wiggleC, cta1: wiggleCta1, cta2: wiggleCta2 }}
@@ -6140,10 +6293,8 @@ return (
             onChangeTransitionTuning={changeTextTransitionTuning}
             onChangeTransitionInFrame={changeTextInFrame}
             onApplyTransitionPreset={applyTextTransitionTuningPreset}
-            roleLabels={template === 'spotify_print'
-              ? { headline: 'Número', date: 'Texto acima', cta1: 'Métrica' }
-              : { headline: 'Headline', date: 'Data', cta1: 'Chamada 1', cta2: 'Chamada 2' }}
-            visibleRoles={template === 'spotify_print' ? ['headline', 'date', 'cta1'] : undefined}
+            roleLabels={textRoleLabels}
+            visibleRoles={visibleTextRoles}
             showCtaToggles={template === 'available_now'}
             showCta1={showCta1}
             showCta2={showCta2}

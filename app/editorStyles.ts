@@ -29,6 +29,9 @@ export const leftSidebar: React.CSSProperties = {
   display: 'flex', flexDirection: 'column',
   overflowY: 'auto', overflowX: 'hidden',
   height: '100%', minHeight: 0,
+  scrollPaddingTop: 64,
+  paddingBottom: 28,
+  overscrollBehavior: 'contain',
 };
 
 export const rightSidebar: React.CSSProperties = {
