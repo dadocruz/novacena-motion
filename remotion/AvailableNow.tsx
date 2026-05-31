@@ -78,7 +78,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const finalFlash = finalFlashEnabled ? interpolate(frame, [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14], [0, 0.45, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;
   const showAll = frame >= FINAL_POSTER;
   const isStory = props.renderTarget === 'story';
-  const visiblePlatforms = props.platforms.filter((p) => Boolean(motion.customLogos?.[p]));
+  const visiblePlatforms = props.platforms;
   const platformLogoSize = motion.platformLogoSize ?? 54;
   const platformLogoGap = motion.platformLogoGap ?? 18;
   const platformLogoScales = motion.platformLogoScales ?? {};

@@ -3254,8 +3254,8 @@ export default function Home() {
       const scale = clamp(Number(txScale[role] ?? 1), 0.2, 4);
       const offsetX = (Number(txOX[role] ?? 0) / 1080) * 100;
       const offsetY = (Number(txOY[role] ?? 0) / compositionHeight) * 100;
-      const textHeightFactor = role === 'headline' ? 0.58 : role === 'date' ? 0.7 : 0.62;
-      const textWidthPad = role === 'date' ? 0.7 : 0.9;
+      const textHeightFactor = role === 'headline' ? 1 : role === 'date' ? 0.92 : 0.88;
+      const textWidthPad = role === 'date' ? 0.82 : 1;
       const scaledWidth = clamp(width * textWidthPad * scale, 4, 96);
       const scaledHeight = clamp(height * textHeightFactor * scale, 2.6, 36);
       const centerX = left + width / 2 + offsetX;
@@ -3274,8 +3274,8 @@ export default function Home() {
       width: pct(clamp(width, 4, 96)),
       height: pct(clamp(height, 3, 92)),
     });
-    const visibleLogoPlatforms = platformsSel.filter((p) => Boolean(customLogos[p]));
-    const logoSizes = (visibleLogoPlatforms.length ? visibleLogoPlatforms : platformsSel).map((p) =>
+    const visibleLogoPlatforms = platformsSel;
+    const logoSizes = visibleLogoPlatforms.map((p) =>
       Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))
     );
     const maxLogoSize = Math.max(44, ...logoSizes);
@@ -4955,8 +4955,8 @@ return (
                 style={{
                   position: 'relative',
                   width: target === 'story'
-                    ? 'min(380px, 100%, calc((100dvh - 235px) * 9 / 16))'
-                    : 'min(460px, 100%, calc((100dvh - 235px) * 1080 / 1350))',
+                    ? 'min(360px, 100%, calc((100dvh - 270px) * 9 / 16))'
+                    : 'min(430px, 100%, calc((100dvh - 270px) * 1080 / 1350))',
                   flex: '0 1 auto',
                   aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
                   borderRadius: 22,
@@ -5042,7 +5042,7 @@ return (
                     }}
                     style={{
                       position: 'absolute',
-                      zIndex: 15,
+                      zIndex: 90,
                       padding: 0,
                       borderRadius: 10,
                       border: selected ? `1px dashed ${accent}` : '1px solid transparent',
