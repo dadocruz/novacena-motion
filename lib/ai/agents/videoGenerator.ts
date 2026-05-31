@@ -55,7 +55,6 @@ export async function generateVideoBg(input: VideoGenInput): Promise<VideoGenRes
       ],
     }],
     generationConfig: {
-      // @ts-expect-error — Veo-specific params not fully typed in SDK yet
       responseMimeType: 'video/mp4',
       videoDuration: `${durationSeconds}s`,
       aspectRatio,
