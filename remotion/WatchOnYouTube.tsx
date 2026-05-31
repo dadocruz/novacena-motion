@@ -2,18 +2,18 @@ import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
-  charStagger,
   easings,
   eased,
-  maskReveal,
-  scaleInBack,
   loopFloat,
+  getTextTransition,
+  type TextTransitionId,
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
+import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
@@ -61,10 +61,12 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
   const channelIn = props.motion?.dateInFrame ?? CHANNEL_IN;
   const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
-
-  const headlineMask = maskReveal(frame, headlineIn, 28);
-  const channelAnim = scaleInBack(frame, channelIn, 20);
-  const ctaChar = charStagger(frame, ctaIn, 1.0);
+  const txHeadline = (props.motion?.transitionHeadline ?? 'mask_reveal') as TextTransitionId;
+  const txChannel = (props.motion?.transitionDate ?? 'scale_pop') as TextTransitionId;
+  const txCta = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'split_letters') as TextTransitionId;
+  const headlineTransition = getTextTransition(txHeadline)(frame, headlineIn, props.motion?.transitionTuningHeadline);
+  const channelTransition = getTextTransition(txChannel)(frame, channelIn, props.motion?.transitionTuningDate);
+  const ctaTransition = getTextTransition(txCta)(frame, ctaIn, props.motion?.transitionTuningCta1 ?? props.motion?.transitionTuningCta);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -88,6 +90,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const ctaTop = clamp(channelTop + 84, SAFE_TOP + 840, SAFE_BOTTOM - 110);
   const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 1.08 + 168, 420, 860);
   const channelTextStyle = keepTextOnlyStyle(applyTextStyle(props.motion?.styleDate));
+  const channelBoxOpacity = frame < channelIn ? 0 : 1;
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -109,11 +112,6 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     frequency: 0.9,
     seed: 130,
   });
-  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
-    ...anim,
-    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
-  });
-
   // YouTube ícones flutuando (posicionados nas bordas, com rotação)
   const floatingYT = [
     { left: 60, top: 310, size: 110, off: 0, rotate: -15 },
@@ -169,8 +167,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           padding: '17px 58px',
           overflow: 'hidden',
           boxShadow: '0 12px 30px rgba(255,0,0,0.32)',
-          ...channelAnim,
-          ...userTextTransform(props.motion?.styleDate, mergeAnim(channelAnim, channelWiggle.transform)),
+          opacity: channelBoxOpacity,
+          ...userTextTransform(props.motion?.styleDate, { transform: channelWiggle.transform }),
         }}
       >
         <span
@@ -189,7 +187,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             ...channelTextStyle,
           }}
         >
-          {channel}
+          <StyledText
+            text={channel}
+            transition={showAll ? undefined : channelTransition}
+            style={props.motion?.styleDate}
+            stroke={props.motion?.strokeDate}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </span>
       </div>
     </div>
@@ -220,11 +225,17 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             ...textStrokeStyle(M.strokeHeadline),
             ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
             ...applyTextStyle(props.motion?.styleHeadline),
-            ...(showAll ? {} : headlineMask),
-            ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
+            ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
           }}
         >
-          ASSISTA NO<br />YOUTUBE
+          <StyledText
+            text={'ASSISTA NO\nYOUTUBE'}
+            transition={showAll ? undefined : headlineTransition}
+            style={props.motion?.styleHeadline}
+            stroke={M.strokeHeadline}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </div>
         <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
           <PremiumCover
@@ -259,7 +270,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
             }}
           >
-            {cta}
+            <StyledText
+              text={cta}
+              transition={showAll ? undefined : ctaTransition}
+              style={ctaStyle}
+              stroke={ctaStroke}
+              preserveFontShape={false}
+              previewMode={false}
+            />
           </div>
         )}
         <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
@@ -304,12 +322,18 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           textTransform: 'uppercase',
           ...textStrokeStyle(M.strokeHeadline),
           ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
-          ...applyTextStyle(props.motion?.styleHeadline),
-          ...(showAll ? {} : headlineMask),
-          ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
-        }}
-      >
-        ASSISTA NO<br />YOUTUBE
+        ...applyTextStyle(props.motion?.styleHeadline),
+        ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
+      }}
+    >
+        <StyledText
+          text={'ASSISTA NO\nYOUTUBE'}
+          transition={showAll ? undefined : headlineTransition}
+          style={props.motion?.styleHeadline}
+          stroke={M.strokeHeadline}
+          preserveFontShape={false}
+          previewMode={false}
+        />
       </div>
 
       {/* CAPA — centralizada */}
@@ -345,17 +369,18 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             textTransform: 'uppercase',
             ...textStrokeStyle(ctaStroke),
             ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
-            ...applyTextStyle(ctaStyle),
-            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
-          }}
-        >
-          {showAll
-            ? cta
-            : cta.split('').map((char, i) => (
-                <span key={i} style={ctaChar(i)}>
-                  {char === ' ' ? ' ' : char}
-                </span>
-              ))}
+          ...applyTextStyle(ctaStyle),
+          ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
+        }}
+      >
+          <StyledText
+            text={cta}
+            transition={showAll ? undefined : ctaTransition}
+            style={ctaStyle}
+            stroke={ctaStroke}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </div>
       )}
 
