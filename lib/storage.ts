@@ -98,21 +98,42 @@ async function writeJson(filepath: string, data: unknown): Promise<void> {
   await writeFile(filepath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+function safeUserSegment(userId?: string | null): string | null {
+  if (!userId) return null;
+  return userId.replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 80) || null;
+}
+
+function safeSlugSegment(slug: string): string {
+  return slug.replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 80) || 'artist';
+}
+
+function artistsFile(userId?: string | null) {
+  const safeUserId = safeUserSegment(userId);
+  return safeUserId ? path.join(DATA_DIR, 'users', safeUserId, 'artists.json') : ARTISTS_FILE;
+}
+
+function artistDataDir(slug: string, userId?: string | null) {
+  const safeUserId = safeUserSegment(userId);
+  return safeUserId
+    ? path.join(DATA_DIR, 'users', safeUserId, 'artists', safeSlugSegment(slug))
+    : path.join(DATA_DIR, 'artists', safeSlugSegment(slug));
+}
+
 // ============================================================
 // ARTISTS
 // ============================================================
 
-export async function listArtists(): Promise<Artist[]> {
-  return readJson<Artist[]>(ARTISTS_FILE, []);
+export async function listArtists(userId?: string | null): Promise<Artist[]> {
+  return readJson<Artist[]>(artistsFile(userId), []);
 }
 
-export async function getArtist(slug: string): Promise<Artist | undefined> {
-  const all = await listArtists();
+export async function getArtist(slug: string, userId?: string | null): Promise<Artist | undefined> {
+  const all = await listArtists(userId);
   return all.find((a) => a.slug === slug);
 }
 
-export async function createArtist(name: string): Promise<Artist> {
-  const all = await listArtists();
+export async function createArtist(name: string, userId?: string | null): Promise<Artist> {
+  const all = await listArtists(userId);
   const baseSlug = slugify(name);
   let slug = baseSlug;
   let i = 2;
@@ -128,27 +149,28 @@ export async function createArtist(name: string): Promise<Artist> {
     updatedAt: now,
   };
   all.unshift(artist);
-  await writeJson(ARTISTS_FILE, all);
+  await writeJson(artistsFile(userId), all);
   return artist;
 }
 
 export async function updateArtist(
   slug: string,
-  patch: Partial<Pick<Artist, 'name' | 'driveFolderPath' | 'coverArtUrl'>>
+  patch: Partial<Pick<Artist, 'name' | 'driveFolderPath' | 'coverArtUrl'>>,
+  userId?: string | null
 ): Promise<Artist | null> {
-  const all = await listArtists();
+  const all = await listArtists(userId);
   const idx = all.findIndex((a) => a.slug === slug);
   if (idx < 0) return null;
   all[idx] = { ...all[idx], ...patch, updatedAt: new Date().toISOString() };
-  await writeJson(ARTISTS_FILE, all);
+  await writeJson(artistsFile(userId), all);
   return all[idx];
 }
 
-export async function deleteArtist(slug: string): Promise<boolean> {
-  const all = await listArtists();
+export async function deleteArtist(slug: string, userId?: string | null): Promise<boolean> {
+  const all = await listArtists(userId);
   const filtered = all.filter((a) => a.slug !== slug);
   if (filtered.length === all.length) return false;
-  await writeJson(ARTISTS_FILE, filtered);
+  await writeJson(artistsFile(userId), filtered);
   return true;
 }
 
@@ -156,34 +178,35 @@ export async function deleteArtist(slug: string): Promise<boolean> {
 // GALERIA POR ARTISTA
 // ============================================================
 
-function galleryFile(slug: string) {
-  return path.join(DATA_DIR, 'artists', slug, 'gallery.json');
+function galleryFile(slug: string, userId?: string | null) {
+  return path.join(artistDataDir(slug, userId), 'gallery.json');
 }
 
-export async function listGallery(slug: string): Promise<GalleryItem[]> {
-  return readJson<GalleryItem[]>(galleryFile(slug), []);
+export async function listGallery(slug: string, userId?: string | null): Promise<GalleryItem[]> {
+  return readJson<GalleryItem[]>(galleryFile(slug, userId), []);
 }
 
 export async function addGalleryItem(
   slug: string,
-  item: Omit<GalleryItem, 'id' | 'createdAt'>
+  item: Omit<GalleryItem, 'id' | 'createdAt'>,
+  userId?: string | null
 ): Promise<GalleryItem> {
-  const all = await listGallery(slug);
+  const all = await listGallery(slug, userId);
   const newItem: GalleryItem = {
     ...item,
     id: uid('gal_'),
     createdAt: new Date().toISOString(),
   };
   all.unshift(newItem);
-  await writeJson(galleryFile(slug), all);
+  await writeJson(galleryFile(slug, userId), all);
   return newItem;
 }
 
-export async function deleteGalleryItem(slug: string, id: string): Promise<boolean> {
-  const all = await listGallery(slug);
+export async function deleteGalleryItem(slug: string, id: string, userId?: string | null): Promise<boolean> {
+  const all = await listGallery(slug, userId);
   const filtered = all.filter((g) => g.id !== id);
   if (filtered.length === all.length) return false;
-  await writeJson(galleryFile(slug), filtered);
+  await writeJson(galleryFile(slug, userId), filtered);
   return true;
 }
 
@@ -191,34 +214,35 @@ export async function deleteGalleryItem(slug: string, id: string): Promise<boole
 // FOTOS POR ARTISTA
 // ============================================================
 
-function photosFile(slug: string) {
-  return path.join(DATA_DIR, 'artists', slug, 'photos.json');
+function photosFile(slug: string, userId?: string | null) {
+  return path.join(artistDataDir(slug, userId), 'photos.json');
 }
 
-export async function listPhotos(slug: string): Promise<ArtistPhoto[]> {
-  return readJson<ArtistPhoto[]>(photosFile(slug), []);
+export async function listPhotos(slug: string, userId?: string | null): Promise<ArtistPhoto[]> {
+  return readJson<ArtistPhoto[]>(photosFile(slug, userId), []);
 }
 
 export async function addPhoto(
   slug: string,
-  photo: Omit<ArtistPhoto, 'id' | 'uploadedAt'>
+  photo: Omit<ArtistPhoto, 'id' | 'uploadedAt'>,
+  userId?: string | null
 ): Promise<ArtistPhoto> {
-  const all = await listPhotos(slug);
+  const all = await listPhotos(slug, userId);
   const newPhoto: ArtistPhoto = {
     ...photo,
     id: uid('ph_'),
     uploadedAt: new Date().toISOString(),
   };
   all.unshift(newPhoto);
-  await writeJson(photosFile(slug), all);
+  await writeJson(photosFile(slug, userId), all);
   return newPhoto;
 }
 
-export async function deletePhoto(slug: string, id: string): Promise<boolean> {
-  const all = await listPhotos(slug);
+export async function deletePhoto(slug: string, id: string, userId?: string | null): Promise<boolean> {
+  const all = await listPhotos(slug, userId);
   const filtered = all.filter((p) => p.id !== id);
   if (filtered.length === all.length) return false;
-  await writeJson(photosFile(slug), filtered);
+  await writeJson(photosFile(slug, userId), filtered);
   return true;
 }
 

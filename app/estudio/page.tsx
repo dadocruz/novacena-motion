@@ -911,8 +911,21 @@ export default function Home() {
       const merged = [...FONT_CATALOG, ...user];
       const seen = new Set<string>();
       return merged.filter((f) => {
-        if (seen.has(f.id)) return false;
+        const labelKey = String(f.label || f.family || f.id)
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\.(otf|ttf|woff2?|eot)$/g, '')
+          .replace(/\b(regular|normal)\b/g, '')
+          .replace(/[^a-z0-9]+/g, '');
+        const familyKey = String(f.family || '')
+          .toLowerCase()
+          .replace(/^user_/, '')
+          .replace(/[^a-z0-9]+/g, '');
+        const key = `${labelKey || familyKey}:${f.weight ?? ''}`;
+        if (seen.has(f.id) || seen.has(key)) return false;
         seen.add(f.id);
+        seen.add(key);
         return true;
       });
     },
@@ -1704,6 +1717,16 @@ export default function Home() {
     setBgTrimPreviewTime(next);
     setBgTrimTimecodeInput(formatTimecode(next));
     if (shouldSeek && bgTrimVideoRef.current) {
+      bgTrimVideoRef.current.currentTime = next;
+    }
+  }
+
+  function seekBgTrimPreview(value: number) {
+    const max = Math.max(0, bgVideoDuration || 0);
+    const next = Math.max(0, Math.min(max, Number.isFinite(value) ? value : 0));
+    bgTrimSelectionEndRef.current = null;
+    setBgTrimPreviewTime(next);
+    if (bgTrimVideoRef.current) {
       bgTrimVideoRef.current.currentTime = next;
     }
   }
@@ -4866,7 +4889,14 @@ return (
       </aside>
 
       {/* ─── ÁREA CENTRAL ─── */}
-      <section style={centerStyle} data-novacena-center-panel="true">
+      <section
+        style={{
+          ...centerStyle,
+          padding: 'clamp(8px, 1.1vw, 20px)',
+          gap: 'clamp(8px, 1.1vh, 14px)',
+        }}
+        data-novacena-center-panel="true"
+      >
         {activeTab === 'studio' ? (
           <>
             <div style={previewToolbarStyle}>
@@ -4907,8 +4937,8 @@ return (
                 style={{
                   position: 'relative',
                   width: target === 'story'
-                    ? 'min(380px, 100%, calc((100dvh - 160px) * 9 / 16))'
-                    : 'min(460px, 100%, calc((100dvh - 160px) * 1080 / 1350))',
+                    ? 'min(380px, 100%, calc((100dvh - 235px) * 9 / 16))'
+                    : 'min(460px, 100%, calc((100dvh - 235px) * 1080 / 1350))',
                   flex: '0 1 auto',
                   aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
                   borderRadius: 22,
@@ -5785,9 +5815,27 @@ return (
 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 5 }}>
-                    <span style={{ color: 'var(--text-3)' }}>Timeline do bruto</span>
+                    <span style={{ color: 'var(--text-3)' }}>Percorrer vídeo bruto</span>
                     <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>
                       {formatTimecode(bgTrimPreviewTime)} / {formatTimecode(bgVideoDuration)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0.1, bgVideoDuration)}
+                    step={0.05}
+                    value={Math.min(bgTrimPreviewTime, Math.max(0, bgVideoDuration || 0))}
+                    onChange={(event) => seekBgTrimPreview(parseFloat(event.target.value))}
+                    style={{ width: '100%', accentColor: '#f97316' }}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 5 }}>
+                    <span style={{ color: 'var(--text-3)' }}>Início do corte</span>
+                    <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>
+                      {formatTimecode(bgVideoStartSec)} até {formatTimecode(bgVideoStartSec + bgClipDuration)}
                     </span>
                   </div>
                   <div style={{ position: 'relative', height: 28, display: 'grid', alignItems: 'center' }}>

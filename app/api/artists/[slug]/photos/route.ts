@@ -5,6 +5,7 @@ import {
   deletePhoto,
   listPhotos,
 } from '../../../../../lib/storage';
+import { SAAS_COOKIE_NAME, verifySessionToken } from '../../../../../lib/saasUsers';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../../../lib/uploadHelpers';
 
 export const runtime = 'nodejs';
@@ -20,13 +21,40 @@ function safeSlugSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 80) || 'artist';
 }
 
-export async function GET(_req: NextRequest, { params }: RouteContext) {
+function isSaasMode() {
+  return process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
+    process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+}
+
+function getScopedUserId(req: NextRequest): string | null {
+  if (!isSaasMode()) return null;
+  const session = verifySessionToken(req.cookies.get(SAAS_COOKIE_NAME)?.value);
+  return session?.sub ?? null;
+}
+
+function uploadOwnerSegment(req: NextRequest): string {
+  const userId = getScopedUserId(req);
+  return userId ? `users/${safeSlugSegment(userId)}` : 'artists';
+}
+
+function unauthorizedIfNeeded(req: NextRequest) {
+  if (!isSaasMode()) return null;
+  return getScopedUserId(req) ? null : NextResponse.json({ ok: false, error: 'Acesso não autorizado.' }, { status: 401 });
+}
+
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const unauthorized = unauthorizedIfNeeded(req);
+  if (unauthorized) return unauthorized;
+
   const { slug } = await params;
-  const photos = await listPhotos(slug);
+  const photos = await listPhotos(slug, getScopedUserId(req));
   return NextResponse.json({ ok: true, photos });
 }
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
+  const unauthorized = unauthorizedIfNeeded(req);
+  if (unauthorized) return unauthorized;
+
   const { slug } = await params;
   try {
     const form = await req.formData();
@@ -66,11 +94,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     const uploaded = [];
     for (const file of files) {
       const filename = safeFileName(file.name, '.png');
-      const dir = path.join(PUBLIC_UPLOADS, 'artists', safeSlug, 'photos');
+      const dir = path.join(PUBLIC_UPLOADS, uploadOwnerSegment(req), safeSlug, 'photos');
       const buffer = Buffer.from(await file.arrayBuffer());
       await saveFile(dir, filename, buffer);
-      const publicPath = `/api/uploads/artists/${safeSlug}/photos/${filename}`;
-      const photo = await addPhoto(slug, { filename, path: publicPath });
+      const publicPath = `/api/uploads/${uploadOwnerSegment(req)}/${safeSlug}/photos/${filename}`;
+      const photo = await addPhoto(slug, { filename, path: publicPath }, getScopedUserId(req));
       uploaded.push(photo);
     }
     return NextResponse.json({ ok: true, uploaded });
@@ -83,10 +111,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 }
 
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  const unauthorized = unauthorizedIfNeeded(req);
+  if (unauthorized) return unauthorized;
+
   const { slug } = await params;
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ ok: false, error: 'id obrigatório.' }, { status: 400 });
-  const ok = await deletePhoto(slug, id);
+  const ok = await deletePhoto(slug, id, getScopedUserId(req));
   return NextResponse.json({ ok });
 }

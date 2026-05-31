@@ -138,6 +138,16 @@ function getSample(role: FontRole, headline: string, date: string, cta: string, 
   return headline || 'LANÇAMENTO';
 }
 
+function cleanFontLabel(font: FontDef) {
+  return String(font.label || font.family || font.id)
+    .replace(/^user[_-]/i, '')
+    .replace(/\.(otf|ttf|woff2?|eot)$/i, '')
+    .replace(/\b[0-9a-f]{8,}\b/gi, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || 'Fonte';
+}
+
 function strokeStyle(s: TextStroke): React.CSSProperties {
   if (!s || s.mode === 'none' || s.width <= 0) return {};
   const color = s.fillKind === 'solid' ? s.color : (s.gradientFrom || s.color);
@@ -733,18 +743,19 @@ export default function FontsPanel({
             style={{
               fontFamily: `'${font.family}', sans-serif`,
               fontWeight: font.weight || 700,
-              fontSize: 28,
-              lineHeight: 1.1,
+              fontSize: 21,
+              lineHeight: 1,
               color: '#fff',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              maxWidth: 210,
             }}
           >
             {sample}
           </div>
           <div style={{ fontSize: 9, color: '#777', marginTop: 4 }}>
-            {font.label} · {font.category || font.vibe || 'Fonte'}
+            {cleanFontLabel(font)} · {font.category || font.vibe || 'Fonte'}
           </div>
         </div>
 
