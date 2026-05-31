@@ -8,7 +8,6 @@ import {
   maskReveal,
   scaleInBack,
   loopFloat,
-  previewSafeAnim,
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
@@ -29,6 +28,31 @@ const FINAL_POSTER = 222;
 const SAFE_TOP = 285;
 const SAFE_BOTTOM = 1635;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => {
+  if (!style) return {};
+  const {
+    padding,
+    paddingTop,
+    paddingRight,
+    paddingBottom,
+    paddingLeft,
+    width,
+    minWidth,
+    maxWidth,
+    height,
+    minHeight,
+    maxHeight,
+    borderRadius,
+    background,
+    backgroundColor,
+    boxShadow,
+    overflow,
+    whiteSpace,
+    textOverflow,
+    ...textOnly
+  } = style;
+  return textOnly;
+};
 
 export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
@@ -38,9 +62,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const channelIn = props.motion?.dateInFrame ?? CHANNEL_IN;
   const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
 
-  const previewMode = props.motion?.previewMode === true;
-  const headlineMask = previewSafeAnim(maskReveal(frame, headlineIn, 28), previewMode);
-  const channelAnim = previewSafeAnim(scaleInBack(frame, channelIn, 20), previewMode);
+  const headlineMask = maskReveal(frame, headlineIn, 28);
+  const channelAnim = scaleInBack(frame, channelIn, 20);
   const ctaChar = charStagger(frame, ctaIn, 1.0);
 
   const finalFlash = M.finalFlash
@@ -63,7 +86,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const coverLeftOffset = clamp(props.motion?.coverX ?? 0, -220, 220);
   const channelTop = clamp(coverTop + coverSize + 34, SAFE_TOP + 720, SAFE_BOTTOM - 220);
   const ctaTop = clamp(channelTop + 84, SAFE_TOP + 840, SAFE_BOTTOM - 110);
-  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 0.92 + 128, 360, 820);
+  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 1.08 + 168, 420, 860);
+  const channelTextStyle = keepTextOnlyStyle(applyTextStyle(props.motion?.styleDate));
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -131,33 +155,42 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         pointerEvents: 'none',
       }}
     >
-        <div
+      <div
         style={{
           width: 'fit-content',
           maxWidth: channelMaxWidth,
-          minHeight: 66,
+          minHeight: 70,
+          boxSizing: 'border-box',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: 12,
           background: '#FF0000',
-          color: '#fff',
-          fontFamily: ff(M.fontDate.family),
-          fontSize: channelFontSize,
-          fontWeight: M.fontDate.weight,
-          letterSpacing: 1.2,
-          lineHeight: 1,
-          padding: '15px 46px',
-          whiteSpace: 'nowrap',
+          padding: '17px 58px',
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
           boxShadow: '0 12px 30px rgba(255,0,0,0.32)',
-          ...applyTextStyle(props.motion?.styleDate),
-          ...(showAll ? {} : channelAnim),
-          ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
+          ...channelAnim,
+          ...userTextTransform(props.motion?.styleDate, mergeAnim(channelAnim, channelWiggle.transform)),
         }}
       >
-        {channel}
+        <span
+          style={{
+            maxWidth: '100%',
+            display: 'block',
+            color: '#fff',
+            fontFamily: ff(M.fontDate.family),
+            fontSize: channelFontSize,
+            fontWeight: M.fontDate.weight,
+            letterSpacing: 1.2,
+            lineHeight: 1,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            ...channelTextStyle,
+          }}
+        >
+          {channel}
+        </span>
       </div>
     </div>
   );
