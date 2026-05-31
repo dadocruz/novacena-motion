@@ -5106,6 +5106,8 @@ return (
                     width: '100%',
                     height: `${(1350 / 1920) * 100}%`,
                     border: '2px dashed rgba(255, 80, 200, 0.85)',
+                    boxShadow: '0 0 0 9999px rgba(255, 80, 200, 0.08) inset',
+                    zIndex: 30,
                     pointerEvents: 'none',
                   }}
                 />

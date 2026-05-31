@@ -52,6 +52,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const showAll = frame >= FINAL_POSTER;
   const cta = props.cta || 'CLIPE OFICIAL DISPONÍVEL';
   const channel = props.channelName || 'CANAL OFICIAL';
+  const channelCompactLength = channel.replace(/\s+/g, '').length;
+  const channelFontSize = channelCompactLength > 28 ? 26 : channelCompactLength > 20 ? 30 : 34;
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -105,6 +107,51 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       );
     });
 
+  const channelPill = (
+    <div
+      style={{
+        position: 'absolute',
+        top: 1320,
+        left: 0,
+        right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '0 96px',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          width: 'fit-content',
+          maxWidth: 720,
+          minHeight: 58,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+          background: '#FF0000',
+          color: '#fff',
+          fontFamily: ff(M.fontDate.family),
+          fontSize: channelFontSize,
+          fontWeight: M.fontDate.weight,
+          letterSpacing: 1.2,
+          lineHeight: 1,
+          padding: '12px 28px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
+          ...applyTextStyle(props.motion?.styleDate),
+          ...(showAll ? {} : channelAnim),
+          ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
+        }}
+      >
+        {channel}
+      </div>
+    </div>
+  );
+
   if (props.motion?.layoutPreset === 'novacena_youtube_card') {
     return (
       <AbsoluteFill style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#fff', overflow: 'hidden' }}>
@@ -149,31 +196,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             glowColor={M.glowColor}
           />
         </div>
-        <div
-          style={{
-            position: 'absolute',
-            top: 1320,
-            left: 200,
-            right: 200,
-            minHeight: 58,
-            display: 'grid',
-            placeItems: 'center',
-            borderRadius: 12,
-            background: '#FF0000',
-            color: '#fff',
-            fontFamily: ff(M.fontDate.family),
-            fontSize: 36,
-            fontWeight: M.fontDate.weight,
-            letterSpacing: 1.2,
-            padding: '12px 24px',
-            boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
-            ...applyTextStyle(props.motion?.styleDate),
-            ...(showAll ? {} : channelAnim),
-            ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
-          }}
-        >
-          {channel}
-        </div>
+        {channelPill}
         <div
           style={{
             position: 'absolute',
@@ -259,35 +282,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         />
       </div>
 
-      {/* CANAL PILL — handle do artista */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 1320,
-          left: 120,
-          right: 120,
-          minHeight: 58,
-          display: 'grid',
-          placeItems: 'center',
-          borderRadius: 12,
-          background: '#FF0000',
-          color: '#fff',
-          fontFamily: ff(M.fontDate.family),
-          fontSize: 32,
-          fontWeight: M.fontDate.weight,
-          letterSpacing: 1.2,
-          padding: '12px 28px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
-          ...applyTextStyle(props.motion?.styleDate),
-          ...(showAll ? {} : channelAnim),
-          ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
-        }}
-      >
-        {channel}
-      </div>
+      {channelPill}
 
       {/* CTA */}
       <div
