@@ -84,6 +84,14 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const platformLogoScales = motion.platformLogoScales ?? {};
   const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
   const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
+  const logoCount = Math.max(1, visiblePlatforms.length);
+  const maxLogosWidth = 640;
+  const totalRequestedLogoWidth = visiblePlatforms.reduce((sum, p) => {
+    const size = Math.round(platformLogoSize * (platformLogoScales[p] ?? 1));
+    return sum + (motion.customLogos?.[p] ? size * 2.8 : size);
+  }, 0) + Math.max(0, logoCount - 1) * platformLogoGap;
+  const logosFitScale = Math.min(1, maxLogosWidth / Math.max(1, totalRequestedLogoWidth));
+  const fittedLogoGap = Math.max(8, Math.round(platformLogoGap * logosFitScale));
 
   if (motion.layoutPreset === 'novacena_presave_typographic') {
     const textShadow = '0 2px 0 rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.10)';
@@ -233,12 +241,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             <StyledText text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
           {visiblePlatforms.length > 0 ? (
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: platformLogoGap, flexWrap: 'wrap', opacity: showAll ? 1 : logosAppear }}>
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: '100%', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo
                   key={p}
                   name={p}
-                  size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))}
+                  size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale)}
+                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * 2.15)}
                   delay={logosIn + idx * 7}
                   customSrc={motion.customLogos?.[p]}
                   index={idx}

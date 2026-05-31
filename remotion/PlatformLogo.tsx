@@ -5,6 +5,7 @@ type PlatformLogoProps = {
   name: string;
   size?: number;
   variant?: 'badge' | 'icon';
+  maxWidth?: number;
   delay?: number;
   customSrc?: string;
   index?: number;
@@ -16,6 +17,7 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   name,
   size = 58,
   variant,
+  maxWidth,
   delay = 0,
   customSrc,
   index = 0,
@@ -63,7 +65,7 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   if (!src) return null;
 
   const isCustomWordmark = Boolean(customSrc) && variant !== 'icon';
-  const boxWidth = isCustomWordmark ? Math.round(size * 2.8) : size;
+  const boxWidth = isCustomWordmark ? Math.min(maxWidth ?? Math.round(size * 2.8), Math.round(size * 2.8)) : size;
   const boxHeight = size;
 
   return (
