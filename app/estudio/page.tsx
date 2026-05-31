@@ -4392,21 +4392,6 @@ export default function Home() {
     </div>
   );
 
-  const leftEditorSections = [
-    { id: 'Template', label: 'Template' },
-    { id: 'Capa principal', label: 'Capa' },
-    { id: 'Conteúdo', label: 'Conteudo' },
-    { id: 'Plataformas', label: 'Plataformas' },
-  ];
-
-  function scrollToLeftSidebarSection(title: string) {
-    const panel = document.querySelector('[data-novacena-left-panel="true"]');
-    const targetSection = panel?.querySelector(`[data-editor-section="${title}"]`);
-    if (targetSection instanceof HTMLElement) {
-      targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
 
 return (
     <main
@@ -4626,38 +4611,6 @@ return (
 
       {/* ─── SIDEBAR ESQUERDA ─── */}
       <aside style={leftSidebar} data-novacena-left-panel="true">
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 25,
-            padding: '10px 14px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 6,
-            background: 'linear-gradient(180deg, rgba(16,16,20,0.98), rgba(16,16,20,0.92))',
-            borderBottom: '1px solid var(--border-1)',
-            backdropFilter: 'blur(14px)',
-          }}
-        >
-          {leftEditorSections.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => scrollToLeftSidebarSection(item.id)}
-              style={{
-                ...ghostBtnStyle,
-                minHeight: 30,
-                padding: '7px 8px',
-                borderRadius: 8,
-                fontSize: 11,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
         <Section title="Template">
           <div style={gridTwoCols}>
             {templateOrder.map((id) => (

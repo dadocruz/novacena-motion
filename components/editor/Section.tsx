@@ -78,7 +78,7 @@ export function Section({
       style={{
         order: canDrag && typeof orderIndex === 'number' && orderIndex >= 0 ? orderIndex : fixedPanelOrder,
         padding: '12px 22px 14px',
-        scrollMarginTop: 56,
+        scrollMarginTop: 12,
         opacity: isDragging ? 0.45 : 1,
         transform: isDragging ? 'scale(0.985)' : undefined,
         borderTop: isDragOver ? '1px solid rgba(168, 85, 247, 0.75)' : undefined,
