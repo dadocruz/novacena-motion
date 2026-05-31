@@ -4402,7 +4402,7 @@ return (
         margin: '0 auto',
         overflow: 'hidden',
         display: 'grid',
-        gridTemplateColumns: 'minmax(220px, clamp(260px, 20vw, 420px)) minmax(240px, 1fr) minmax(220px, clamp(260px, 19vw, 420px))',
+        gridTemplateColumns: 'minmax(220px, clamp(260px, 20vw, 420px)) minmax(240px, 1fr) minmax(300px, clamp(320px, 22vw, 460px))',
         gridTemplateRows: '56px 1fr',
         gridTemplateAreas: `
           "topbar topbar topbar"

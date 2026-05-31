@@ -41,6 +41,7 @@ export const rightSidebar: React.CSSProperties = {
   display: 'flex', flexDirection: 'column',
   overflowY: 'auto', overflowX: 'hidden',
   height: '100%', minHeight: 0,
+  minWidth: 0,
 };
 
 export const centerStyle: React.CSSProperties = {

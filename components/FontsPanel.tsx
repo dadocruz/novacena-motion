@@ -100,6 +100,11 @@ const panel: React.CSSProperties = {
   color: '#f5f5f5',
   display: 'grid',
   gap: 12,
+  boxSizing: 'border-box',
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
 };
 
 const tiny: React.CSSProperties = {
@@ -111,6 +116,8 @@ const tiny: React.CSSProperties = {
 };
 
 const tab = (active: boolean): React.CSSProperties => ({
+  flex: '1 1 96px',
+  minWidth: 0,
   background: active ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.02)',
   border: active ? '1px solid rgba(255,200,80,0.45)' : '1px solid rgba(255,255,255,0.08)',
   color: active ? '#ffc857' : '#888',
@@ -119,6 +126,9 @@ const tab = (active: boolean): React.CSSProperties => ({
   padding: '5px 10px',
   borderRadius: 7,
   cursor: 'pointer',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 const seg = (active: boolean): React.CSSProperties => ({
@@ -175,6 +185,7 @@ const TEXT_FILL_COLORS = [
 
 const fpSegBtn: React.CSSProperties = {
   padding: '7px 9px',
+  minWidth: 0,
   background: 'var(--surface-1)',
   color: 'var(--text-2)',
   border: '1px solid var(--border-1)',
@@ -182,6 +193,9 @@ const fpSegBtn: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
   cursor: 'pointer',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 };
 
 const fpSegBtnActive: React.CSSProperties = {
@@ -308,7 +322,7 @@ function TextTransitionEditor({
         ))}
       </select>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(62px, 1fr))', gap: 4, minWidth: 0 }}>
         {presets.map((preset) => (
           <button
             key={preset.id}
@@ -731,6 +745,7 @@ export default function FontsPanel({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          minWidth: 0,
           padding: '10px 12px',
           background: selected ? 'rgba(255,200,80,0.11)' : favorite ? 'rgba(255,200,80,0.07)' : 'rgba(255,255,255,0.025)',
           border: selected ? '1px solid rgba(255,200,80,0.5)' : favorite ? '1px solid rgba(255,200,80,0.22)' : '1px solid rgba(255,255,255,0.065)',
@@ -738,7 +753,7 @@ export default function FontsPanel({
           cursor: 'pointer',
         }}
       >
-        <div style={{ minWidth: 0 }}>
+        <div style={{ minWidth: 0, flex: '1 1 auto' }}>
           <div
             style={{
               fontFamily: `'${font.family}', sans-serif`,
@@ -749,7 +764,7 @@ export default function FontsPanel({
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              maxWidth: 210,
+              maxWidth: '100%',
             }}
           >
             {sample}
@@ -766,6 +781,7 @@ export default function FontsPanel({
             onToggleFavorite(font.id);
           }}
           style={{
+            flex: '0 0 auto',
             background: 'transparent',
             border: 0,
             color: favorite ? '#ffc857' : '#444',
@@ -781,13 +797,13 @@ export default function FontsPanel({
 
   return (
     <div data-text-panel-anchor="fontes" style={{ ...panel, scrollMarginTop: 78 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, auto) minmax(0, 1fr)', alignItems: 'start', gap: 8, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 27 }}>
           <span style={{ color: '#555', fontSize: 13 }}>⁝⁝</span>
           <span style={tiny}>Fontes</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end', minWidth: 0 }}>
           {enabledRoles.map((item) => (
             <button
               key={item}
