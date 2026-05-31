@@ -78,13 +78,32 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
   });
 
-  // YouTube ícones flutuando
+  // YouTube ícones flutuando (posicionados nas bordas, com rotação)
   const floatingYT = [
-    { left: 70, top: 290, size: 96, off: 0 },
-    { left: 880, top: 340, size: 116, off: 33 },
-    { left: 90, top: 1470, size: 86, off: 88 },
-    { left: 870, top: 1510, size: 102, off: 130 },
+    { left: 60, top: 310, size: 110, off: 0, rotate: -15 },
+    { left: 860, top: 360, size: 130, off: 33, rotate: 12 },
+    { left: 70, top: 1440, size: 100, off: 88, rotate: 18 },
+    { left: 850, top: 1500, size: 120, off: 130, rotate: -10 },
   ];
+
+  const renderYTIcons = (startFrame: number) =>
+    floatingYT.map((f, i) => {
+      const appear = eased(frame, startFrame + i * 4, startFrame + i * 4 + 22, easings.outCubic);
+      return (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: f.left,
+            top: f.top,
+            opacity: appear * 0.85,
+            transform: `${loopFloat(frame, f.off, 1.1)} rotate(${f.rotate}deg)`,
+          }}
+        >
+          <PlatformLogo name="YouTube" size={f.size} variant="icon" customSrc={M.customLogos?.YouTube} />
+        </div>
+      );
+    });
 
   if (props.motion?.layoutPreset === 'novacena_youtube_card') {
     return (
@@ -92,26 +111,19 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
         <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={M.particlesEnabled ? 0.72 : 0} background={M.background} />
         <OverlayLayer overlays={props.motion?.overlays} />
-        {floatingYT.map((f, i) => {
-          const appear = eased(frame, 20 + i * 4, 20 + i * 4 + 18, easings.outCubic);
-          return (
-            <div key={i} style={{ position: 'absolute', left: f.left, top: f.top, opacity: appear * 0.72, transform: loopFloat(frame, f.off, 0.9) }}>
-              <PlatformLogo name="YouTube" size={f.size + 18} variant="icon" customSrc={M.customLogos?.YouTube} />
-            </div>
-          );
-        })}
+        {renderYTIcons(20)}
         <div
           style={{
             position: 'absolute',
-            top: 408,
-            left: 120,
-            right: 120,
+            top: 330,
+            left: 96,
+            right: 96,
             textAlign: 'center',
             fontFamily: ff(M.fontHeadline.family),
-            fontSize: 82,
-            lineHeight: 0.9,
+            fontSize: 88,
+            lineHeight: 0.95,
             fontWeight: M.fontHeadline.weight,
-            letterSpacing: 2.4,
+            letterSpacing: 2,
             color: '#d8f4f0',
             textShadow: '0 4px 0 rgba(0,0,0,0.28), 0 18px 46px rgba(0,0,0,0.46)',
             textTransform: 'uppercase',
@@ -124,10 +136,10 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         >
           ASSISTA NO<br />YOUTUBE
         </div>
-        <div data-cover-position-wrapper style={{ position: 'absolute', top: 675 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
+        <div data-cover-position-wrapper style={{ position: 'absolute', top: 620 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
           <PremiumCover
             src={props.coverImage}
-            size={props.motion?.coverSize ?? 590}
+            size={props.motion?.coverSize ?? 520}
             entryFrame={COVER_IN}
             spinStart={COVER_IN + 14}
             spinEnd={FINAL_HIT - 4}
@@ -140,20 +152,21 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         <div
           style={{
             position: 'absolute',
-            top: 1420,
-            left: 250,
-            right: 250,
-            minHeight: 62,
+            top: 1320,
+            left: 200,
+            right: 200,
+            minHeight: 58,
             display: 'grid',
             placeItems: 'center',
-            borderRadius: 16,
-            background: '#ff1616',
+            borderRadius: 12,
+            background: '#FF0000',
             color: '#fff',
             fontFamily: ff(M.fontDate.family),
-            fontSize: 40,
+            fontSize: 36,
             fontWeight: M.fontDate.weight,
-            letterSpacing: 0.8,
-            boxShadow: '0 18px 42px rgba(0,0,0,0.36)',
+            letterSpacing: 1.2,
+            padding: '12px 24px',
+            boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
             ...applyTextStyle(props.motion?.styleDate),
             ...(showAll ? {} : channelAnim),
             ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
@@ -164,14 +177,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         <div
           style={{
             position: 'absolute',
-            top: 1514,
+            top: 1420,
             left: 96,
             right: 96,
             textAlign: 'center',
             fontFamily: ff(ctaFont.family),
-            fontSize: 34,
+            fontSize: 30,
             fontWeight: ctaFont.weight,
-            letterSpacing: 1.8,
+            letterSpacing: 2.4,
             textTransform: 'uppercase',
             ...textStrokeStyle(ctaStroke),
             ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
@@ -201,137 +214,106 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         intensity={M.particlesEnabled ? 1 : 0}
         background={M.background}
       />
-
-      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
       <OverlayLayer overlays={props.motion?.overlays} />
 
-      {/* YT ícones decorativos */}
-      {floatingYT.map((f, i) => {
-        const appear = eased(frame, 28 + i * 4, 28 + i * 4 + 22, easings.outCubic);
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: f.left,
-              top: f.top,
-              opacity: appear * 0.85,
-              transform: loopFloat(frame, f.off, 1.1),
-            }}
-          >
-            <PlatformLogo name="YouTube" size={f.size} variant="icon" customSrc={M.customLogos?.YouTube} />
-          </div>
-        );
-      })}
+      {renderYTIcons(28)}
 
-      <AbsoluteFill
+      {/* HEADLINE — safe zone y:330 */}
+      <div
         style={{
-          padding: '0 72px',
-          paddingTop: 220,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          position: 'absolute',
+          top: 330,
+          left: 96,
+          right: 96,
           textAlign: 'center',
+          fontFamily: ff(M.fontHeadline.family),
+          fontSize: 88,
+          lineHeight: 0.95,
+          fontWeight: M.fontHeadline.weight,
+          letterSpacing: 2,
+          color: '#d8f4f0',
+          textShadow: '0 4px 0 rgba(0,0,0,0.28), 0 18px 46px rgba(0,0,0,0.46)',
+          textTransform: 'uppercase',
+          ...textStrokeStyle(M.strokeHeadline),
+          ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
+          ...applyTextStyle(props.motion?.styleHeadline),
+          ...(showAll ? {} : headlineMask),
+          ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
         }}
       >
-        {/* HEADLINE */}
-        <div style={{ width: '100%', paddingBottom: 20, overflow: 'visible' }}>
-          <div
-            style={{
-              fontFamily: ff(M.fontHeadline.family),
-              fontSize: 114,
-              lineHeight: 1,
-              fontWeight: M.fontHeadline.weight,
-              letterSpacing: -3.5,
-              ...textStrokeStyle(M.strokeHeadline),
-              ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
-              textShadow: 'none',
-              overflow: 'visible',
-              ...applyTextStyle(props.motion?.styleHeadline),
-              ...(showAll ? {} : headlineMask),
-              ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
-            }}
-          >
-            ASSISTA<br />NO YOUTUBE
-          </div>
-        </div>
+        ASSISTA NO<br />YOUTUBE
+      </div>
 
-        {/* CAPA */}
-        <div style={{ marginTop: 60 }}>
-          <div
+      {/* CAPA — centralizada */}
+      <div data-cover-position-wrapper style={{ position: 'absolute', top: 620 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
+        <PremiumCover
+          src={props.coverImage}
+          size={props.motion?.coverSize ?? 520}
+          entryFrame={COVER_IN}
+          spinStart={COVER_IN + 14}
+          spinEnd={FINAL_HIT - 4}
+          spinTurns={M.spinTurns}
+          wiggleIntensity={M.wiggleIntensity}
+          accentFrames={accents}
+          glowColor={M.glowColor}
+        />
+      </div>
 
-            data-cover-position-wrapper
+      {/* CANAL PILL — handle do artista */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 1320,
+          left: 200,
+          right: 200,
+          minHeight: 58,
+          display: 'grid',
+          placeItems: 'center',
+          borderRadius: 12,
+          background: '#FF0000',
+          color: '#fff',
+          fontFamily: ff(M.fontDate.family),
+          fontSize: 36,
+          fontWeight: M.fontDate.weight,
+          letterSpacing: 1.2,
+          padding: '12px 24px',
+          boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
+          ...applyTextStyle(props.motion?.styleDate),
+          ...(showAll ? {} : channelAnim),
+          ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
+        }}
+      >
+        {channel}
+      </div>
 
-            style={{
+      {/* CTA */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 1420,
+          left: 96,
+          right: 96,
+          textAlign: 'center',
+          fontFamily: ff(ctaFont.family),
+          fontSize: 30,
+          fontWeight: ctaFont.weight,
+          letterSpacing: 2.4,
+          textTransform: 'uppercase',
+          ...textStrokeStyle(ctaStroke),
+          ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
+          ...applyTextStyle(ctaStyle),
+          ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
+        }}
+      >
+        {showAll
+          ? cta
+          : cta.split('').map((char, i) => (
+              <span key={i} style={ctaChar(i)}>
+                {char === ' ' ? ' ' : char}
+              </span>
+            ))}
+      </div>
 
-              transform: `translate(${props.motion?.coverX ?? 0}px, ${props.motion?.coverY ?? 0}px)`,
-
-              willChange: 'transform',
-
-            }}
-
-          >
-
-          <PremiumCover
-            src={props.coverImage}
-            size={M.coverSize + 30}
-            entryFrame={COVER_IN}
-            spinStart={COVER_IN + 14}
-            spinEnd={FINAL_HIT - 4}
-            spinTurns={M.spinTurns}
-            wiggleIntensity={M.wiggleIntensity}
-            accentFrames={accents}
-            glowColor={M.glowColor}
-          />
-
-          </div>
-        </div>
-
-        {/* CANAL PILL */}
-        <div
-          style={{
-            fontFamily: ff(M.fontDate.family),
-            marginTop: 50,
-            display: 'inline-block',
-            padding: '14px 32px',
-            borderRadius: 999,
-            background: '#FF0000',
-            fontSize: 32,
-            fontWeight: M.fontDate.weight,
-            letterSpacing: 1.6,
-            boxShadow: '0 20px 50px rgba(255,0,0,0.36)',
-            ...applyTextStyle(props.motion?.styleDate),
-            ...(showAll ? {} : channelAnim),
-            ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
-          }}
-        >
-          ▶ {channel}
-        </div>
-
-        {/* CTA */}
-        <div
-          style={{
-            fontFamily: ff(ctaFont.family),
-            marginTop: 32,
-            fontSize: 32,
-            fontWeight: ctaFont.weight,
-            letterSpacing: 2.4,
-            textShadow: 'none',
-            ...textStrokeStyle(ctaStroke),
-            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
-            ...applyTextStyle(ctaStyle),
-            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
-          }}
-        >
-          {showAll
-            ? cta
-            : cta.split('').map((char, i) => (
-                <span key={i} style={ctaChar(i)}>
-                  {char === ' ' ? '\u00A0' : char}
-                </span>
-              ))}
-        </div>
-      </AbsoluteFill>
       <AbsoluteFill
         style={{
           background: '#fff',
