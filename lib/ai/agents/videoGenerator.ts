@@ -58,8 +58,8 @@ export async function generateVideoBg(input: VideoGenInput): Promise<VideoGenRes
       responseMimeType: 'video/mp4',
       videoDuration: `${durationSeconds}s`,
       aspectRatio,
-    },
-  });
+    } as any,
+  } as any);
 
   const videoData = extractVideoFromResponse(response);
 
