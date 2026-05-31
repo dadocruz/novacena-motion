@@ -4883,17 +4883,14 @@ return (
 
         <div
           style={{
-            position: 'sticky',
-            bottom: 0,
-            zIndex: 8,
-            marginTop: 'auto',
-            padding: '14px 22px',
+            position: 'relative',
+            marginTop: 14,
+            padding: '14px 22px 22px',
             display: 'flex',
             flexDirection: 'column',
             gap: 8,
-            background: 'linear-gradient(180deg, rgba(14,14,18,0.84), var(--bg-1) 28%)',
+            background: 'var(--bg-1)',
             borderTop: '1px solid var(--border-1)',
-            backdropFilter: 'blur(14px)',
           }}
         >
           {SAAS_EXPORT_MODE && (
