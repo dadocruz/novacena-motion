@@ -1,0 +1,126 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - feat/render-cloud-lambda
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  SERVICE_NAME: novacena-motion
+
+jobs:
+  validate:
+    name: Validate app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_NOVACENA_SAAS_MODE: '1'
+          NEXT_PUBLIC_MOTION_META_PIXEL_ID: ${{ vars.NEXT_PUBLIC_MOTION_META_PIXEL_ID }}
+          NEXT_PUBLIC_MOTION_GTM_ID: ${{ vars.NEXT_PUBLIC_MOTION_GTM_ID }}
+          NEXT_PUBLIC_MOTION_GA_ID: ${{ vars.NEXT_PUBLIC_MOTION_GA_ID }}
+          NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID: ${{ vars.NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID }}
+
+      - name: Run tests
+        run: npm test -- --run
+
+  build-and-push:
+    name: Build and push image
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Image metadata
+        id: meta
+        run: |
+          IMAGE="${IMAGE_NAME}:${GITHUB_SHA}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_NOVACENA_SAAS_MODE=1
+            NEXT_PUBLIC_MOTION_META_PIXEL_ID=${{ vars.NEXT_PUBLIC_MOTION_META_PIXEL_ID }}
+            NEXT_PUBLIC_MOTION_GTM_ID=${{ vars.NEXT_PUBLIC_MOTION_GTM_ID }}
+            NEXT_PUBLIC_MOTION_GA_ID=${{ vars.NEXT_PUBLIC_MOTION_GA_ID }}
+            NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID=${{ vars.NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID }}
+
+  deploy:
+    name: Update Docker Swarm service
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/novacena_vps
+          chmod 600 ~/.ssh/novacena_vps
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy image to Swarm
+        run: |
+          ssh -i ~/.ssh/novacena_vps -p "${{ secrets.VPS_PORT || 22 }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" << 'EOF'
+            set -euo pipefail
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+
+            docker pull "${{ needs.build-and-push.outputs.image }}"
+
+            docker service update \
+              --with-registry-auth \
+              --force \
+              --image "${{ needs.build-and-push.outputs.image }}" \
+              "${{ env.SERVICE_NAME }}"
+
+            docker service ps "${{ env.SERVICE_NAME }}" --no-trunc
+          EOF
