@@ -3407,11 +3407,24 @@ export default function Home() {
     const coverHeightPct = clamp((coverSize / compositionHeight) * 100, 12, 66);
 
     if (template === 'watch_youtube') {
+      const youtubeCoverSize = clamp(coverSize, 420, 660);
+      const youtubeCoverTopPx = clamp(620 + coverY, 285 + 230, 1635 - youtubeCoverSize - 250);
+      const youtubeCoverCenterY = (youtubeCoverTopPx + youtubeCoverSize / 2) / compositionHeight * 100;
+      const youtubeCoverWidthPct = clamp((youtubeCoverSize / 1080) * 100, 38, 62);
+      const youtubeCoverHeightPct = clamp((youtubeCoverSize / compositionHeight) * 100, 22, 36);
+      const channelText = String(channelName || 'CANAL OFICIAL');
+      const channelChars = Math.max(16, channelText.replace(/\s+/g, '').length);
+      const channelFont = clamp(640 / channelChars, 25, 36);
+      const channelWidthPx = clamp(channelChars * channelFont * 0.82 + 76, 300, 720);
+      const channelWidthPct = clamp((channelWidthPx / 1080) * 100, 28, 67);
+      const channelTopPct = clamp(((youtubeCoverTopPx + youtubeCoverSize + 34) / compositionHeight) * 100, 52, 75);
+      const ctaTopPct = clamp(((youtubeCoverTopPx + youtubeCoverSize + 118) / compositionHeight) * 100, 58, 80);
+
       return [
         { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(12, 16, 76, 13, 'headline') },
-        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 47, coverPct, coverHeightPct, coverX, coverY) },
-        { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect(17, 68, 66, 8, 'date') },
-        { id: 'youtube-cta', kind: 'text', role: 'cta1', label: 'CTA do video', rect: roleRect(12, 75, 76, 8, 'cta1') },
+        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0) },
+        { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date') },
+        { id: 'youtube-cta', kind: 'text', role: 'cta1', label: 'CTA do video', rect: roleRect(12, ctaTopPct, 76, 5.8, 'cta1') },
         ...elementHotspots,
       ];
     }
@@ -3436,7 +3449,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -5105,12 +5118,31 @@ return (
                     left: 0,
                     width: '100%',
                     height: `${(1350 / 1920) * 100}%`,
-                    border: '2px dashed rgba(255, 80, 200, 0.85)',
-                    boxShadow: '0 0 0 9999px rgba(255, 80, 200, 0.08) inset',
-                    zIndex: 30,
+                    border: '2px dashed rgba(255, 80, 200, 0.95)',
+                    boxShadow: '0 0 0 2px rgba(0,0,0,0.34), 0 0 0 9999px rgba(255, 80, 200, 0.10) inset',
+                    zIndex: 42,
                     pointerEvents: 'none',
                   }}
-                />
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 10,
+                      padding: '4px 8px',
+                      borderRadius: 999,
+                      background: 'rgba(0,0,0,0.72)',
+                      border: '1px solid rgba(255,80,200,0.65)',
+                      color: '#fff',
+                      fontSize: 10,
+                      fontWeight: 900,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Safe zone
+                  </span>
+                </div>
               )}
               {previewLayerHotspots.map((layer) => {
                 const selected =

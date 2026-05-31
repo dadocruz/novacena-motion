@@ -26,6 +26,9 @@ const CTA_IN = 124;
 const MID_HIT = 140;
 const FINAL_HIT = 208;
 const FINAL_POSTER = 222;
+const SAFE_TOP = 285;
+const SAFE_BOTTOM = 1635;
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
@@ -53,7 +56,13 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const cta = props.cta || 'CLIPE OFICIAL DISPONÍVEL';
   const channel = props.channelName || 'CANAL OFICIAL';
   const channelCompactLength = channel.replace(/\s+/g, '').length;
-  const channelFontSize = channelCompactLength > 28 ? 26 : channelCompactLength > 20 ? 30 : 34;
+  const channelFontSize = clamp(640 / Math.max(16, channelCompactLength), 25, 36);
+  const coverSize = clamp(props.motion?.coverSize ?? 520, 420, 660);
+  const coverTop = clamp(620 + (props.motion?.coverY ?? 0), SAFE_TOP + 230, SAFE_BOTTOM - coverSize - 250);
+  const coverLeftOffset = clamp(props.motion?.coverX ?? 0, -220, 220);
+  const channelTop = clamp(coverTop + coverSize + 34, SAFE_TOP + 720, SAFE_BOTTOM - 220);
+  const ctaTop = clamp(channelTop + 84, SAFE_TOP + 840, SAFE_BOTTOM - 110);
+  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 0.82 + 76, 300, 720);
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -92,7 +101,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     floatingYT.map((f, i) => {
       const appear = eased(frame, startFrame + i * 4, startFrame + i * 4 + 22, easings.outCubic);
       return (
-        <div
+      <div
           key={i}
           style={{
             position: 'absolute',
@@ -111,7 +120,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     <div
       style={{
         position: 'absolute',
-        top: 1320,
+        top: channelTop,
         left: 0,
         right: 0,
         display: 'flex',
@@ -121,10 +130,10 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         pointerEvents: 'none',
       }}
     >
-      <div
+        <div
         style={{
           width: 'fit-content',
-          maxWidth: 720,
+          maxWidth: channelMaxWidth,
           minHeight: 58,
           display: 'inline-flex',
           alignItems: 'center',
@@ -137,11 +146,11 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           fontWeight: M.fontDate.weight,
           letterSpacing: 1.2,
           lineHeight: 1,
-          padding: '12px 28px',
+          padding: '12px 30px',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          boxShadow: '0 18px 42px rgba(255,0,0,0.32)',
+          boxShadow: '0 12px 30px rgba(255,0,0,0.32)',
           ...applyTextStyle(props.motion?.styleDate),
           ...(showAll ? {} : channelAnim),
           ...userTextTransform(props.motion?.styleDate, showAll ? { transform: channelWiggle.transform } : mergeAnim(channelAnim, channelWiggle.transform)),
@@ -183,10 +192,10 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         >
           ASSISTA NO<br />YOUTUBE
         </div>
-        <div data-cover-position-wrapper style={{ position: 'absolute', top: 620 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
+        <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
           <PremiumCover
             src={props.coverImage}
-            size={props.motion?.coverSize ?? 520}
+            size={coverSize}
             entryFrame={COVER_IN}
             spinStart={COVER_IN + 14}
             spinEnd={FINAL_HIT - 4}
@@ -200,7 +209,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         <div
           style={{
             position: 'absolute',
-            top: 1420,
+            top: ctaTop,
             left: 96,
             right: 96,
             textAlign: 'center',
@@ -268,10 +277,10 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       </div>
 
       {/* CAPA — centralizada */}
-      <div data-cover-position-wrapper style={{ position: 'absolute', top: 620 + (props.motion?.coverY ?? 0), left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${props.motion?.coverX ?? 0}px)` }}>
+      <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
         <PremiumCover
           src={props.coverImage}
-          size={props.motion?.coverSize ?? 520}
+          size={coverSize}
           entryFrame={COVER_IN}
           spinStart={COVER_IN + 14}
           spinEnd={FINAL_HIT - 4}
@@ -288,7 +297,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       <div
         style={{
           position: 'absolute',
-          top: 1420,
+          top: ctaTop,
           left: 96,
           right: 96,
           textAlign: 'center',
