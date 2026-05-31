@@ -3231,6 +3231,22 @@ export default function Home() {
     rect: React.CSSProperties;
   };
 
+  function previewLayerAccent(kind: PreviewLayerHotspot['kind']) {
+    if (kind === 'text') return '#ff4fd8';
+    if (kind === 'cover') return '#38bdf8';
+    if (kind === 'logos') return '#22c55e';
+    if (kind === 'phone') return '#f59e0b';
+    return '#a78bfa';
+  }
+
+  function previewLayerKindLabel(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'text') return `Texto · ${layer.label}`;
+    if (layer.kind === 'cover') return 'Capa';
+    if (layer.kind === 'logos') return 'Logos';
+    if (layer.kind === 'phone') return 'Celular';
+    return layer.label || 'Elemento';
+  }
+
   const previewLayerHotspots = React.useMemo<PreviewLayerHotspot[]>(() => {
     const pct = (value: number) => `${Math.round(value * 10) / 10}%`;
     const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -3238,8 +3254,10 @@ export default function Home() {
       const scale = clamp(Number(txScale[role] ?? 1), 0.2, 4);
       const offsetX = (Number(txOX[role] ?? 0) / 1080) * 100;
       const offsetY = (Number(txOY[role] ?? 0) / compositionHeight) * 100;
-      const scaledWidth = clamp(width * scale, 4, 96);
-      const scaledHeight = clamp(height * scale, 3, 80);
+      const textHeightFactor = role === 'headline' ? 0.58 : role === 'date' ? 0.7 : 0.62;
+      const textWidthPad = role === 'date' ? 0.7 : 0.9;
+      const scaledWidth = clamp(width * textWidthPad * scale, 4, 96);
+      const scaledHeight = clamp(height * textHeightFactor * scale, 2.6, 36);
       const centerX = left + width / 2 + offsetX;
       const centerY = top + height / 2 + offsetY;
 
@@ -4994,14 +5012,15 @@ return (
                   (layer.kind === 'phone' && activeStudioTool === 'motion') ||
                   (layer.kind === 'element' && layer.overlayId === selectedOverlayId);
                 const dragging = previewDraggingLayerId === layer.id;
+                const accent = previewLayerAccent(layer.kind);
 
                 return (
                   <button
                     key={layer.id}
                     type="button"
                     data-preview-layer-hit="true"
-                    aria-label={`Selecionar ${layer.label}`}
-                    title={layer.kind === 'element' ? `${layer.label} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${layer.label}`}
+                    aria-label={`Selecionar ${previewLayerKindLabel(layer)}`}
+                    title={layer.kind === 'element' ? `${previewLayerKindLabel(layer)} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${previewLayerKindLabel(layer)}`}
                     onPointerDown={(event) => beginPreviewLayerDrag(event, layer)}
                     onPointerMove={(event) => movePreviewLayer(event, layer)}
                     onPointerUp={endPreviewLayerDrag}
@@ -5026,15 +5045,46 @@ return (
                       zIndex: 15,
                       padding: 0,
                       borderRadius: 10,
-                      border: selected ? '1px dashed rgba(255, 80, 200, 0.9)' : '1px solid transparent',
-                      background: selected ? 'rgba(255, 80, 200, 0.07)' : 'transparent',
-                      boxShadow: dragging ? '0 0 0 2px rgba(255,80,200,0.35)' : 'none',
+                      border: selected ? `1px dashed ${accent}` : '1px solid transparent',
+                      background: selected ? `${accent}18` : 'transparent',
+                      boxShadow: dragging
+                        ? `0 0 0 2px ${accent}66, 0 12px 28px rgba(0,0,0,0.32)`
+                        : selected
+                          ? `0 0 0 1px rgba(0,0,0,0.42), 0 0 24px ${accent}40`
+                          : 'none',
                       cursor: layer.kind === 'logos' ? 'pointer' : dragging ? 'grabbing' : 'grab',
                       outline: 'none',
                       touchAction: 'none',
                       ...layer.rect,
                     }}
-                  />
+                  >
+                    {selected && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          left: 6,
+                          top: -28,
+                          maxWidth: 180,
+                          padding: '5px 8px',
+                          borderRadius: 7,
+                          background: 'rgba(9,9,13,0.92)',
+                          border: `1px solid ${accent}99`,
+                          color: '#fff',
+                          fontSize: 10,
+                          fontWeight: 900,
+                          lineHeight: 1,
+                          letterSpacing: 0.2,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          pointerEvents: 'none',
+                          boxShadow: '0 10px 24px rgba(0,0,0,0.45)',
+                        }}
+                      >
+                        {previewLayerKindLabel(layer)}
+                      </span>
+                    )}
+                  </button>
                 );
               })}
               {editingPreviewTextRole && (() => {
