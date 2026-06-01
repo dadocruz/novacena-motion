@@ -1192,11 +1192,114 @@ export default function Home() {
         setShowCta1(true);
         setShowCta2(true);
       } else if (nextId === 'watch_youtube') {
-        setShowCta1(true);
-        setShowCta2(false);
+        applyWatchYoutubeDefaults();
       }
     }
     setPreviewNonce((n) => n + 1);
+  }
+
+  function applyWatchYoutubeDefaults() {
+    const next = getProject('watch_youtube') as ReturnType<typeof getProject> & Record<string, any> & {
+      showCta1?: boolean;
+      showCta2?: boolean;
+      showCover?: boolean;
+    };
+    const m = (next.motion ?? {}) as MotionConfig & Record<string, any>;
+    const bg = ((m as any).background ?? {}) as Record<string, any>;
+    const poster = (next.posterFrame ?? {}) as Record<string, any>;
+
+    setActiveStudioTool('cover');
+    setActiveTextRole('headline');
+    setLayoutPreset(typeof m.layoutPreset === 'string' ? m.layoutPreset : '');
+    setTarget((next.target ?? next.renderTarget ?? 'story') as RenderTarget);
+    setShowSafeArea(false);
+    setReleaseDate(next.releaseDate ?? '');
+    setHeadline(next.headline ?? 'ASSISTA NO YOUTUBE');
+    setCta(next.cta ?? 'CLIPE OFICIAL DISPONÍVEL');
+    setCta2(next.cta2 ?? next.cta ?? 'CLIPE OFICIAL DISPONÍVEL');
+    setShowCta1(next.showCta1 ?? false);
+    setShowCta2(next.showCta2 ?? false);
+    setShowCover(next.showCover ?? true);
+    setChannelName(next.channelName ?? '@GRUPOFAÇANHA');
+    setPlatformsSel(cloneHistoryValue((next.platforms ?? ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music']) as PlatformName[]));
+
+    setFontHeadline(m.fontHeadline ?? DEFAULT_FONTS.headline);
+    setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
+    setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
+    setFontCta1(m.fontCta1 ?? m.fontCta ?? DEFAULT_FONTS.cta);
+    setFontCta2(m.fontCta2 ?? m.fontCta ?? DEFAULT_FONTS.cta);
+    setCoverSize(m.coverSize ?? 500);
+    setCoverY(m.coverY ?? 10.7);
+    setCoverX(m.coverX ?? -11.2);
+    setCoverMotion(normalizeCoverMotionId(m.coverMotion ?? 'zoom_bounce'));
+    setSpinTurns(m.spinTurns ?? 2);
+    setWiggleIntensity(m.wiggleIntensity ?? 1);
+    setWiggleH(m.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
+    setWiggleD(m.wiggleDate ?? DEFAULT_TEXT_WIGGLE_VALUES.date);
+    setWiggleC(m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta);
+    setWiggleCta1(m.wiggleCta1 ?? m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta1);
+    setWiggleCta2(m.wiggleCta2 ?? m.wiggleCta ?? DEFAULT_TEXT_WIGGLE_VALUES.cta2);
+    setParticlesEnabled(m.particlesEnabled ?? true);
+    setFinalFlash(m.finalFlash ?? true);
+    setGlowColor(m.glowColor ?? GLOW_PRESETS[0].color);
+    setTrHeadline(m.transitionHeadline ?? 'mask_reveal');
+    setTrDate(m.transitionDate ?? 'scale_pop');
+    setTrCta(m.transitionCta ?? 'split_letters');
+    setTrCta1(m.transitionCta1 ?? m.transitionCta ?? 'scale_pop');
+    setTrCta2(m.transitionCta2 ?? m.transitionCta ?? 'split_letters');
+    setTransitionTuning(transitionTuningFromMotion(m));
+    setStyleHeadline(mergeTextStyle(HEADLINE_STYLE_DEFAULTS, m.styleHeadline as TextStyle));
+    setStyleDate(mergeTextStyle(DATE_STYLE_DEFAULTS, m.styleDate as TextStyle));
+    setStyleCta(mergeTextStyle(CTA_STYLE_DEFAULTS, m.styleCta as TextStyle));
+    setStyleCta1(mergeTextStyle(CTA_STYLE_DEFAULTS, (m.styleCta1 ?? m.styleCta) as TextStyle));
+    setStyleCta2(mergeTextStyle(CTA_STYLE_DEFAULTS, (m.styleCta2 ?? m.styleCta) as TextStyle));
+    applyTextMetricsFromStyle('headline', m.styleHeadline);
+    applyTextMetricsFromStyle('date', m.styleDate);
+    applyTextMetricsFromStyle('cta', m.styleCta);
+    applyTextMetricsFromStyle('cta1', m.styleCta1 ?? m.styleCta);
+    applyTextMetricsFromStyle('cta2', m.styleCta2 ?? m.styleCta);
+    setStrokeHeadline(textStrokeFromFactory(m.strokeHeadline));
+    setStrokeDate(textStrokeFromFactory(m.strokeDate));
+    setStrokeCta(textStrokeFromFactory(m.strokeCta));
+    setStrokeCta1(textStrokeFromFactory(m.strokeCta1 ?? m.strokeCta));
+    setStrokeCta2(textStrokeFromFactory(m.strokeCta2 ?? m.strokeCta));
+    setTextOpacity(m.textOpacity ?? 1);
+    setCta1InFrame(m.cta1InFrame ?? CTA_TIMING_DEFAULTS.cta1InFrame);
+    setCtaSwapFrame(m.ctaSwapFrame ?? CTA_TIMING_DEFAULTS.ctaSwapFrame);
+    setCta2InFrame(m.cta2InFrame ?? CTA_TIMING_DEFAULTS.cta2InFrame);
+    setTextInFrames({
+      headline: typeof m.headlineInFrame === 'number' ? m.headlineInFrame : undefined,
+      date: typeof m.dateInFrame === 'number' ? m.dateInFrame : undefined,
+      cta1: typeof m.cta1InFrame === 'number' ? m.cta1InFrame : undefined,
+      cta2: typeof m.cta2InFrame === 'number' ? m.cta2InFrame : undefined,
+    });
+    setLogosInFrame(m.logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
+    setDurationSeconds(next.durationSeconds ?? m.durationSeconds ?? 8);
+    setPosterFrameEnabled(Boolean(poster.enabled));
+    setPosterFrameSec(poster.frameSec ?? 3);
+    setPosterHoldSec(poster.holdSec ?? 1);
+    setPosterOutroEnabled(poster.outroEnabled ?? true);
+    setBgVideo('');
+    setBgVideoStartSec(typeof bg.videoStartFrame === 'number' ? bg.videoStartFrame / 30 : 0);
+    setBgVideoDuration(0);
+    setBgVideoOpacity(bg.videoOpacity ?? 1);
+    setBgColor(bg.bgColor ?? '#030205');
+    setBgVideoBlur(bg.videoBlur ?? 22);
+    setBgVideoSaturation(bg.videoSaturation ?? 1.15);
+    setAudioSrc('');
+    setAudioStartSec(bg.audioStartSec ?? 0);
+    setAudioVolume(bg.audioVolume ?? 0.8);
+    setAudioFadeIn(bg.audioFadeInSec ?? 0.5);
+    setAudioFadeOut(bg.audioFadeOutSec ?? 1);
+    setUseVideoAudio(bg.useVideoAudio ?? true);
+    setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
+    setCustomLogos(m.customLogos ?? {});
+    setPlatformLogoSize(m.platformLogoSize ?? 89);
+    setPlatformLogoGap(m.platformLogoGap ?? 22);
+    setPlatformLogoScales(m.platformLogoScales ?? {});
+    setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
+    setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
+    setOverlays(cloneHistoryValue(m.overlays ?? []));
   }
 
   function createEditorSnapshot(): EditorHistorySnapshot {
