@@ -439,7 +439,7 @@ export default function Home() {
   const textRoleLabels = useMemo(() => getTextRoleLabels(template), [template]);
   const visibleTextRoles = VISIBLE_TEXT_ROLES_BY_TEMPLATE[template];
   const hasOptionalCta1 = template === 'available_now' || template === 'watch_youtube';
-  const hasOptionalCta2 = template === 'available_now' || template === 'out_now';
+  const hasOptionalCta2 = template === 'available_now';
 
   // Project settings
   const [durationSeconds, setDurationSeconds] = useState<number>(
@@ -4931,10 +4931,7 @@ return (
                 Arte de disponivel. Use depois que o single ja saiu: sem data e sem "faca o pre-save".
               </div>
               <Field label="Headline" value={headline} onChange={setHeadline} placeholder="DISPONIVEL ou OUCA AGORA" />
-              <ToggleRow label="Mostrar CTA de plataformas" value={showCta2} onChange={setShowCta2} />
-              {showCta2 && (
-                <TextAreaField label="CTA de plataformas" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS\nou EM TODOS OS APPS DE MUSICA"} rows={2} />
-              )}
+              <TextAreaField label="CTA de plataformas" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS"} rows={2} />
             </>
           ) : (
             <>
