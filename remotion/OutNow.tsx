@@ -22,8 +22,8 @@ import { StyledText } from './StyledText';
 const HEADLINE_IN = 0;
 const COVER_IN = 54;
 const MID_HIT = 124;
-const CTA_IN_DEFAULT = 78;
-const LOGOS_IN_DEFAULT = 130;
+const CTA_IN_DEFAULT = MID_HIT + 14;
+const LOGOS_IN_DEFAULT = 158;
 const FINAL_HIT_BASE = 208;
 const FINAL_POSTER_BASE = 222;
 
@@ -50,7 +50,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const particlesEnabled = motion.particlesEnabled ?? true;
   const finalFlashEnabled = motion.finalFlash ?? true;
   const glowColor = motion.glowColor ?? 'rgba(190, 90, 255, 0.28)';
-  const ctaIn = motion.cta1InFrame ?? CTA_IN_DEFAULT;
+  const ctaIn = motion.cta2InFrame ?? CTA_IN_DEFAULT;
   const logosIn = motion.logosInFrame ?? LOGOS_IN_DEFAULT;
   const headlineIn = motion.headlineInFrame ?? HEADLINE_IN;
 
@@ -75,17 +75,18 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
   const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
   const logoCount = Math.max(1, visiblePlatforms.length);
-  const maxLogosWidth = 640;
+  const maxLogosWidth = 920;
+  const logoBoxMultiplier = motion.platformLogoPack === 'standard' || motion.platformLogoPack === 'rectangular' ? 2.15 : 1;
   const totalRequestedLogoWidth = visiblePlatforms.reduce((sum, p) => {
     const size = Math.round(platformLogoSize * (platformLogoScales[p] ?? 1));
-    return sum + (motion.customLogos?.[p] ? size * 2.8 : size);
+    return sum + size * logoBoxMultiplier;
   }, 0) + Math.max(0, logoCount - 1) * platformLogoGap;
   const logosFitScale = Math.min(1, maxLogosWidth / Math.max(1, totalRequestedLogoWidth));
-  const fittedLogoGap = Math.max(8, Math.round(platformLogoGap * logosFitScale));
+  const fittedLogoGap = Math.max(0, Math.round(platformLogoGap * logosFitScale));
 
   return (
     <AbsoluteFill style={{ fontFamily: 'Inter, Arial, sans-serif', color: '#fff', overflow: 'hidden' }}>
-      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '']} />
+      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
       <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={particlesEnabled ? 1 : 0} background={motion.background} />
       <OverlayLayer overlays={motion.overlays} />
 
@@ -121,6 +122,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
         {/* CTA (ex: "EM TODAS AS PLATAFORMAS DIGITAIS") — sem "FAÇA O PRÉ-SAVE" */}
         <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: '100%', minHeight: 44, opacity: 0 }} />
           <div style={{
             fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
             width: '100%',
@@ -145,8 +147,9 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
                 <PlatformLogo
                   key={p}
                   name={p}
+                  variant={logoBoxMultiplier === 1 ? 'icon' : undefined}
                   size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale)}
-                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * 2.15)}
+                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * logoBoxMultiplier)}
                   delay={logosIn + idx * 7}
                   customSrc={motion.customLogos?.[p]}
                   tintEnabled={motion.platformLogoTintEnabled}
