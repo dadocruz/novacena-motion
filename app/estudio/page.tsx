@@ -3809,8 +3809,6 @@ export default function Home() {
   }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
-    stopTransitionPreviewLoopForManualEdit();
-
     if (layer.kind === 'text' && layer.role) {
       setActiveTextRole(layer.role);
       selectStudioTool('text');
@@ -3974,7 +3972,6 @@ export default function Home() {
       window.setTimeout(() => {
         suppressPreviewClickRef.current = false;
       }, 0);
-      setPreviewNonce((n) => n + 1);
     }
 
     previewDragRef.current = null;
