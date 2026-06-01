@@ -79,13 +79,14 @@ ENV NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID=$NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID
 # Cria usuário não-root pra rodar Next
 RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs -m -s /bin/bash nextjs
 
-# Copia output standalone do Next + estáticos + public
+# node_modules vem de DEPS (não builder) — cacheia enquanto package.json não mudar
+# Remotion precisa do node_modules completo (binários, fontes, etc que o standalone não inclui)
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Output do Next standalone + estáticos + public (mudam a cada build)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copia node_modules COMPLETO (Remotion precisa de binários, fontes, etc que o standalone não inclui)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Arquivos necessários para o CLI do Remotion (chamado via npm run render:*)
 COPY --from=builder --chown=nextjs:nodejs /app/remotion ./remotion
