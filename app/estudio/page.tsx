@@ -3453,14 +3453,52 @@ export default function Home() {
   const previewLayerHotspots = React.useMemo<PreviewLayerHotspot[]>(() => {
     const pct = (value: number) => `${Math.round(value * 10) / 10}%`;
     const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const textValueForRole = (role: FontRole) => {
+      if (template === 'spotify_print' || template === 'milestone') {
+        if (role === 'headline') return metricNumber;
+        if (role === 'date') return metricPrefix;
+        if (role === 'cta' || role === 'cta1') return metricLabel;
+        return cta2;
+      }
+
+      if (template === 'watch_youtube') {
+        if (role === 'headline') return 'ASSISTA NO YOUTUBE';
+        if (role === 'date') return channelName;
+        if (role === 'cta' || role === 'cta1') return cta;
+        return cta2;
+      }
+
+      if (template === 'out_now') {
+        if (role === 'headline') return headline;
+        if (role === 'cta2') return cta2;
+        if (role === 'cta' || role === 'cta1') return cta;
+        return releaseDate;
+      }
+
+      if (role === 'date') return releaseDate;
+      if (role === 'cta2') return cta2;
+      if (role === 'cta' || role === 'cta1') return cta;
+      return headline;
+    };
     const roleRect = (left: number, top: number, width: number, height: number, role: FontRole): React.CSSProperties => {
       const scale = clamp(Number(txScale[role] ?? 1), 0.2, 4);
       const offsetX = (Number(txOX[role] ?? 0) / 1080) * 100;
       const offsetY = (Number(txOY[role] ?? 0) / compositionHeight) * 100;
-      const textHeightFactor = role === 'headline' ? 1 : role === 'date' ? 0.92 : 0.88;
-      const textWidthPad = role === 'date' ? 0.82 : 1;
-      const scaledWidth = clamp(width * textWidthPad * scale, 4, 96);
-      const scaledHeight = clamp(height * textHeightFactor * scale, 2.6, 36);
+      const textValue = String(textValueForRole(role) || '');
+      const lines = textValue.split('\n').map((line) => line.trim()).filter(Boolean);
+      const longestLine = Math.max(1, ...lines.map((line) => line.length));
+      const lineCount = Math.max(1, lines.length);
+      const widthFactor = role === 'headline'
+        ? 2.75
+        : role === 'date'
+          ? 1.45
+          : role === 'cta1' || role === 'cta'
+            ? 1.7
+            : 1.15;
+      const lineHeightPct = role === 'headline' ? 4.9 : role === 'date' ? 3.2 : 3.45;
+      const estimatedWidth = longestLine * widthFactor + (role === 'cta1' || role === 'cta' ? 6 : 3);
+      const scaledWidth = clamp(Math.min(width, estimatedWidth) * scale, 8, 96);
+      const scaledHeight = clamp(Math.min(height, lineCount * lineHeightPct) * scale, 2.2, 36);
       const centerX = left + width / 2 + offsetX;
       const centerY = top + height / 2 + offsetY;
 
@@ -3584,7 +3622,7 @@ export default function Home() {
       return [
         { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: roleRect(6, 11, 88, 18, 'headline') },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY) },
-        ...(showCta1 ? [{ id: 'outnow-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta1') }] : []),
+        { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta2') },
         ...(releaseDate ? [{ id: 'outnow-date', kind: 'text' as const, role: 'date' as const, label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') }] : []),
         { id: 'logos', kind: 'logos', label: 'Logos', rect: { left: '30%', top: '84%', width: '40%', height: '8%' } },
         ...elementHotspots,
@@ -3600,7 +3638,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -3682,6 +3720,10 @@ export default function Home() {
   }
 
   function getPreviewLayerScale(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'text' && layer.role) {
+      return Number(txScale[layer.role] ?? 1);
+    }
+
     if (layer.kind === 'element' && layer.overlayId) {
       return overlays.find((item) => item.id === layer.overlayId)?.scale ?? 0.42;
     }
@@ -3690,6 +3732,11 @@ export default function Home() {
   }
 
   function setPreviewLayerScale(layer: PreviewLayerHotspot, scale: number) {
+    if (layer.kind === 'text' && layer.role) {
+      updTxN(setTxScale, layer.role, Math.max(0.2, Math.min(4, Math.round(scale * 100) / 100)));
+      return;
+    }
+
     if (layer.kind !== 'element' || !layer.overlayId) return;
     updateOverlay(layer.overlayId, { scale: Math.max(0.05, Math.min(4, Math.round(scale * 100) / 100)) });
   }
@@ -3709,7 +3756,7 @@ export default function Home() {
       kind: layer.kind,
       role: layer.role,
       overlayId: layer.overlayId,
-      mode: layer.kind === 'element' && event.shiftKey ? 'scale' : 'move',
+      mode: (layer.kind === 'element' || layer.kind === 'text') && event.shiftKey ? 'scale' : 'move',
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -3739,7 +3786,7 @@ export default function Home() {
     const dx = dxPreview * (1080 / drag.previewWidth);
     const dy = dyPreview * (compositionHeight / drag.previewHeight);
 
-    if (drag.mode === 'scale' && layer.kind === 'element') {
+    if (drag.mode === 'scale' && (layer.kind === 'element' || layer.kind === 'text')) {
       const delta = (dxPreview - dyPreview) / Math.max(120, drag.previewWidth * 0.35);
       setPreviewLayerScale(layer, (drag.startScale ?? 1) + delta);
     } else {
@@ -3813,6 +3860,7 @@ export default function Home() {
 
     if (template === 'out_now') {
       if (role === 'headline') setHeadline(value);
+      else if (role === 'cta2') setCta2(value);
       else if (role === 'cta' || role === 'cta1') setCta(value);
       return;
     }
@@ -5405,7 +5453,7 @@ return (
                     }}
                     style={{
                       position: 'absolute',
-                      zIndex: 40,
+                      zIndex: 120,
                       ...editingLayer.rect,
                       minHeight: 34,
                       padding: 8,
