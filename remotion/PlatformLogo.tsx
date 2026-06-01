@@ -8,6 +8,8 @@ type PlatformLogoProps = {
   maxWidth?: number;
   delay?: number;
   customSrc?: string;
+  tintEnabled?: boolean;
+  tintColor?: string;
   index?: number;
   pulseAmount?: number;
   pulseSpeed?: number;
@@ -20,6 +22,8 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   maxWidth,
   delay = 0,
   customSrc,
+  tintEnabled = false,
+  tintColor = '#ffffff',
   index = 0,
   pulseAmount = 0.06,
   pulseSpeed = 1,
@@ -67,6 +71,7 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
   const isCustomWordmark = Boolean(customSrc) && variant !== 'icon';
   const boxWidth = isCustomWordmark ? Math.min(maxWidth ?? Math.round(size * 2.8), Math.round(size * 2.8)) : size;
   const boxHeight = size;
+  const shouldTint = tintEnabled && Boolean(customSrc);
 
   return (
     <div
@@ -86,18 +91,37 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
         lineHeight: 0,
       }}
     >
-      <Img
-        src={src}
-        alt={name}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'contain',
-          display: 'block',
-          background: 'transparent',
-          verticalAlign: 'top',
-        }}
-      />
+      {shouldTint ? (
+        <div
+          aria-label={name}
+          style={{
+            width: '100%',
+            height: '100%',
+            background: tintColor,
+            WebkitMaskImage: `url("${src}")`,
+            maskImage: `url("${src}")`,
+            WebkitMaskRepeat: 'no-repeat',
+            maskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskPosition: 'center',
+            WebkitMaskSize: 'contain',
+            maskSize: 'contain',
+          }}
+        />
+      ) : (
+        <Img
+          src={src}
+          alt={name}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            display: 'block',
+            background: 'transparent',
+            verticalAlign: 'top',
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -250,6 +250,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                   maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * 2.15)}
                   delay={logosIn + idx * 7}
                   customSrc={motion.customLogos?.[p]}
+                  tintEnabled={motion.platformLogoTintEnabled}
+                  tintColor={motion.platformLogoTintColor}
                   index={idx}
                   pulseAmount={platformLogoWiggle}
                   pulseSpeed={platformLogoWiggleSpeed}

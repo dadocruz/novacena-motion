@@ -135,7 +135,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             transform: `${loopFloat(frame, f.off, 1.1)} rotate(${f.rotate}deg)`,
           }}
         >
-          <PlatformLogo name="YouTube" size={f.size} variant="icon" customSrc={M.customLogos?.YouTube} />
+          <PlatformLogo
+            name="YouTube"
+            size={f.size}
+            variant="icon"
+            customSrc={M.customLogos?.YouTube}
+            tintEnabled={M.platformLogoTintEnabled}
+            tintColor={M.platformLogoTintColor}
+          />
         </div>
       );
     });

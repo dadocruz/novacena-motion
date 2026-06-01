@@ -265,6 +265,8 @@ export type ResolvedMotion = {
   durationFrames: number;
   background: NonNullable<MotionConfig['background']>;
   customLogos?: Record<string, string>;
+  platformLogoTintEnabled?: boolean;
+  platformLogoTintColor?: string;
   strokeHeadline: TextStroke;
   strokeDate: TextStroke;
   strokeCta: TextStroke;
@@ -291,6 +293,8 @@ export function resolveMotion(
     durationFrames: durationSeconds * 30,
     background: cfg.background ?? {},
     customLogos: cfg.customLogos,
+    platformLogoTintEnabled: cfg.platformLogoTintEnabled,
+    platformLogoTintColor: cfg.platformLogoTintColor,
     strokeHeadline: cfg.strokeHeadline ?? DEFAULT_TEXT_STROKE,
     strokeDate: cfg.strokeDate ?? DEFAULT_TEXT_STROKE,
     strokeCta: cfg.strokeCta ?? DEFAULT_TEXT_STROKE,

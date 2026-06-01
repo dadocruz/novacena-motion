@@ -236,7 +236,13 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             ...(showAll ? {} : logoAnim),
           }}
         >
-          <PlatformLogo name="Spotify" size={84} customSrc={M.customLogos?.Spotify} />
+          <PlatformLogo
+            name="Spotify"
+            size={84}
+            customSrc={M.customLogos?.Spotify}
+            tintEnabled={M.platformLogoTintEnabled}
+            tintColor={M.platformLogoTintColor}
+          />
         </div>
       </AbsoluteFill>
 <AbsoluteFill

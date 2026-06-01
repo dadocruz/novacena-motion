@@ -127,7 +127,14 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
                 boxShadow: '0 22px 60px rgba(0,0,0,0.42)',
               }}
             >
-              <PlatformLogo name={f.p} size={78} variant="icon" customSrc={M.customLogos?.[f.p]} />
+              <PlatformLogo
+                name={f.p}
+                size={78}
+                variant="icon"
+                customSrc={M.customLogos?.[f.p]}
+                tintEnabled={M.platformLogoTintEnabled}
+                tintColor={M.platformLogoTintColor}
+              />
             </div>
           </div>
         );

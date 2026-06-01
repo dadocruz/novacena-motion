@@ -321,6 +321,8 @@ export type MotionConfig = {
   platformLogoSize?: number;
   platformLogoGap?: number;
   platformLogoScales?: Record<string, number>;
+  platformLogoTintEnabled?: boolean;
+  platformLogoTintColor?: string;
   /** Pulso orgânico contínuo dos logos de plataforma. */
   platformLogoWiggle?: number;
   platformLogoWiggleSpeed?: number;

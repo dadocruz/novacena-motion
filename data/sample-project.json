@@ -237,6 +237,8 @@
         "platformLogoSize": 89,
         "platformLogoGap": 22,
         "platformLogoScales": {},
+        "platformLogoTintEnabled": false,
+        "platformLogoTintColor": "#ffffff",
         "platformLogoWiggle": 0.065,
         "platformLogoWiggleSpeed": 1,
         "overlays": []

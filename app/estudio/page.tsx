@@ -452,6 +452,8 @@ export default function Home() {
   const [platformLogoSize, setPlatformLogoSize] = useState<number>(factoryMotion.platformLogoSize ?? 58);
   const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 22);
   const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
+  const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
+  const [platformLogoTintColor, setPlatformLogoTintColor] = useState<string>(factoryMotion.platformLogoTintColor ?? '#ffffff');
   const platformLogoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // Overlays
@@ -1211,6 +1213,8 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoTintEnabled,
+      platformLogoTintColor,
       overlays,
       favoriteFontIds,
       studioMode,
@@ -1334,6 +1338,8 @@ export default function Home() {
     setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
     setPlatformLogoGap(snapshot.platformLogoGap ?? 22);
     setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
+    setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
+    setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(snapshot.overlays ?? []));
     setFavoriteFontIds(cloneHistoryValue(snapshot.favoriteFontIds ?? []));
     setStudioMode((snapshot.studioMode ?? 'simple') as StudioMode);
@@ -1534,6 +1540,8 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoTintEnabled,
+      platformLogoTintColor,
       platformLogoWiggle: factoryMotion.platformLogoWiggle ?? 0.065,
       platformLogoWiggleSpeed: factoryMotion.platformLogoWiggleSpeed ?? 1,
       overlays,
@@ -1606,6 +1614,8 @@ export default function Home() {
       platformLogoScales,
       platformLogoGap,
       platformLogoSize,
+      platformLogoTintEnabled,
+      platformLogoTintColor,
       overlays,
       phoneSize,
       phoneX,
@@ -2162,6 +2172,8 @@ export default function Home() {
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 22);
       setPlatformLogoScales(m.platformLogoScales ?? {});
+      setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
+      setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
       setCoverMotion(normalizeCoverMotionId(m.coverMotion));
       setSpinTurns(m.spinTurns ?? 2);
       setWiggleIntensity(m.wiggleIntensity ?? 1);
@@ -2695,6 +2707,8 @@ export default function Home() {
     setPlatformLogoSize((m as any).platformLogoSize ?? 58);
     setPlatformLogoGap((m as any).platformLogoGap ?? 22);
     setPlatformLogoScales((m as any).platformLogoScales ?? {});
+    setPlatformLogoTintEnabled((m as any).platformLogoTintEnabled ?? false);
+    setPlatformLogoTintColor((m as any).platformLogoTintColor ?? '#ffffff');
     setDurationSeconds((factoryAvailableNow.durationSeconds ?? (m as any).durationSeconds) ?? 8);
     setPosterFrameEnabled(poster.enabled ?? false);
     setPosterFrameSec(poster.frameSec ?? 3);
@@ -2790,6 +2804,8 @@ export default function Home() {
     if (typeof c.platformLogoSize === 'number') setPlatformLogoSize(c.platformLogoSize);
     if (typeof c.platformLogoGap === 'number') setPlatformLogoGap(c.platformLogoGap);
     if (c.platformLogoScales && typeof c.platformLogoScales === 'object') setPlatformLogoScales(c.platformLogoScales);
+    if (typeof c.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(c.platformLogoTintEnabled);
+    if (typeof c.platformLogoTintColor === 'string') setPlatformLogoTintColor(c.platformLogoTintColor);
     if (typeof c.wiggleIntensity === 'number') setWiggleIntensity(c.wiggleIntensity);
     if (typeof c.particlesEnabled === 'boolean') setParticlesEnabled(c.particlesEnabled);
     if (typeof c.finalFlash === 'boolean') setFinalFlash(c.finalFlash);
@@ -4285,6 +4301,8 @@ export default function Home() {
     if (typeof m.platformLogoSize === 'number') setPlatformLogoSize(m.platformLogoSize);
     if (typeof m.platformLogoGap === 'number') setPlatformLogoGap(m.platformLogoGap);
     if (m.platformLogoScales && typeof m.platformLogoScales === 'object') setPlatformLogoScales(m.platformLogoScales);
+    if (typeof m.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(m.platformLogoTintEnabled);
+    if (typeof m.platformLogoTintColor === 'string') setPlatformLogoTintColor(m.platformLogoTintColor);
     if (m.customLogos && typeof m.customLogos === 'object') setCustomLogos(m.customLogos);
     if (Array.isArray(m.overlays)) setOverlays(m.overlays);
 
@@ -6236,6 +6254,48 @@ return (
         
             <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
               <div style={miniLabel}>AJUSTES DOS LOGOS</div>
+              <ToggleRow
+                label="Recolorir logos brancos"
+                value={platformLogoTintEnabled}
+                onChange={setPlatformLogoTintEnabled}
+              />
+              <label style={{ display: 'grid', gap: 6, marginTop: 8, marginBottom: 10 }}>
+                <span style={miniInputLabel}>Cor global dos logos</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '42px 1fr', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="color"
+                    value={platformLogoTintColor}
+                    onChange={(event) => setPlatformLogoTintColor(event.target.value)}
+                    style={{ ...colorInputStyle, width: 42, height: 34, padding: 2 }}
+                  />
+                  <input
+                    value={platformLogoTintColor}
+                    onChange={(event) => setPlatformLogoTintColor(event.target.value)}
+                    placeholder="#ffffff"
+                    style={fieldInputStyle}
+                  />
+                </div>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 6, marginBottom: 12 }}>
+                {['#ffffff', '#000000', '#20d66b', '#ff1f1f', '#ffcc33', '#7c5cff', '#ff7a2f', '#38bdf8'].map((c) => (
+                  <button
+                    key={`platform-tint-${c}`}
+                    type="button"
+                    onClick={() => {
+                      setPlatformLogoTintEnabled(true);
+                      setPlatformLogoTintColor(c);
+                    }}
+                    title={c}
+                    style={{
+                      height: 24,
+                      border: platformLogoTintEnabled && platformLogoTintColor.toLowerCase() === c ? '1px solid var(--text-1)' : '1px solid var(--border-1)',
+                      background: c,
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </div>
               <SliderRow
                 label="Tamanho geral dos logos"
                 value={platformLogoSize}
