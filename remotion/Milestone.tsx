@@ -159,6 +159,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             src={props.coverImage}
             size={Math.min(M.coverSize, 460)}
             entryFrame={COVER_IN}
+            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
             spinStart={COVER_IN + 14}
             spinEnd={FINAL_HIT - 4}
             spinTurns={M.spinTurns}

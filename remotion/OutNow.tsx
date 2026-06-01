@@ -191,6 +191,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             src={props.coverImage}
             size={M.coverSize + 40}
             entryFrame={COVER_IN}
+            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
             spinStart={COVER_IN + 14}
             spinEnd={FINAL_HIT - 4}
             spinTurns={M.spinTurns}

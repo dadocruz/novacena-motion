@@ -1729,6 +1729,7 @@ export default function Home() {
     template,
     target,
     previewNonce,
+    coverMotion,
     trHeadline,
     trDate,
     trCta1,
