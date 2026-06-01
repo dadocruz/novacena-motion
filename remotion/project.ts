@@ -15,7 +15,7 @@ export const templateLabels: Record<TemplateId, string> = {
   available_now: 'PRÉ-SAVE',
   watch_youtube: 'Assista no YouTube',
   milestone: '100k / Milestone',
-  out_now: 'LANÇAMENTO',
+  out_now: 'DISPONÍVEL',
   spotify_print: '📱 Spotify Print',
 };
 

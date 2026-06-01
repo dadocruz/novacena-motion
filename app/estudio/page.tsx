@@ -244,7 +244,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
   },
   out_now: {
     headline: 'Headline',
-    cta1: 'CTA de plataformas',
+    cta1: 'CTA plataformas',
   },
   spotify_print: {
     date: 'Texto acima',
@@ -4895,7 +4895,7 @@ return (
           ) : template === 'out_now' ? (
             <>
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
-                Arte de lancamento. Use depois que o single ja saiu: sem data de pre-save e sem "faca o pre-save".
+                Arte de disponivel. Use depois que o single ja saiu: sem data e sem "faca o pre-save".
               </div>
               <Field label="Headline" value={headline} onChange={setHeadline} placeholder="DISPONIVEL ou OUCA AGORA" />
               <ToggleRow label="Mostrar CTA de plataformas" value={showCta1} onChange={setShowCta1} />

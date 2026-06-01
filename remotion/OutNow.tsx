@@ -1,273 +1,167 @@
 import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
-import {
-  easings,
-  eased,
-  loopFloat,
-  getTextTransition,
-  type TextTransitionId,
-} from './motionEngine';
+import { easings, eased, getTextTransition } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
+import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
+import type { TemplateProps, TextTransitionId } from './types';
 import { StyledText } from './StyledText';
-import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
-import type { TemplateProps } from './types';
-import { textStrokeStyle, textFillStyle } from './textStroke';
 
-const HEADLINE_IN = 14;
-const COVER_IN = 46;
-const CTA_IN = 88;
-const MID_HIT = 122;
-const DATE_IN = 130;
-const FINAL_HIT = 208;
-const FINAL_POSTER = 222;
+/**
+ * DISPONÍVEL — mesmo layout do PRÉ-SAVE (AvailableNow) mas:
+ *   - sem data de lançamento
+ *   - sem CTA1 "FAÇA O PRÉ-SAVE" — a música já saiu
+ *   - headline default: "DISPONÍVEL"
+ *   - CTA2 default: "EM TODAS AS PLATAFORMAS DIGITAIS"
+ */
+
+const HEADLINE_IN = 0;
+const COVER_IN = 54;
+const MID_HIT = 124;
+const CTA_IN_DEFAULT = 78;
+const LOGOS_IN_DEFAULT = 130;
+const FINAL_HIT_BASE = 208;
+const FINAL_POSTER_BASE = 222;
 
 export const OutNow: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
+  const motion = props.motion ?? {};
+  const durationSeconds = motion.durationSeconds ?? 8;
+  const durationFrames = durationSeconds * 30;
+  const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
+  const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const accents = [MID_HIT, FINAL_HIT];
-  const M = resolveMotion(props.motion, 'rgba(255, 140, 60, 0.32)');
-  const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
-  const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
-  const dateIn = props.motion?.dateInFrame ?? DATE_IN;
 
-  const txHeadline = (props.motion?.transitionHeadline ?? 'mask_reveal') as TextTransitionId;
-  const txDate = (props.motion?.transitionDate ?? 'scale_pop') as TextTransitionId;
-  const txCta = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'split_letters') as TextTransitionId;
-  const headlineTransition = getTextTransition(txHeadline)(frame, headlineIn, props.motion?.transitionTuningHeadline);
-  const dateTransition = getTextTransition(txDate)(frame, dateIn, props.motion?.transitionTuningDate);
-  const ctaTransition = getTextTransition(txCta)(frame, ctaIn, props.motion?.transitionTuningCta1 ?? props.motion?.transitionTuningCta);
+  const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline, motion.customFonts ?? []);
+  const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
+  const fontCta1Id = motion.fontCta1 && motion.fontCta1 !== DEFAULT_FONTS.cta ? motion.fontCta1 : motion.fontCta ?? DEFAULT_FONTS.cta;
+  const fontCta1 = findFont(fontCta1Id, motion.customFonts ?? []);
 
-  const finalFlash = M.finalFlash
-    ? interpolate(
-        frame,
-        [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14],
-        [0, 0.4, 0],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-      )
-    : 0;
+  const coverSize = motion.coverSize ?? 510;
+  const spinTurns = motion.spinTurns ?? 2;
+  const wiggleIntensity = motion.wiggleIntensity ?? 1;
+  const wH = motion.wiggleHeadline ?? 0.35;
+  const wC1 = motion.wiggleCta1 ?? motion.wiggleCta ?? 0.3;
+  const particlesEnabled = motion.particlesEnabled ?? true;
+  const finalFlashEnabled = motion.finalFlash ?? true;
+  const glowColor = motion.glowColor ?? 'rgba(190, 90, 255, 0.28)';
+  const ctaIn = motion.cta1InFrame ?? CTA_IN_DEFAULT;
+  const logosIn = motion.logosInFrame ?? LOGOS_IN_DEFAULT;
+  const headlineIn = motion.headlineInFrame ?? HEADLINE_IN;
 
+  const txHeadline: TextTransitionId = (motion.transitionHeadline ?? (motion as any).trHeadline ?? 'mask_reveal') as TextTransitionId;
+  const txCta: TextTransitionId = (motion.transitionCta ?? (motion as any).trCta ?? 'split_letters') as TextTransitionId;
+  const txCta1 = (motion.transitionCta1 ?? (motion as any).trCta1 ?? motion.transitionCta ?? (motion as any).trCta ?? 'scale_pop') as TextTransitionId;
+  const tH = getTextTransition(txHeadline)(frame, headlineIn, motion.transitionTuningHeadline);
+  const tC1 = getTextTransition(txCta1)(frame, ctaIn, motion.transitionTuningCta1 ?? motion.transitionTuningCta);
+
+  const wigH = brazuWiggle(frame, { amplitude: wH * wiggleIntensity, frequency: 0.74, seed: 10 });
+  const wigC1 = brazuWiggle(frame, { amplitude: wC1 * wiggleIntensity, frequency: 0.9, seed: 130 });
+
+  // No DISPONÍVEL: CTA1 = "EM TODAS AS PLATAFORMAS DIGITAIS" (sem "FAÇA O PRÉ-SAVE")
+  const ctaText = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+  const ctaOpacity = interpolate(frame, [ctaIn, ctaIn + 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const logosAppear = eased(frame, logosIn, logosIn + 24, easings.outCubic);
+  const finalFlash = finalFlashEnabled ? interpolate(frame, [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14], [0, 0.45, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;
   const showAll = frame >= FINAL_POSTER;
-  const headline = props.headline || 'DISPONÍVEL';
-  const cta = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
-  const ctaFont = findFont(
-    props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
-    props.motion?.customFonts ?? []
-  ) ?? M.fontCta;
-  const ctaStyle = props.motion?.styleCta1 ?? props.motion?.styleCta;
-  const ctaStroke = props.motion?.strokeCta1 ?? props.motion?.strokeCta ?? M.strokeCta;
-  const headlineWiggle = brazuWiggle(frame, {
-    amplitude: (props.motion?.wiggleHeadline ?? 0.35) * M.wiggleIntensity,
-    frequency: 0.74,
-    seed: 10,
-  });
-  const ctaWiggle = brazuWiggle(frame, {
-    amplitude: (props.motion?.wiggleCta1 ?? props.motion?.wiggleCta ?? 0.3) * M.wiggleIntensity,
-    frequency: 0.9,
-    seed: 130,
-  });
-  const dateWiggle = brazuWiggle(frame, {
-    amplitude: (props.motion?.wiggleDate ?? 0.25) * M.wiggleIntensity,
-    frequency: 0.64,
-    seed: 70,
-  });
-  // Logos flutuando nos cantos (decorativo)
-  const floatingLogos = [
-    { p: props.platforms[0] || 'Spotify', left: 60, top: 280, off: 0 },
-    { p: props.platforms[1] || 'Deezer', left: 880, top: 320, off: 42 },
-    { p: props.platforms[2] || 'Apple Music', left: 80, top: 1480, off: 90 },
-    { p: props.platforms[3] || 'YouTube Music', left: 860, top: 1520, off: 140 },
-  ] as const;
+  const isStory = props.renderTarget === 'story';
+  const visiblePlatforms = props.platforms;
+  const platformLogoSize = motion.platformLogoSize ?? 54;
+  const platformLogoGap = motion.platformLogoGap ?? 18;
+  const platformLogoScales = motion.platformLogoScales ?? {};
+  const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
+  const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
+  const logoCount = Math.max(1, visiblePlatforms.length);
+  const maxLogosWidth = 640;
+  const totalRequestedLogoWidth = visiblePlatforms.reduce((sum, p) => {
+    const size = Math.round(platformLogoSize * (platformLogoScales[p] ?? 1));
+    return sum + (motion.customLogos?.[p] ? size * 2.8 : size);
+  }, 0) + Math.max(0, logoCount - 1) * platformLogoGap;
+  const logosFitScale = Math.min(1, maxLogosWidth / Math.max(1, totalRequestedLogoWidth));
+  const fittedLogoGap = Math.max(8, Math.round(platformLogoGap * logosFitScale));
 
   return (
-    <AbsoluteFill
-      style={{
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        color: '#fff',
-        overflow: 'hidden',
-      }}
-    >
-      <FontFaces fonts={props.motion?.customFonts} activeFontIds={[props.motion?.fontHeadline ?? '', props.motion?.fontDate ?? '', props.motion?.fontCta ?? '', props.motion?.fontCta1 ?? '']} />
-      <CinematicBackground
-        coverImage={props.coverImage}
-        accentFrames={accents}
-        intensity={M.particlesEnabled ? 1 : 0}
-        background={M.background}
-      />
+    <AbsoluteFill style={{ fontFamily: 'Inter, Arial, sans-serif', color: '#fff', overflow: 'hidden' }}>
+      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '']} />
+      <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={particlesEnabled ? 1 : 0} background={motion.background} />
+      <OverlayLayer overlays={motion.overlays} />
 
-      {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
-      <OverlayLayer overlays={props.motion?.overlays} />
-
-      {/* Logos flutuando decorativos */}
-      {floatingLogos.map((f, i) => {
-        const appear = eased(frame, 30 + i * 4, 30 + i * 4 + 20, easings.outCubic);
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: f.left,
-              top: f.top,
-              opacity: appear * 0.92,
-              transform: loopFloat(frame, f.off, 1.1),
-            }}
-          >
-            <div
-              style={{
-                width: 110,
-                height: 110,
-                borderRadius: 999,
-                background: 'rgba(255,255,255,0.92)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 22px 60px rgba(0,0,0,0.42)',
-              }}
-            >
-              <PlatformLogo
-                name={f.p}
-                size={78}
-                variant="icon"
-                customSrc={M.customLogos?.[f.p]}
-                tintEnabled={M.platformLogoTintEnabled}
-                tintColor={M.platformLogoTintColor}
-              />
+      {/* Layout idêntico ao PRÉ-SAVE, sem data e sem CTA de pré-save */}
+      <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>
+        {/* HEADLINE */}
+        <div style={{ width: '100%' }}>
+          <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible' }}>
+            <div style={{
+              fontFamily: `'${fontHeadline?.family ?? 'Arial'}', Arial, sans-serif`,
+              fontSize: (props.headline || '').length > 14 ? 76 : 92,
+              lineHeight: 0.96,
+              fontWeight: fontHeadline?.weight ?? 900,
+              letterSpacing: (props.headline || '').length > 14 ? 1.5 : -1,
+              whiteSpace: 'pre-line',
+              maxWidth: '100%',
+              overflow: 'visible',
+              ...applyTextStyle(motion.styleHeadline),
+              ...userTextTransform(motion.styleHeadline, { transform: wigH.transform }),
+            }}>
+              <StyledText text={props.headline || 'DISPONÍVEL'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
-        );
-      })}
-
-      {/* CONTEÚDO PRINCIPAL */}
-      <AbsoluteFill
-        style={{
-          padding: '0 72px',
-          paddingTop: 200,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-        }}
-      >
-        {/* HEADLINE GIGANTE */}
-        <div style={{ width: '100%', paddingBottom: 20, overflow: 'visible' }}>
-          <div
-            style={{
-              fontFamily: ff(M.fontHeadline.family),
-              fontSize: 148,
-              lineHeight: 0.94,
-              fontWeight: M.fontHeadline.weight,
-              letterSpacing: -4,
-              ...textStrokeStyle(M.strokeHeadline),
-              ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
-              textShadow: 'none',
-              overflow: 'visible',
-              ...applyTextStyle(props.motion?.styleHeadline),
-              ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
-            }}
-          >
-            <StyledText
-              text={headline}
-              transition={showAll ? undefined : headlineTransition}
-              style={props.motion?.styleHeadline}
-              stroke={M.strokeHeadline}
-              preserveFontShape={false}
-              previewMode={false}
-            />
-          </div>
+          {/* SEM DATA — a música já saiu */}
         </div>
 
         {/* CAPA */}
-        <div style={{ marginTop: 70 }}>
-          <div
-
-            data-cover-position-wrapper
-
-            style={{
-
-              transform: `translate(${props.motion?.coverX ?? 0}px, ${props.motion?.coverY ?? 0}px)`,
-
-              willChange: 'transform',
-
-            }}
-
-          >
-
-          <PremiumCover
-            src={props.coverImage}
-            size={M.coverSize + 40}
-            entryFrame={COVER_IN}
-            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-            spinStart={COVER_IN + 14}
-            spinEnd={FINAL_HIT - 4}
-            spinTurns={M.spinTurns}
-            wiggleIntensity={M.wiggleIntensity}
-            accentFrames={accents}
-            glowColor={M.glowColor}
-          />
-
+        <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <div data-cover-position-wrapper style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
+            <PremiumCover src={props.coverImage} size={coverSize} entryFrame={COVER_IN} spinStart={COVER_IN + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
 
-        {/* CTA char stagger */}
-        <div
-          style={{
-            fontFamily: ff(ctaFont.family),
-            marginTop: 80,
-            fontSize: 38,
-            fontWeight: ctaFont.weight,
-            letterSpacing: 2.6,
-            textShadow: 'none',
-            ...textStrokeStyle(ctaStroke),
-            ...(ctaStyle?.useGradient ? {} : textFillStyle(ctaStroke)),
-            ...applyTextStyle(ctaStyle),
-            ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
-          }}
-        >
-          <StyledText
-            text={cta}
-            transition={showAll ? undefined : ctaTransition}
-            style={ctaStyle}
-            stroke={ctaStroke}
-            preserveFontShape={false}
-            previewMode={false}
-          />
-        </div>
-
-        {/* DATA */}
-        {props.releaseDate ? (
-          <div
-            style={{
-              fontFamily: ff(M.fontDate.family),
-              marginTop: 26,
-              fontSize: 28,
-              fontWeight: M.fontDate.weight,
-              letterSpacing: 2.4,
-              opacity: 0.92,
-              ...applyTextStyle(props.motion?.styleDate),
-              ...userTextTransform(props.motion?.styleDate, { transform: dateWiggle.transform }),
-            }}
-          >
-            <StyledText
-              text={`DESDE ${props.releaseDate}`}
-              transition={showAll ? undefined : dateTransition}
-              style={props.motion?.styleDate}
-              stroke={props.motion?.strokeDate}
-              preserveFontShape={false}
-              previewMode={false}
-            />
+        {/* CTA (ex: "EM TODAS AS PLATAFORMAS DIGITAIS") — sem "FAÇA O PRÉ-SAVE" */}
+        <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{
+            fontFamily: `'${fontCta1?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
+            width: '100%',
+            minHeight: 52,
+            fontSize: 29,
+            lineHeight: 1.12,
+            fontWeight: fontCta1?.weight ?? fontCta?.weight ?? 900,
+            letterSpacing: 2.5,
+            whiteSpace: 'pre-line',
+            maxWidth: '100%',
+            opacity: ctaText.trim() ? (showAll ? 1 : ctaOpacity) : 0,
+            ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
+            ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: wigC1.transform }),
+          }}>
+            <StyledText text={ctaText} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
-        ) : null}
+
+          {/* LOGOS */}
+          {visiblePlatforms.length > 0 ? (
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: '100%', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
+              {visiblePlatforms.map((p, idx) => (
+                <PlatformLogo
+                  key={p}
+                  name={p}
+                  size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale)}
+                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * 2.15)}
+                  delay={logosIn + idx * 7}
+                  customSrc={motion.customLogos?.[p]}
+                  tintEnabled={motion.platformLogoTintEnabled}
+                  tintColor={motion.platformLogoTintColor}
+                  index={idx}
+                  pulseAmount={platformLogoWiggle}
+                  pulseSpeed={platformLogoWiggleSpeed}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
       </AbsoluteFill>
-      <AbsoluteFill
-        style={{
-          background: '#fff',
-          opacity: finalFlash,
-          pointerEvents: 'none',
-        }}
-      />
+      <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
     </AbsoluteFill>
   );
 };
