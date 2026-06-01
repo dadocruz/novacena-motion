@@ -1886,6 +1886,35 @@ export default function Home() {
     setPreviewNonce((n) => n + 1);
   }
 
+  function clearManualPlatformLogos(platforms: PlatformName[] = platformsSel) {
+    setCustomLogos((current) => {
+      const next = { ...current };
+      for (const platform of platforms) {
+        if (next[platform] && !isFactoryPlatformLogoPath(next[platform])) {
+          delete next[platform];
+        }
+      }
+      return next;
+    });
+    setPreviewNonce((n) => n + 1);
+  }
+
+  function selectPlatformLogoPack(pack: PlatformLogoPackId) {
+    setPlatformLogoPack(pack);
+    clearManualPlatformLogos(allPlatforms);
+  }
+
+  function addPlatformFromPack(platform: PlatformName) {
+    setPlatformsSel((current) => (current.includes(platform) ? current : [...current, platform]));
+    setCustomLogos((current) => {
+      if (!current[platform] || isFactoryPlatformLogoPath(current[platform])) return current;
+      const next = { ...current };
+      delete next[platform];
+      return next;
+    });
+    setPreviewNonce((n) => n + 1);
+  }
+
   function startEditPreviewLoop(range: EditPreviewLoop) {
     setEditPreviewLoop(range);
 
@@ -6246,7 +6275,7 @@ return (
         {/* LOGOS DAS PLATAFORMAS */}
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
-            Escolha o pacote visual e gerencie quais plataformas aparecem no template.
+            Escolha um pacote visual para manter todos os logos no mesmo estilo. Upload manual fica reservado para exceções.
           </div>
 
           <div style={{ display: 'grid', gap: 8 }}>
@@ -6259,7 +6288,7 @@ return (
                   type="button"
                   disabled={!option.available}
                   onClick={() => {
-                    if (option.available) setPlatformLogoPack(option.id);
+                    if (option.available) selectPlatformLogoPack(option.id);
                   }}
                   style={{
                     display: 'grid',
@@ -6284,6 +6313,44 @@ return (
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => clearManualPlatformLogos(allPlatforms)}
+              style={{
+                minHeight: 34,
+                borderRadius: 8,
+                border: '1px solid var(--border-1)',
+                background: 'transparent',
+                color: 'var(--text-2)',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: 11,
+              }}
+            >
+              Limpar logos manuais e usar pacote
+            </button>
+          </div>
+
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
+            <div style={miniLabel}>CONTROLE DO CONJUNTO</div>
+            <SliderRow
+              label="Tamanho geral dos logos"
+              value={platformLogoSize}
+              min={16}
+              max={120}
+              step={1}
+              onChange={setPlatformLogoSize}
+              format={(v) => `${Math.round(v)}px`}
+            />
+            <SliderRow
+              label="Distância entre logos"
+              value={platformLogoGap}
+              min={0}
+              max={80}
+              step={1}
+              onChange={setPlatformLogoGap}
+              format={(v) => `${Math.round(v)}px`}
+            />
           </div>
 
           <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
@@ -6347,7 +6414,7 @@ return (
                     <button
                       key={`add-platform-${p}`}
                       type="button"
-                      onClick={() => setPlatformsSel((current) => (current.includes(p) ? current : [...current, p]))}
+                      onClick={() => addPlatformFromPack(p)}
                       style={{
                         minHeight: 32,
                         padding: '7px 10px',
@@ -6369,9 +6436,9 @@ return (
 
           {platformsSel.length > 0 && (
             <div style={{ display: 'grid', gap: 8, marginTop: 14, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
-              <div style={miniLabel}>UPLOAD MANUAL POR PLATAFORMA</div>
+              <div style={miniLabel}>AVANCADO: SUBSTITUIR LOGO INDIVIDUAL</div>
               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-                Use quando quiser trocar um logo específico. Sem upload manual, o pacote escolhido acima manda em todos.
+                Use apenas quando um logo precisar fugir do pacote. Para voltar ao conjunto, limpe o logo manual.
               </div>
               {platformsSel.map((p) => {
                 const effectiveSrc = effectiveCustomLogos[p];
@@ -6445,7 +6512,7 @@ return (
           )}
         
             <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
-              <div style={miniLabel}>AJUSTES DOS LOGOS</div>
+              <div style={miniLabel}>COR DOS LOGOS BRANCOS</div>
               <ToggleRow
                 label="Recolorir logos brancos"
                 value={platformLogoTintEnabled}
@@ -6488,25 +6555,8 @@ return (
                   />
                 ))}
               </div>
-              <SliderRow
-                label="Tamanho geral dos logos"
-                value={platformLogoSize}
-                min={16}
-                max={120}
-                step={1}
-                onChange={setPlatformLogoSize}
-                format={(v) => `${Math.round(v)}px`}
-              />
-              <SliderRow
-                label="Distância lateral dos logos"
-                value={platformLogoGap}
-                min={0}
-                max={80}
-                step={1}
-                onChange={setPlatformLogoGap}
-                format={(v) => `${Math.round(v)}px`}
-              />
-              {allPlatforms.map((p) => (
+              <div style={{ ...miniLabel, marginTop: 12 }}>AJUSTE FINO POR PLATAFORMA</div>
+              {platformsSel.map((p) => (
                 <SliderRow
                   key={`platform-scale-${p}`}
                   label={`Escala ${p}`}
