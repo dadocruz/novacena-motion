@@ -38,14 +38,15 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
   const fontHeadline = findFont(motion.fontHeadline ?? DEFAULT_FONTS.headline, motion.customFonts ?? []);
   const fontCta = findFont(motion.fontCta ?? DEFAULT_FONTS.cta, motion.customFonts ?? []);
-  const fontCta1Id = motion.fontCta1 && motion.fontCta1 !== DEFAULT_FONTS.cta ? motion.fontCta1 : motion.fontCta ?? DEFAULT_FONTS.cta;
-  const fontCta1 = findFont(fontCta1Id, motion.customFonts ?? []);
+  // Usa fontCta2 para "EM TODAS AS PLATAFORMAS DIGITAIS" — mesmo slot que o PRÉ-SAVE
+  const fontCta2Id = motion.fontCta2 && motion.fontCta2 !== DEFAULT_FONTS.cta ? motion.fontCta2 : motion.fontCta ?? DEFAULT_FONTS.cta;
+  const fontCta2 = findFont(fontCta2Id, motion.customFonts ?? []);
 
   const coverSize = motion.coverSize ?? 510;
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
   const wH = motion.wiggleHeadline ?? 0.35;
-  const wC1 = motion.wiggleCta1 ?? motion.wiggleCta ?? 0.3;
+  const wC2 = motion.wiggleCta2 ?? motion.wiggleCta ?? 0.25;
   const particlesEnabled = motion.particlesEnabled ?? true;
   const finalFlashEnabled = motion.finalFlash ?? true;
   const glowColor = motion.glowColor ?? 'rgba(190, 90, 255, 0.28)';
@@ -54,13 +55,12 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const headlineIn = motion.headlineInFrame ?? HEADLINE_IN;
 
   const txHeadline: TextTransitionId = (motion.transitionHeadline ?? (motion as any).trHeadline ?? 'mask_reveal') as TextTransitionId;
-  const txCta: TextTransitionId = (motion.transitionCta ?? (motion as any).trCta ?? 'split_letters') as TextTransitionId;
-  const txCta1 = (motion.transitionCta1 ?? (motion as any).trCta1 ?? motion.transitionCta ?? (motion as any).trCta ?? 'scale_pop') as TextTransitionId;
+  const txCta2 = (motion.transitionCta2 ?? (motion as any).trCta2 ?? motion.transitionCta ?? (motion as any).trCta ?? 'split_letters') as TextTransitionId;
   const tH = getTextTransition(txHeadline)(frame, headlineIn, motion.transitionTuningHeadline);
-  const tC1 = getTextTransition(txCta1)(frame, ctaIn, motion.transitionTuningCta1 ?? motion.transitionTuningCta);
+  const tC2 = getTextTransition(txCta2)(frame, ctaIn, motion.transitionTuningCta2 ?? motion.transitionTuningCta);
 
   const wigH = brazuWiggle(frame, { amplitude: wH * wiggleIntensity, frequency: 0.74, seed: 10 });
-  const wigC1 = brazuWiggle(frame, { amplitude: wC1 * wiggleIntensity, frequency: 0.9, seed: 130 });
+  const wigC2 = brazuWiggle(frame, { amplitude: wC2 * wiggleIntensity, frequency: 0.82, seed: 210 });
 
   // No DISPONÍVEL: CTA1 = "EM TODAS AS PLATAFORMAS DIGITAIS" (sem "FAÇA O PRÉ-SAVE")
   const ctaText = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
@@ -123,20 +123,20 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         {/* CTA (ex: "EM TODAS AS PLATAFORMAS DIGITAIS") — sem "FAÇA O PRÉ-SAVE" */}
         <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{
-            fontFamily: `'${fontCta1?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
+            fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
             width: '100%',
             minHeight: 52,
             fontSize: 29,
             lineHeight: 1.12,
-            fontWeight: fontCta1?.weight ?? fontCta?.weight ?? 900,
+            fontWeight: fontCta2?.weight ?? fontCta?.weight ?? 900,
             letterSpacing: 2.5,
             whiteSpace: 'pre-line',
             maxWidth: '100%',
             opacity: ctaText.trim() ? (showAll ? 1 : ctaOpacity) : 0,
-            ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
-            ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: wigC1.transform }),
+            ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
+            ...userTextTransform(motion.styleCta2 ?? motion.styleCta, { transform: wigC2.transform }),
           }}>
-            <StyledText text={ctaText} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
+            <StyledText text={ctaText} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
 
           {/* LOGOS */}
