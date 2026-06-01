@@ -2,19 +2,18 @@ import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
-  charStagger,
   easings,
   eased,
-  maskReveal,
-  scaleInBack,
   loopFloat,
-  previewSafeAnim,
+  getTextTransition,
+  type TextTransitionId,
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
+import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
@@ -35,12 +34,12 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
   const dateIn = props.motion?.dateInFrame ?? DATE_IN;
 
-  const previewMode = props.motion?.previewMode === true;
-  const headlineMaskRaw = maskReveal(frame, headlineIn, 28);
-  const ctaChar = charStagger(frame, ctaIn, 1.0);
-  const dateAnimRaw = scaleInBack(frame, dateIn, 18);
-  const headlineMask = previewSafeAnim(headlineMaskRaw, previewMode);
-  const dateAnim = previewSafeAnim(dateAnimRaw, previewMode);
+  const txHeadline = (props.motion?.transitionHeadline ?? 'mask_reveal') as TextTransitionId;
+  const txDate = (props.motion?.transitionDate ?? 'scale_pop') as TextTransitionId;
+  const txCta = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'split_letters') as TextTransitionId;
+  const headlineTransition = getTextTransition(txHeadline)(frame, headlineIn, props.motion?.transitionTuningHeadline);
+  const dateTransition = getTextTransition(txDate)(frame, dateIn, props.motion?.transitionTuningDate);
+  const ctaTransition = getTextTransition(txCta)(frame, ctaIn, props.motion?.transitionTuningCta1 ?? props.motion?.transitionTuningCta);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -74,11 +73,6 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
     frequency: 0.64,
     seed: 70,
   });
-  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
-    ...anim,
-    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
-  });
-
   // Logos flutuando nos cantos (decorativo)
   const floatingLogos = [
     { p: props.platforms[0] || 'Spotify', left: 60, top: 280, off: 0 },
@@ -163,11 +157,17 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               textShadow: 'none',
               overflow: 'visible',
               ...applyTextStyle(props.motion?.styleHeadline),
-              ...(showAll ? {} : headlineMask),
-              ...userTextTransform(props.motion?.styleHeadline, showAll ? { transform: headlineWiggle.transform } : mergeAnim(headlineMask, headlineWiggle.transform)),
+              ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
             }}
           >
-            OUÇA<br />AGORA
+            <StyledText
+              text={'OUÇA\nAGORA'}
+              transition={showAll ? undefined : headlineTransition}
+              style={props.motion?.styleHeadline}
+              stroke={M.strokeHeadline}
+              preserveFontShape={false}
+              previewMode={false}
+            />
           </div>
         </div>
 
@@ -217,13 +217,14 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
           }}
         >
-          {showAll
-            ? cta
-            : cta.split('').map((char, i) => (
-                <span key={i} style={ctaChar(i)}>
-                  {char === ' ' ? '\u00A0' : char}
-                </span>
-              ))}
+          <StyledText
+            text={cta}
+            transition={showAll ? undefined : ctaTransition}
+            style={ctaStyle}
+            stroke={ctaStroke}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </div>
 
         {/* DATA */}
@@ -237,11 +238,17 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               letterSpacing: 2.4,
               opacity: 0.92,
               ...applyTextStyle(props.motion?.styleDate),
-              ...(showAll ? {} : dateAnim),
-              ...userTextTransform(props.motion?.styleDate, showAll ? { transform: dateWiggle.transform } : mergeAnim(dateAnim, dateWiggle.transform)),
+              ...userTextTransform(props.motion?.styleDate, { transform: dateWiggle.transform }),
             }}
           >
-            DESDE {props.releaseDate}
+            <StyledText
+              text={`DESDE ${props.releaseDate}`}
+              transition={showAll ? undefined : dateTransition}
+              style={props.motion?.styleDate}
+              stroke={props.motion?.strokeDate}
+              preserveFontShape={false}
+              previewMode={false}
+            />
           </div>
         ) : null}
       </AbsoluteFill>

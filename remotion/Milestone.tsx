@@ -2,18 +2,17 @@ import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
-  charStagger,
-  easings,
-  eased,
-  maskReveal,
   scaleInBack,
   previewSafeAnim,
+  getTextTransition,
+  type TextTransitionId,
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
+import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
@@ -37,11 +36,13 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const accents = [numberIn, MID_HIT, FINAL_HIT];
 
   const previewMode = props.motion?.previewMode === true;
-  const prefixMask = previewSafeAnim(maskReveal(frame, prefixIn, 24), previewMode);
-  const numberAnim = previewSafeAnim(scaleInBack(frame, numberIn, 26), previewMode);
-  const numberChar = charStagger(frame, numberIn + 4, 1.4);
-  const labelMask = previewSafeAnim(maskReveal(frame, labelIn, 22), previewMode);
   const logoAnim = previewSafeAnim(scaleInBack(frame, logoIn, 18), previewMode);
+  const txPrefix = (props.motion?.transitionDate ?? 'mask_reveal') as TextTransitionId;
+  const txNumber = (props.motion?.transitionHeadline ?? 'scale_pop') as TextTransitionId;
+  const txLabel = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'mask_reveal') as TextTransitionId;
+  const prefixTransition = getTextTransition(txPrefix)(frame, prefixIn, props.motion?.transitionTuningDate);
+  const numberTransition = getTextTransition(txNumber)(frame, numberIn, props.motion?.transitionTuningHeadline);
+  const labelTransition = getTextTransition(txLabel)(frame, labelIn, props.motion?.transitionTuningCta1 ?? props.motion?.transitionTuningCta);
 
   const finalFlash = M.finalFlash
     ? interpolate(
@@ -85,11 +86,6 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
     frequency: 0.9,
     seed: 130,
   });
-  const mergeAnim = (anim: React.CSSProperties, wiggleTransform?: string): React.CSSProperties => ({
-    ...anim,
-    transform: [anim.transform, wiggleTransform].filter(Boolean).join(' '),
-  });
-
   return (
     <AbsoluteFill
       style={{
@@ -130,11 +126,17 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               ...(props.motion?.styleDate?.useGradient ? {} : textFillStyle(M.strokeDate)),
               textShadow: 'none',
             ...applyTextStyle(props.motion?.styleDate),
-            ...(showAll ? {} : prefixMask),
-              ...userTextTransform(props.motion?.styleDate, showAll ? { transform: prefixWiggle.transform } : mergeAnim(prefixMask, prefixWiggle.transform)),
+              ...userTextTransform(props.motion?.styleDate, { transform: prefixWiggle.transform }),
           }}
         >
-          {prefixText}
+          <StyledText
+            text={prefixText}
+            transition={showAll ? undefined : prefixTransition}
+            style={props.motion?.styleDate}
+            stroke={M.strokeDate}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </div>
 
         {/* CAPA */}
@@ -187,17 +189,17 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               ...textStrokeStyle(M.strokeHeadline),
               ...(props.motion?.styleHeadline?.useGradient ? {} : textFillStyle(M.strokeHeadline)),
               ...applyTextStyle(props.motion?.styleHeadline),
-              ...(showAll ? {} : { opacity: numberAnim.opacity }),
               ...userTextTransform(props.motion?.styleHeadline, { transform: numberWiggle.transform }),
             }}
           >
-            {showAll
-              ? numberText
-              : numberText.split('').map((char, i) => (
-                  <span key={i} style={numberChar(i)}>
-                    {char}
-                  </span>
-                ))}
+            <StyledText
+              text={numberText}
+              transition={showAll ? undefined : numberTransition}
+              style={props.motion?.styleHeadline}
+              stroke={M.strokeHeadline}
+              preserveFontShape={false}
+              previewMode={false}
+            />
           </div>
         </div>
 
@@ -213,11 +215,17 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             ...textStrokeStyle(labelStroke),
             ...(labelStyle?.useGradient ? {} : textFillStyle(labelStroke)),
             ...applyTextStyle(labelStyle),
-            ...(showAll ? {} : labelMask),
-            ...userTextTransform(labelStyle, showAll ? { transform: labelWiggle.transform } : mergeAnim(labelMask, labelWiggle.transform)),
+            ...userTextTransform(labelStyle, { transform: labelWiggle.transform }),
           }}
         >
-          {labelText}
+          <StyledText
+            text={labelText}
+            transition={showAll ? undefined : labelTransition}
+            style={labelStyle}
+            stroke={labelStroke}
+            preserveFontShape={false}
+            previewMode={false}
+          />
         </div>
 
         {/* LOGO SPOTIFY */}
