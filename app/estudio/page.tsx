@@ -4561,6 +4561,7 @@ return (
           />
         </div>
         <div
+          data-novacena-template-menu="true"
           style={{
             position: 'absolute',
             left: '50%',
@@ -7142,6 +7143,7 @@ return (
       )}
     
       <div
+        data-novacena-tool-dock="true"
         style={{
           position: 'fixed',
           left: '50%',

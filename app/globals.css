@@ -183,6 +183,12 @@ input[type='range']::-moz-range-thumb {
   [data-novacena-editor-shell='true'] [data-novacena-topbar='true'] {
     padding-inline: 12px !important;
   }
+
+  [data-novacena-editor-shell='true'] [data-novacena-template-menu='true'] {
+    position: static !important;
+    transform: none !important;
+    margin-inline: auto !important;
+  }
 }
 
 @media (max-width: 920px) {
@@ -199,11 +205,12 @@ input[type='range']::-moz-range-thumb {
     overflow: visible !important;
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: auto auto auto auto !important;
+    grid-template-rows: auto auto auto auto auto !important;
     grid-template-areas:
       "topbar"
-      "left"
       "center"
+      "dock"
+      "left"
       "right" !important;
   }
 
@@ -227,6 +234,22 @@ input[type='range']::-moz-range-thumb {
 
   [data-novacena-editor-shell='true'] [data-novacena-center-panel='true'] {
     min-height: 58dvh !important;
+  }
+
+  [data-novacena-editor-shell='true'] [data-novacena-tool-dock='true'] {
+    grid-area: dock !important;
+    position: sticky !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: 10px !important;
+    transform: none !important;
+    width: fit-content !important;
+    max-width: calc(100vw - 28px) !important;
+    margin: 10px auto 14px !important;
+    z-index: 70 !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
   }
 }
 
