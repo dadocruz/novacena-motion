@@ -1178,8 +1178,21 @@ export default function Home() {
     if (saved) {
       restoreEditorSnapshot({ ...saved, template: nextId });
     } else {
-      // Primeira vez abrindo esse template — só troca, mantém defaults
       setTemplate(nextId);
+      // Defaults corretos para cada template na primeira abertura
+      if (nextId === 'out_now') {
+        setHeadline('DISPONÍVEL');
+        setShowCta1(false);
+        setShowCta2(true);
+        setCta2('EM TODAS AS PLATAFORMAS DIGITAIS');
+        setReleaseDate('');
+      } else if (nextId === 'available_now') {
+        setShowCta1(true);
+        setShowCta2(true);
+      } else if (nextId === 'watch_youtube') {
+        setShowCta1(true);
+        setShowCta2(false);
+      }
     }
     setPreviewNonce((n) => n + 1);
   }
