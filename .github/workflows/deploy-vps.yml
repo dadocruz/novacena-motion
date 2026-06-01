@@ -76,18 +76,26 @@ jobs:
               --image "${IMAGE_TAG}" \
               "${SERVICE}"
 
-            echo "Waiting for convergence..."
-            sleep 15
+            echo "Waiting for app to start..."
+            HEALTHY=false
+            for i in $(seq 1 12); do
+              sleep 10
+              if curl -fsS --max-time 5 http://localhost:3000/api/health > /dev/null 2>&1; then
+                HEALTHY=true
+                break
+              fi
+              echo "  attempt $i/12 — not ready yet"
+            done
 
             echo "--- Service status ---"
             docker service ps "${SERVICE}" \
               --format "table {{.Name}}\t{{.CurrentState}}\t{{.Error}}" \
               --filter "desired-state=running"
 
-            if curl -fsS --max-time 5 http://localhost:3000/api/health > /dev/null 2>&1; then
+            if [ "$HEALTHY" = true ]; then
               echo "Healthcheck OK"
             else
-              echo "WARNING: healthcheck failed"
+              echo "WARNING: healthcheck failed after 120s"
               docker service logs "${SERVICE}" --tail 30 --no-trunc 2>&1 | tail -20
               if [ -n "${PREVIOUS_IMAGE}" ]; then
                 echo "Rolling back to ${PREVIOUS_IMAGE}..."
