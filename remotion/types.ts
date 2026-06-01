@@ -379,6 +379,7 @@ export type MotionProject = {
   metricPrefix?: string;
   metricNumber?: string;
   metricLabel?: string;
+  showCover?: boolean;
   platforms: PlatformName[];
   coverImage: string;
   media: MediaConfig;

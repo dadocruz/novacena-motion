@@ -316,6 +316,7 @@ export default function Home() {
   const [cta2, setCta2] = useState(factoryAvailableNow.cta2 ?? factoryAvailableNow.cta);
   const [showCta1, setShowCta1] = useState<boolean>(factoryAvailableNow.showCta1 ?? true);
   const [showCta2, setShowCta2] = useState<boolean>(factoryAvailableNow.showCta2 ?? true);
+  const [showCover, setShowCover] = useState<boolean>(factoryAvailableNow.showCover ?? true);
 
   const [channelName, setChannelName] = useState(factoryAvailableNow.channelName ?? '');
   const [metricPrefix, setMetricPrefix] = useState(factoryAvailableNow.metricPrefix ?? 'ULTRAPASSAMOS');
@@ -943,13 +944,14 @@ export default function Home() {
 
   // Quando troca template, atualiza defaults
   useEffect(() => {
-    const next = getProject(template) as ReturnType<typeof getProject> & { showCta1?: boolean; showCta2?: boolean };
+    const next = getProject(template) as ReturnType<typeof getProject> & { showCta1?: boolean; showCta2?: boolean; showCover?: boolean };
     setHeadline(next.headline);
     setReleaseDate(next.releaseDate ?? '');
     setCta(next.cta);
     setCta2(next.cta2 ?? next.cta ?? '');
     setShowCta1(next.showCta1 ?? true);
     setShowCta2(next.showCta2 ?? (template === 'available_now'));
+    setShowCover(next.showCover ?? true);
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -1131,6 +1133,7 @@ export default function Home() {
       cta2,
       showCta1,
       showCta2,
+      showCover,
       channelName,
       metricPrefix,
       metricNumber,
@@ -1253,6 +1256,7 @@ export default function Home() {
     setCta2(snapshot.cta2 ?? '');
     setShowCta1(snapshot.showCta1 ?? true);
     setShowCta2(snapshot.showCta2 ?? true);
+    setShowCover(snapshot.showCover ?? true);
     setChannelName(snapshot.channelName ?? '');
     setMetricPrefix(snapshot.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(snapshot.metricNumber ?? '100.000');
@@ -1692,6 +1696,7 @@ export default function Home() {
       headline,
       cta: showCta1 ? cta : '',
       cta2: showCta2 ? cta2 : '',
+      showCover,
       channelName,
       metricPrefix,
       metricNumber,
@@ -1708,7 +1713,7 @@ export default function Home() {
       renderTarget: target,
     } satisfies TemplateProps;
   }, [
-    template, releaseDate, headline, cta, cta2, showCta1, showCta2, channelName, metricPrefix,
+    template, releaseDate, headline, cta, cta2, showCta1, showCta2, showCover, channelName, metricPrefix,
     metricNumber, metricLabel, platformsSel, coverImage, motionWithStyles, target,
   ]);
 
@@ -1731,6 +1736,7 @@ export default function Home() {
     template,
     target,
     previewNonce,
+    showCover,
     coverMotion,
     trHeadline,
     trDate,
@@ -2133,6 +2139,7 @@ export default function Home() {
     setHeadline(snap.headline ?? '');
     setCta(snap.cta ?? '');
     setCta2(snap.cta2 ?? snap.cta ?? '');
+    setShowCover(snap.showCover ?? true);
     setCoverImage(snap.coverImage ?? '');
     if (snap.motion) {
       const m = snap.motion;
@@ -3436,7 +3443,7 @@ export default function Home() {
 
       return [
         { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(12, 16, 76, 13, 'headline') },
-        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0) },
+        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0) }] : []),
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date') },
         ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: roleRect(12, ctaTopPct, 76, 5.8, 'cta1') }] : []),
         ...elementHotspots,
@@ -3463,7 +3470,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -4072,6 +4079,7 @@ export default function Home() {
         cta2,
         showCta1,
         showCta2,
+        showCover,
         coverImage,
         channelName,
         metricPrefix,
@@ -4205,6 +4213,7 @@ export default function Home() {
 
     if (typeof preset.showCta1 === 'boolean') setShowCta1(preset.showCta1);
     if (typeof preset.showCta2 === 'boolean') setShowCta2(preset.showCta2);
+    if (typeof preset.showCover === 'boolean') setShowCover(preset.showCover);
 
     if (m.fontHeadline) setFontHeadline(m.fontHeadline);
     if (m.fontDate) setFontDate(m.fontDate);
@@ -4693,6 +4702,13 @@ return (
             }}
             style={{ display: 'none' }}
           />
+          {template === 'watch_youtube' && (
+            <ToggleRow
+              label="Mostrar capa no vídeo"
+              value={showCover}
+              onChange={setShowCover}
+            />
+          )}
         </Section>
 
         {activeArtist && (

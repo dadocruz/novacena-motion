@@ -78,6 +78,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
     : 0;
 
   const showAll = frame >= FINAL_POSTER;
+  const showCover = props.showCover !== false;
   const cta = props.cta ?? '';
   const hasCta = cta.trim().length > 0;
   const channel = props.channelName || 'CANAL OFICIAL';
@@ -237,20 +238,22 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             previewMode={false}
           />
         </div>
-        <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
-          <PremiumCover
-            src={props.coverImage}
-            size={coverSize}
-            entryFrame={COVER_IN}
-            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-            spinStart={COVER_IN + 14}
-            spinEnd={FINAL_HIT - 4}
-            spinTurns={M.spinTurns}
-            wiggleIntensity={M.wiggleIntensity}
-            accentFrames={accents}
-            glowColor={M.glowColor}
-          />
-        </div>
+        {showCover && (
+          <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
+            <PremiumCover
+              src={props.coverImage}
+              size={coverSize}
+              entryFrame={COVER_IN}
+              motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
+              spinStart={COVER_IN + 14}
+              spinEnd={FINAL_HIT - 4}
+              spinTurns={M.spinTurns}
+              wiggleIntensity={M.wiggleIntensity}
+              accentFrames={accents}
+              glowColor={M.glowColor}
+            />
+          </div>
+        )}
         {channelPill}
         {hasCta && (
           <div
@@ -338,20 +341,22 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       </div>
 
       {/* CAPA — centralizada */}
-      <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
-        <PremiumCover
-          src={props.coverImage}
-          size={coverSize}
-          entryFrame={COVER_IN}
-          motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-          spinStart={COVER_IN + 14}
-          spinEnd={FINAL_HIT - 4}
-          spinTurns={M.spinTurns}
-          wiggleIntensity={M.wiggleIntensity}
-          accentFrames={accents}
-          glowColor={M.glowColor}
-        />
-      </div>
+      {showCover && (
+        <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
+          <PremiumCover
+            src={props.coverImage}
+            size={coverSize}
+            entryFrame={COVER_IN}
+            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
+            spinStart={COVER_IN + 14}
+            spinEnd={FINAL_HIT - 4}
+            spinTurns={M.spinTurns}
+            wiggleIntensity={M.wiggleIntensity}
+            accentFrames={accents}
+            glowColor={M.glowColor}
+          />
+        </div>
+      )}
 
       {channelPill}
 
