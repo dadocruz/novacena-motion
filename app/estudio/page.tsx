@@ -207,6 +207,24 @@ const PLATFORM_LOGO_PACK_OPTIONS: {
   { id: 'rectangular', label: 'Logos retangulares', hint: 'Aguardando pacote', available: false },
 ];
 
+const ROUND_WHITE_PLATFORM_LOGOS: Partial<Record<PlatformName, string>> = {
+  Spotify: '/logos/platforms/round-white/SPOTIFY.png',
+  Deezer: '/logos/platforms/round-white/DEEZER.png',
+  'Apple Music': '/logos/platforms/round-white/APPLE.png',
+  'YouTube Music': '/logos/platforms/round-white/YOUTUBE.png',
+  'Amazon Music': '/logos/platforms/round-white/AMAZON.png',
+  Tidal: '/logos/platforms/round-white/TIDAL.png',
+};
+
+function isFactoryPlatformLogoPath(src?: string) {
+  return typeof src === 'string' && src.startsWith('/logos/platforms/');
+}
+
+function defaultPlatformLogoForPack(pack: PlatformLogoPackId, platform: PlatformName) {
+  if (pack === 'round') return ROUND_WHITE_PLATFORM_LOGOS[platform];
+  return undefined;
+}
+
 const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<FontRole, string>>>> = {
   available_now: {
     headline: 'Titulo',
@@ -467,6 +485,20 @@ export default function Home() {
   const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
   const [platformLogoTintColor, setPlatformLogoTintColor] = useState<string>(factoryMotion.platformLogoTintColor ?? '#ffffff');
   const platformLogoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const effectiveCustomLogos = useMemo(() => {
+    const next: Record<string, string> = {};
+
+    for (const platform of allPlatforms) {
+      const packed = defaultPlatformLogoForPack(platformLogoPack, platform);
+      const selected = customLogos[platform];
+
+      if (packed) next[platform] = packed;
+      if (selected && !isFactoryPlatformLogoPath(selected)) next[platform] = selected;
+      if (!packed && selected) next[platform] = selected;
+    }
+
+    return next;
+  }, [customLogos, platformLogoPack]);
 
   // Overlays
   const [overlayAssets, setOverlayAssets] = useState<OverlayAsset[]>([]);
@@ -1550,7 +1582,7 @@ export default function Home() {
         audioFadeOutSec: audioFadeOut,
         useVideoAudio,
       },
-      customLogos: normalizeCustomLogos(customLogos),
+      customLogos: normalizeCustomLogos(effectiveCustomLogos),
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
@@ -1625,7 +1657,7 @@ export default function Home() {
       audioFadeIn,
       audioFadeOut,
       useVideoAudio,
-      customLogos,
+      effectiveCustomLogos,
       platformLogoScales,
       platformLogoGap,
       platformLogoSize,
@@ -3505,7 +3537,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, customLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
@@ -6335,21 +6367,15 @@ return (
             </div>
           )}
 
-          <details style={{ marginTop: 14 }}>
-            <summary
-              style={{
-                cursor: 'pointer',
-                color: 'var(--text-2)',
-                fontSize: 12,
-                fontWeight: 800,
-                listStyle: 'none',
-              }}
-            >
-              Upload manual por plataforma
-            </summary>
-            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+          {platformsSel.length > 0 && (
+            <div style={{ display: 'grid', gap: 8, marginTop: 14, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
+              <div style={miniLabel}>UPLOAD MANUAL POR PLATAFORMA</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                Use quando quiser trocar um logo específico. Sem upload manual, o pacote escolhido acima manda em todos.
+              </div>
               {platformsSel.map((p) => {
-                const hasCustom = !!customLogos[p];
+                const effectiveSrc = effectiveCustomLogos[p];
+                const hasManualLogo = !!customLogos[p] && !isFactoryPlatformLogoPath(customLogos[p]);
                 return (
                   <div key={p} style={platformLogoRow}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
@@ -6359,10 +6385,10 @@ return (
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                       }}>
-                        {hasCustom ? (
+                        {effectiveSrc ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
-                            src={customLogos[p]}
+                            src={effectiveSrc}
                             alt={p}
                             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
                           />
@@ -6370,15 +6396,38 @@ return (
                           <span style={{ fontSize: 10, color: 'var(--text-3)' }}>logo</span>
                         )}
                       </div>
-                      <span style={{ fontSize: 12, color: 'var(--text-1)' }}>{p}</span>
+                      <span style={{ display: 'grid', gap: 2 }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-1)' }}>{p}</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                          {hasManualLogo ? 'Logo manual' : 'Usando pacote'}
+                        </span>
+                      </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => platformLogoInputRefs.current[p]?.click()}
-                      style={tinyAddBtn}
-                    >
-                      Trocar
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {hasManualLogo && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomLogos((current) => {
+                              const next = { ...current };
+                              delete next[p];
+                              return next;
+                            });
+                          }}
+                          style={tinyDelBtn}
+                          title="Voltar para o pacote escolhido"
+                        >
+                          ×
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => platformLogoInputRefs.current[p]?.click()}
+                        style={tinyAddBtn}
+                      >
+                        Trocar
+                      </button>
+                    </div>
                     <input
                       ref={(el) => { platformLogoInputRefs.current[p] = el; }}
                       type="file"
@@ -6393,7 +6442,7 @@ return (
                 );
               })}
             </div>
-          </details>
+          )}
         
             <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
               <div style={miniLabel}>AJUSTES DOS LOGOS</div>
