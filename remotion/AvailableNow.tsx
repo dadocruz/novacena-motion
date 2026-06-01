@@ -86,9 +86,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
   const logoCount = Math.max(1, visiblePlatforms.length);
   const maxLogosWidth = 920;
+  const logoBoxMultiplier = motion.platformLogoPack === 'standard' || motion.platformLogoPack === 'rectangular' ? 2.15 : 1;
   const totalRequestedLogoWidth = visiblePlatforms.reduce((sum, p) => {
     const size = Math.round(platformLogoSize * (platformLogoScales[p] ?? 1));
-    return sum + (motion.customLogos?.[p] ? size * 2.8 : size);
+    return sum + size * logoBoxMultiplier;
   }, 0) + Math.max(0, logoCount - 1) * platformLogoGap;
   const logosFitScale = Math.min(1, maxLogosWidth / Math.max(1, totalRequestedLogoWidth));
   const fittedLogoGap = Math.max(0, Math.round(platformLogoGap * logosFitScale));
@@ -246,8 +247,9 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
                 <PlatformLogo
                   key={p}
                   name={p}
+                  variant={logoBoxMultiplier === 1 ? 'icon' : undefined}
                   size={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale)}
-                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * 2.15)}
+                  maxWidth={Math.round(platformLogoSize * (platformLogoScales[p] ?? 1) * logosFitScale * logoBoxMultiplier)}
                   delay={logosIn + idx * 7}
                   customSrc={motion.customLogos?.[p]}
                   tintEnabled={motion.platformLogoTintEnabled}

@@ -3449,7 +3449,8 @@ export default function Home() {
       Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))
     );
     const maxLogoSize = Math.max(44, ...logoSizes);
-    const totalLogoWidth = logoSizes.reduce((sum, size) => sum + size, 0) + Math.max(0, logoSizes.length - 1) * platformLogoGap;
+    const logoBoxMultiplier = platformLogoPack === 'standard' || platformLogoPack === 'rectangular' ? 2.15 : 1;
+    const totalLogoWidth = logoSizes.reduce((sum, size) => sum + size * logoBoxMultiplier, 0) + Math.max(0, logoSizes.length - 1) * platformLogoGap;
 
     const makeAvailableNowLogosRect = (): React.CSSProperties => {
       const stageTop = target === 'story' ? 245 : 88;
@@ -6346,7 +6347,7 @@ return (
               label="Distância entre logos"
               value={platformLogoGap}
               min={0}
-              max={60}
+              max={180}
               step={1}
               onChange={setPlatformLogoGap}
               format={(v) => `${Math.round(v)}px`}
