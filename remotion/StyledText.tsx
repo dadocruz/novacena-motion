@@ -31,6 +31,7 @@ type StyledTextProps = {
   stroke?: TextStroke | any;
   preserveFontShape?: boolean;
   previewMode?: boolean;
+  previewLayerId?: string;
 };
 
 const PREVIEW_VISIBILITY_OPACITY = 0.34;
@@ -313,6 +314,7 @@ export function StyledText({
   stroke,
   preserveFontShape = false,
   previewMode = false,
+  previewLayerId,
 }: StyledTextProps) {
   const strokeCss = getStrokeCss(stroke);
   const fillCss = getFillCss(style, stroke);
@@ -331,7 +333,7 @@ export function StyledText({
 
   if (strokeCss) {
     return (
-      <span style={outerStyle}>
+      <span data-novacena-preview-layer={previewLayerId || undefined} style={outerStyle}>
         <span
           aria-hidden
           style={{
@@ -361,7 +363,7 @@ export function StyledText({
   }
 
   return (
-    <span style={outerStyle}>
+    <span data-novacena-preview-layer={previewLayerId || undefined} style={outerStyle}>
       <span
         style={{
           ...fillCss,

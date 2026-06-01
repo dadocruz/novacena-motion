@@ -233,6 +233,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="spotify-date"
             text={prefixText}
             transition={showAll ? undefined : prefixTransition}
             style={props.motion?.styleDate}
@@ -302,6 +303,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             }}
           >
             <StyledText
+              previewLayerId="spotify-number"
               text={numberText}
               transition={showAll ? undefined : numberTransition}
               style={props.motion?.styleHeadline}
@@ -335,6 +337,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="spotify-metric"
             text={labelText}
             transition={showAll ? undefined : labelTransition}
             style={labelStyle}
@@ -347,6 +350,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
         {/* IPHONE COM O PRINT DO SPOTIFY DENTRO */}
         <div
           data-cover-position-wrapper
+          data-novacena-preview-layer="spotify-phone"
           style={{
             position: 'absolute',
             top: phoneTop,

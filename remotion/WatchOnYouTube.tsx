@@ -196,6 +196,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="youtube-channel"
             text={channel}
             transition={showAll ? undefined : channelTransition}
             style={props.motion?.styleDate}
@@ -237,6 +238,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="youtube-title"
             text={'ASSISTA NO\nYOUTUBE'}
             transition={showAll ? undefined : headlineTransition}
             style={props.motion?.styleHeadline}
@@ -247,18 +249,20 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         </div>
         {showCover && (
           <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
-            <PremiumCover
-              src={props.coverImage}
-              size={coverSize}
-              entryFrame={COVER_IN}
-              motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-              spinStart={COVER_IN + 14}
-              spinEnd={FINAL_HIT - 4}
-              spinTurns={M.spinTurns}
-              wiggleIntensity={M.wiggleIntensity}
-              accentFrames={accents}
-              glowColor={M.glowColor}
-            />
+            <div data-novacena-preview-layer="cover" style={{ display: 'inline-block' }}>
+              <PremiumCover
+                src={props.coverImage}
+                size={coverSize}
+                entryFrame={COVER_IN}
+                motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
+                spinStart={COVER_IN + 14}
+                spinEnd={FINAL_HIT - 4}
+                spinTurns={M.spinTurns}
+                wiggleIntensity={M.wiggleIntensity}
+                accentFrames={accents}
+                glowColor={M.glowColor}
+              />
+            </div>
           </div>
         )}
         {channelPill}
@@ -282,6 +286,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             }}
           >
             <StyledText
+              previewLayerId="youtube-cta"
               text={cta}
               transition={showAll ? undefined : ctaTransition}
               style={ctaStyle}
@@ -338,6 +343,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       }}
     >
         <StyledText
+          previewLayerId="youtube-title"
           text={'ASSISTA NO\nYOUTUBE'}
           transition={showAll ? undefined : headlineTransition}
           style={props.motion?.styleHeadline}
@@ -350,18 +356,20 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       {/* CAPA — centralizada */}
       {showCover && (
         <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
-          <PremiumCover
-            src={props.coverImage}
-            size={coverSize}
-            entryFrame={COVER_IN}
-            motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-            spinStart={COVER_IN + 14}
-            spinEnd={FINAL_HIT - 4}
-            spinTurns={M.spinTurns}
-            wiggleIntensity={M.wiggleIntensity}
-            accentFrames={accents}
-            glowColor={M.glowColor}
-          />
+          <div data-novacena-preview-layer="cover" style={{ display: 'inline-block' }}>
+            <PremiumCover
+              src={props.coverImage}
+              size={coverSize}
+              entryFrame={COVER_IN}
+              motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
+              spinStart={COVER_IN + 14}
+              spinEnd={FINAL_HIT - 4}
+              spinTurns={M.spinTurns}
+              wiggleIntensity={M.wiggleIntensity}
+              accentFrames={accents}
+              glowColor={M.glowColor}
+            />
+          </div>
         </div>
       )}
 
@@ -388,6 +396,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         }}
       >
           <StyledText
+            previewLayerId="youtube-cta"
             text={cta}
             transition={showAll ? undefined : ctaTransition}
             style={ctaStyle}

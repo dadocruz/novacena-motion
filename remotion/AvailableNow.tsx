@@ -184,7 +184,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               ...applyTextStyle(motion.styleHeadline),
               ...userTextTransform(motion.styleHeadline, { transform: wigH.transform }),
             }}>
-              <StyledText text={props.headline || 'LANÇAMENTO'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
+              <StyledText previewLayerId="headline" text={props.headline || 'LANÇAMENTO'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
           {props.releaseDate ? (
@@ -199,12 +199,12 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               ...applyTextStyle(motion.styleDate),
               ...userTextTransform(motion.styleDate, { transform: wigD.transform }),
             }}>
-              <StyledText text={props.releaseDate} transition={showAll ? undefined : tD} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />
+              <StyledText previewLayerId="date" text={props.releaseDate} transition={showAll ? undefined : tD} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />
             </div>
           ) : null}
         </div>
         <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <div data-cover-position-wrapper style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
+          <div data-cover-position-wrapper data-novacena-preview-layer="cover" style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
             <PremiumCover src={props.coverImage} size={coverSize} entryFrame={COVER_IN} spinStart={COVER_IN + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
@@ -223,7 +223,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
             ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: wigC1.transform }),
           }}>
-            <StyledText text={cta1Text} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
+            <StyledText previewLayerId="cta1" text={cta1Text} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
           <div style={{
             fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
@@ -239,10 +239,10 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
             ...userTextTransform(motion.styleCta2 ?? motion.styleCta, { transform: wigC2.transform }),
           }}>
-            <StyledText text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
+            <StyledText previewLayerId="cta2" text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
           {visiblePlatforms.length > 0 ? (
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: '100%', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
+            <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo
                   key={p}

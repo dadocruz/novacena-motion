@@ -107,7 +107,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               ...applyTextStyle(motion.styleHeadline),
               ...userTextTransform(motion.styleHeadline, { transform: wigH.transform }),
             }}>
-              <StyledText text={props.headline || 'DISPONÍVEL'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
+              <StyledText previewLayerId="outnow-title" text={props.headline || 'DISPONÍVEL'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
           {/* SEM DATA — a música já saiu */}
@@ -115,7 +115,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
         {/* CAPA */}
         <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <div data-cover-position-wrapper style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
+          <div data-cover-position-wrapper data-novacena-preview-layer="cover" style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
             <PremiumCover src={props.coverImage} size={coverSize} entryFrame={COVER_IN} spinStart={COVER_IN + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
@@ -137,12 +137,12 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             ...applyTextStyle(motion.styleCta2 ?? motion.styleCta),
             ...userTextTransform(motion.styleCta2 ?? motion.styleCta, { transform: wigC2.transform }),
           }}>
-            <StyledText text={ctaText} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
+            <StyledText previewLayerId="outnow-cta" text={ctaText} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
 
           {/* LOGOS */}
           {visiblePlatforms.length > 0 ? (
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: '100%', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
+            <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo
                   key={p}

@@ -130,6 +130,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="milestone-date"
             text={prefixText}
             transition={showAll ? undefined : prefixTransition}
             style={props.motion?.styleDate}
@@ -144,6 +145,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           <div
 
             data-cover-position-wrapper
+            data-novacena-preview-layer="milestone-cover"
 
             style={{
 
@@ -194,6 +196,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             }}
           >
             <StyledText
+              previewLayerId="milestone-number"
               text={numberText}
               transition={showAll ? undefined : numberTransition}
               style={props.motion?.styleHeadline}
@@ -220,6 +223,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           }}
         >
           <StyledText
+            previewLayerId="milestone-label"
             text={labelText}
             transition={showAll ? undefined : labelTransition}
             style={labelStyle}

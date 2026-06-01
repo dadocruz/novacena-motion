@@ -1157,6 +1157,8 @@ export default function Home() {
   const [strokeCta2, setStrokeCta2] = useState(textStrokeFromFactory(factoryMotion.strokeCta2 ?? factoryMotion.strokeCta));
   const [textOpacity, setTextOpacity] = useState(factoryMotion.textOpacity ?? 1);
   const [previewNonce, setPreviewNonce] = useState(0);
+  const [measuredPreviewRects, setMeasuredPreviewRects] = useState<Record<string, React.CSSProperties>>({});
+  const measuredPreviewRectsKeyRef = useRef('');
   const undoHistoryRef = useRef<EditorHistorySnapshot[]>([]);
   const redoHistoryRef = useRef<EditorHistorySnapshot[]>([]);
   const currentEditorSnapshotRef = useRef<EditorHistorySnapshot | null>(null);
@@ -3450,6 +3452,67 @@ export default function Home() {
     return layer.label || 'Elemento';
   }
 
+  useEffect(() => {
+    let raf = 0;
+    let cancelled = false;
+
+    const round = (value: number) => Math.round(value * 10) / 10;
+    const pct = (value: number) => `${round(value)}%`;
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+    const measure = () => {
+      if (cancelled) return;
+
+      const frame = previewFrameRef.current;
+      const frameRect = frame?.getBoundingClientRect();
+
+      if (!frame || !frameRect?.width || !frameRect?.height) {
+        raf = window.requestAnimationFrame(measure);
+        return;
+      }
+
+      const nodes = Array.from(frame.querySelectorAll<HTMLElement>('[data-novacena-preview-layer]'));
+      const next: Record<string, React.CSSProperties> = {};
+
+      for (const node of nodes) {
+        const id = node.dataset.novacenaPreviewLayer;
+        if (!id) continue;
+
+        const rect = node.getBoundingClientRect();
+        if (!rect.width || !rect.height) continue;
+
+        const padX = Math.min(8, Math.max(2, rect.width * 0.05));
+        const padY = Math.min(6, Math.max(2, rect.height * 0.12));
+        const left = ((rect.left - frameRect.left - padX) / frameRect.width) * 100;
+        const top = ((rect.top - frameRect.top - padY) / frameRect.height) * 100;
+        const width = ((rect.width + padX * 2) / frameRect.width) * 100;
+        const height = ((rect.height + padY * 2) / frameRect.height) * 100;
+
+        next[id] = {
+          left: pct(clamp(left, -20, 116)),
+          top: pct(clamp(top, -20, 116)),
+          width: pct(clamp(width, 2, 120)),
+          height: pct(clamp(height, 2, 120)),
+        };
+      }
+
+      const key = JSON.stringify(next);
+      if (key !== measuredPreviewRectsKeyRef.current) {
+        measuredPreviewRectsKeyRef.current = key;
+        setMeasuredPreviewRects(next);
+      }
+
+      raf = window.requestAnimationFrame(measure);
+    };
+
+    raf = window.requestAnimationFrame(measure);
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+    };
+  }, []);
+
   const previewLayerHotspots = React.useMemo<PreviewLayerHotspot[]>(() => {
     const pct = (value: number) => `${Math.round(value * 10) / 10}%`;
     const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -3515,6 +3578,8 @@ export default function Home() {
       width: pct(clamp(width, 4, 96)),
       height: pct(clamp(height, 3, 92)),
     });
+    const measuredRect = (id: string, fallback: React.CSSProperties): React.CSSProperties =>
+      measuredPreviewRects[id] ?? fallback;
     const visibleLogoPlatforms = platformsSel;
     const logoSizes = visibleLogoPlatforms.map((p) =>
       Math.round(platformLogoSize * (platformLogoScales[p] ?? 1))
@@ -3571,10 +3636,10 @@ export default function Home() {
     if (template === 'spotify_print') {
       const phoneWidthPct = clamp((phoneSize / 1080) * 100, 26, 78);
       return [
-        { id: 'spotify-date', kind: 'text', role: 'date', label: 'Texto acima', rect: roleRect(12, 15, 76, 8, 'date') },
-        { id: 'spotify-number', kind: 'text', role: 'headline', label: 'Número', rect: roleRect(7, 22, 86, 16, 'headline') },
-        { id: 'spotify-metric', kind: 'text', role: 'cta1', label: 'Métrica', rect: roleRect(12, 37, 76, 8, 'cta1') },
-        { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: mediaRect(50, 62, phoneWidthPct, 40, phoneX, phoneY) },
+        { id: 'spotify-date', kind: 'text', role: 'date', label: 'Texto acima', rect: measuredRect('spotify-date', roleRect(12, 15, 76, 8, 'date')) },
+        { id: 'spotify-number', kind: 'text', role: 'headline', label: 'Número', rect: measuredRect('spotify-number', roleRect(7, 22, 86, 16, 'headline')) },
+        { id: 'spotify-metric', kind: 'text', role: 'cta1', label: 'Métrica', rect: measuredRect('spotify-metric', roleRect(12, 37, 76, 8, 'cta1')) },
+        { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: measuredRect('spotify-phone', mediaRect(50, 62, phoneWidthPct, 40, phoneX, phoneY)) },
         { id: 'spotify-logo', kind: 'logos', label: 'Logos', rect: { left: '34%', top: '82%', width: '32%', height: '8%' } },
         ...elementHotspots,
       ];
@@ -3584,10 +3649,10 @@ export default function Home() {
       const coverPct = clamp((Math.min(coverSize, 460) / 1080) * 100, 22, 64);
       const coverHeightPct = clamp((Math.min(coverSize, 460) / compositionHeight) * 100, 14, 38);
       return [
-        { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: roleRect(12, 12, 76, 8, 'date') },
-        { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 37, coverPct, coverHeightPct, coverX, coverY) },
-        { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: roleRect(6, 52, 88, 16, 'headline') },
-        { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: roleRect(14, 68, 72, 9, 'cta1') },
+        { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: measuredRect('milestone-date', roleRect(12, 12, 76, 8, 'date')) },
+        { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: measuredRect('milestone-cover', mediaRect(50, 37, coverPct, coverHeightPct, coverX, coverY)) },
+        { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: measuredRect('milestone-number', roleRect(6, 52, 88, 16, 'headline')) },
+        { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: measuredRect('milestone-label', roleRect(14, 68, 72, 9, 'cta1')) },
         ...elementHotspots,
       ];
     }
@@ -3610,35 +3675,35 @@ export default function Home() {
       const ctaTopPct = clamp(((youtubeCoverTopPx + youtubeCoverSize + 118) / compositionHeight) * 100, 58, 80);
 
       return [
-        { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(12, 16, 76, 13, 'headline') },
-        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0) }] : []),
-        { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date') },
-        ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: roleRect(12, ctaTopPct, 76, 5.8, 'cta1') }] : []),
+        { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: measuredRect('youtube-title', roleRect(12, 16, 76, 13, 'headline')) },
+        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0)) }] : []),
+        { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: measuredRect('youtube-channel', roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date')) },
+        ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) }] : []),
         ...elementHotspots,
       ];
     }
 
     if (template === 'out_now') {
       return [
-        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: roleRect(6, 11, 88, 18, 'headline') },
-        { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY) },
-        { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta2') },
-        ...(releaseDate ? [{ id: 'outnow-date', kind: 'text' as const, role: 'date' as const, label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') }] : []),
-        { id: 'logos', kind: 'logos', label: 'Logos', rect: { left: '30%', top: '84%', width: '40%', height: '8%' } },
+        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: measuredRect('outnow-title', roleRect(6, 11, 88, 18, 'headline')) },
+        { id: 'cover', kind: 'cover', label: 'Capa', rect: measuredRect('cover', mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY)) },
+        { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: 'CTA de plataformas', rect: measuredRect('outnow-cta', roleRect(10, 72, 80, 8, 'cta2')) },
+        ...(releaseDate ? [{ id: 'outnow-date', kind: 'text' as const, role: 'date' as const, label: 'Data / desde', rect: measuredRect('outnow-date', roleRect(18, 81, 64, 7, 'date')) }] : []),
+        { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', { left: '30%', top: '84%', width: '40%', height: '8%' }) },
         ...elementHotspots,
       ];
     }
 
     return [
-      { id: 'headline', kind: 'text', role: 'headline', label: textRoleLabels.headline ?? 'Headline', rect: roleRect(8, 11, 84, 9, 'headline') },
-      { id: 'date', kind: 'text', role: 'date', label: textRoleLabels.date ?? 'Data', rect: roleRect(22, 19, 56, 6, 'date') },
-      { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY) },
-      ...(showCta1 ? [{ id: 'cta1', kind: 'text' as const, role: 'cta1' as const, label: textRoleLabels.cta1 ?? 'Chamada 1', rect: roleRect(8, 68, 84, 8, 'cta1') }] : []),
-      ...(showCta2 ? [{ id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: roleRect(8, 77, 84, 8, 'cta2') }] : []),
-      { id: 'logos', kind: 'logos', label: 'Logos', rect: makeAvailableNowLogosRect() },
+      { id: 'headline', kind: 'text', role: 'headline', label: textRoleLabels.headline ?? 'Headline', rect: measuredRect('headline', roleRect(8, 11, 84, 9, 'headline')) },
+      { id: 'date', kind: 'text', role: 'date', label: textRoleLabels.date ?? 'Data', rect: measuredRect('date', roleRect(22, 19, 56, 6, 'date')) },
+      { id: 'cover', kind: 'cover', label: 'Capa', rect: measuredRect('cover', mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY)) },
+      ...(showCta1 ? [{ id: 'cta1', kind: 'text' as const, role: 'cta1' as const, label: textRoleLabels.cta1 ?? 'Chamada 1', rect: measuredRect('cta1', roleRect(8, 68, 84, 8, 'cta1')) }] : []),
+      ...(showCta2 ? [{ id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: measuredRect('cta2', roleRect(8, 77, 84, 8, 'cta2')) }] : []),
+      { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     stopTransitionPreviewLoopForManualEdit();
