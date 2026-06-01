@@ -258,8 +258,11 @@
     },
     "out_now": {
       "type": "out_now",
-      "headline": "OUÇA AGORA",
-      "cta": "DISPONÍVEL EM TODOS OS APPS"
+      "headline": "DISPONÍVEL",
+      "cta": "EM TODAS AS PLATAFORMAS DIGITAIS",
+      "releaseDate": "",
+      "showCta1": true,
+      "showCta2": false
     },
     "spotify_print": {
       "type": "spotify_print",

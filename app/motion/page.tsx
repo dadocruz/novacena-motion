@@ -34,7 +34,7 @@ const painPoints = [
 ];
 
 const steps = [
-  { n: '1', label: 'TEMPLATE', title: 'Escolha o template.', desc: 'Disponível Agora, Assista no YouTube, Marco de Streams, Spotify Print. Story e feed prontos pra usar.' },
+  { n: '1', label: 'TEMPLATE', title: 'Escolha o template.', desc: 'Pré-save, Lançamento, Assista no YouTube, Marco de Streams, Spotify Print. Story e feed prontos pra usar.' },
   { n: '2', label: 'EDIÇÃO', title: 'Personalize no navegador.', desc: 'Troque capa, texto, vídeo de fundo, logos, cor, opacidade e blur. Tudo visual, sem timeline.' },
   { n: '3', label: 'EXPORTAÇÃO', title: 'Exporte na nuvem.', desc: 'O vídeo é renderizado em servidores na nuvem. Seu computador não trava. Baixe o MP4 pronto.' },
 ];

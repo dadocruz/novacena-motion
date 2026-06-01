@@ -9,8 +9,8 @@ export const STUDIO_CATALOG = {
   templates: [
     {
       id: 'available_now',
-      name: 'Disponível / Pre-save',
-      use_case: 'Lançamento iminente, pre-save, "Disponível em X.DEZ"',
+      name: 'PRÉ-SAVE',
+      use_case: 'Primeira arte da campanha: comunica a data do lançamento e pede pre-save.',
       mandatory_texts: ['headline', 'releaseDate', 'cta'],
     },
     {
@@ -21,8 +21,8 @@ export const STUDIO_CATALOG = {
     },
     {
       id: 'out_now',
-      name: 'Ouça Agora',
-      use_case: 'Música já lançada, divulgação contínua',
+      name: 'LANÇAMENTO',
+      use_case: 'Arte para single ja lançado: headline editavel como "DISPONIVEL" ou "OUCA AGORA" e CTA de plataformas/apps de musica.',
       mandatory_texts: ['headline', 'cta'],
     },
     {

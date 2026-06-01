@@ -51,6 +51,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
     : 0;
 
   const showAll = frame >= FINAL_POSTER;
+  const headline = props.headline || 'DISPONÍVEL';
   const cta = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
   const ctaFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
@@ -161,7 +162,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
             }}
           >
             <StyledText
-              text={'OUÇA\nAGORA'}
+              text={headline}
               transition={showAll ? undefined : headlineTransition}
               style={props.motion?.styleHeadline}
               stroke={M.strokeHeadline}

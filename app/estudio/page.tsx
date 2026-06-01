@@ -214,8 +214,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
     cta1: 'Metrica',
   },
   out_now: {
-    headline: 'Titulo fixo',
-    date: 'Data / desde',
+    headline: 'Headline',
     cta1: 'CTA de plataformas',
   },
   spotify_print: {
@@ -228,7 +227,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
   milestone: ['date', 'headline', 'cta1'],
-  out_now: ['headline', 'cta1', 'date'],
+  out_now: ['headline', 'cta1'],
   spotify_print: ['date', 'headline', 'cta1'],
 };
 
@@ -944,10 +943,13 @@ export default function Home() {
 
   // Quando troca template, atualiza defaults
   useEffect(() => {
-    const next = getProject(template);
+    const next = getProject(template) as ReturnType<typeof getProject> & { showCta1?: boolean; showCta2?: boolean };
     setHeadline(next.headline);
+    setReleaseDate(next.releaseDate ?? '');
     setCta(next.cta);
     setCta2(next.cta2 ?? next.cta ?? '');
+    setShowCta1(next.showCta1 ?? true);
+    setShowCta2(next.showCta2 ?? (template === 'available_now'));
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -3443,10 +3445,10 @@ export default function Home() {
 
     if (template === 'out_now') {
       return [
-        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: roleRect(6, 11, 88, 18, 'headline') },
+        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: roleRect(6, 11, 88, 18, 'headline') },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY) },
         ...(showCta1 ? [{ id: 'outnow-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA de plataformas', rect: roleRect(10, 72, 80, 8, 'cta1') }] : []),
-        { id: 'outnow-date', kind: 'text', role: 'date', label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') },
+        ...(releaseDate ? [{ id: 'outnow-date', kind: 'text' as const, role: 'date' as const, label: 'Data / desde', rect: roleRect(18, 81, 64, 7, 'date') }] : []),
         { id: 'logos', kind: 'logos', label: 'Logos', rect: { left: '30%', top: '84%', width: '40%', height: '8%' } },
         ...elementHotspots,
       ];
@@ -3646,8 +3648,7 @@ export default function Home() {
     }
 
     if (template === 'out_now') {
-      if (role === 'headline') return 'OUCA AGORA';
-      if (role === 'date') return releaseDate;
+      if (role === 'headline') return headline;
       if (role === 'cta' || role === 'cta1') return cta;
       return cta2;
     }
@@ -3674,7 +3675,7 @@ export default function Home() {
     }
 
     if (template === 'out_now') {
-      if (role === 'date') setReleaseDate(value);
+      if (role === 'headline') setHeadline(value);
       else if (role === 'cta' || role === 'cta1') setCta(value);
       return;
     }
@@ -4750,7 +4751,7 @@ return (
           {template === 'watch_youtube' ? (
             <>
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
-                Este template usa campos proprios de YouTube. O titulo "ASSISTA NO YOUTUBE" e fixo; aqui voce edita canal e chamada.
+                Arte de YouTube. O titulo "ASSISTA NO YOUTUBE" e fixo; aqui voce edita o canal, @handle e chamada do video.
               </div>
               <Field label="Canal do YouTube / @handle" value={channelName} onChange={setChannelName} placeholder="GRUPO FACANHA OFICIAL" />
               <ToggleRow label="Mostrar CTA do video" value={showCta1} onChange={setShowCta1} />
@@ -4777,13 +4778,13 @@ return (
           ) : template === 'out_now' ? (
             <>
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
-                Este template tem o titulo fixo "OUCA AGORA". Edite a chamada e a data opcional abaixo.
+                Arte de lancamento. Use depois que o single ja saiu: sem data de pre-save e sem "faca o pre-save".
               </div>
+              <Field label="Headline" value={headline} onChange={setHeadline} placeholder="DISPONIVEL ou OUCA AGORA" />
               <ToggleRow label="Mostrar CTA de plataformas" value={showCta1} onChange={setShowCta1} />
               {showCta1 && (
-                <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS\nPLATAFORMAS DIGITAIS"} rows={2} />
+                <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS\nou EM TODOS OS APPS DE MUSICA"} rows={2} />
               )}
-              <Field label="Data / desde (opcional)" value={releaseDate} onChange={setReleaseDate} placeholder="DESDE 07/06" />
             </>
           ) : (
             <>
@@ -6286,7 +6287,7 @@ return (
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : template === 'out_now' ? 'OUCA AGORA' : headline}
+            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : headline}
             sampleDate={template === 'spotify_print' || template === 'milestone' ? metricPrefix : template === 'watch_youtube' ? channelName : releaseDate}
             sampleCta={template === 'spotify_print' || template === 'milestone' ? metricLabel : cta}
             sampleCta2={cta2}
@@ -6331,7 +6332,7 @@ return (
         </Section>
 
         {template === 'available_now' && (
-          <Section title="Ritmo CTA (Disponível)" draggablePanel>
+          <Section title="Ritmo CTA (PRÉ-SAVE)" draggablePanel>
             <div style={{ marginBottom: 10 }}>
               <div style={{ ...miniInputLabel, display: 'flex', justifyContent: 'space-between' }}>
                 <span>Presets rápidos</span>

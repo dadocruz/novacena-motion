@@ -5,17 +5,17 @@ type RawProject = typeof raw;
 
 export const templateOrder: TemplateId[] = [
   'available_now',
+  'out_now',
   'watch_youtube',
   'milestone',
-  'out_now',
   'spotify_print',
 ];
 
 export const templateLabels: Record<TemplateId, string> = {
-  available_now: 'Disponível',
+  available_now: 'PRÉ-SAVE',
   watch_youtube: 'Assista no YouTube',
   milestone: '100k / Milestone',
-  out_now: 'Ouça Agora',
+  out_now: 'LANÇAMENTO',
   spotify_print: '📱 Spotify Print',
 };
 
