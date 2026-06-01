@@ -62,8 +62,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const wigH = brazuWiggle(frame, { amplitude: wH * wiggleIntensity, frequency: 0.74, seed: 10 });
   const wigC2 = brazuWiggle(frame, { amplitude: wC2 * wiggleIntensity, frequency: 0.82, seed: 210 });
 
-  // No DISPONÍVEL: CTA1 = "EM TODAS AS PLATAFORMAS DIGITAIS" (sem "FAÇA O PRÉ-SAVE")
-  const ctaText = props.cta || 'EM TODAS AS PLATAFORMAS DIGITAIS';
+  const ctaText = props.cta2 ?? props.cta ?? 'EM TODAS AS PLATAFORMAS DIGITAIS';
   const ctaOpacity = interpolate(frame, [ctaIn, ctaIn + 22], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const logosAppear = eased(frame, logosIn, logosIn + 24, easings.outCubic);
   const finalFlash = finalFlashEnabled ? interpolate(frame, [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14], [0, 0.45, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) : 0;

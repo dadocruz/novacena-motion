@@ -244,7 +244,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
   },
   out_now: {
     headline: 'Headline',
-    cta1: 'CTA plataformas',
+    cta2: 'CTA plataformas',
   },
   spotify_print: {
     date: 'Texto acima',
@@ -256,7 +256,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
   milestone: ['date', 'headline', 'cta1'],
-  out_now: ['headline', 'cta1'],
+  out_now: ['headline', 'cta2'],
   spotify_print: ['date', 'headline', 'cta1'],
 };
 
@@ -438,8 +438,8 @@ export default function Home() {
   };
   const textRoleLabels = useMemo(() => getTextRoleLabels(template), [template]);
   const visibleTextRoles = VISIBLE_TEXT_ROLES_BY_TEMPLATE[template];
-  const hasOptionalCta1 = template === 'available_now' || template === 'watch_youtube' || template === 'out_now';
-  const hasOptionalCta2 = template === 'available_now';
+  const hasOptionalCta1 = template === 'available_now' || template === 'watch_youtube';
+  const hasOptionalCta2 = template === 'available_now' || template === 'out_now';
 
   // Project settings
   const [durationSeconds, setDurationSeconds] = useState<number>(
@@ -4918,9 +4918,9 @@ return (
                 Arte de disponivel. Use depois que o single ja saiu: sem data e sem "faca o pre-save".
               </div>
               <Field label="Headline" value={headline} onChange={setHeadline} placeholder="DISPONIVEL ou OUCA AGORA" />
-              <ToggleRow label="Mostrar CTA de plataformas" value={showCta1} onChange={setShowCta1} />
-              {showCta1 && (
-                <TextAreaField label="CTA de plataformas" value={cta} onChange={setCta} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS\nou EM TODOS OS APPS DE MUSICA"} rows={2} />
+              <ToggleRow label="Mostrar CTA de plataformas" value={showCta2} onChange={setShowCta2} />
+              {showCta2 && (
+                <TextAreaField label="CTA de plataformas" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS\nou EM TODOS OS APPS DE MUSICA"} rows={2} />
               )}
             </>
           ) : (
