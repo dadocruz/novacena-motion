@@ -1728,6 +1728,15 @@ export default function Home() {
   const playerRemountKey = [
     template,
     target,
+    previewNonce,
+    trHeadline,
+    trDate,
+    trCta1,
+    trCta2,
+    effectiveTextInFrames.headline,
+    effectiveTextInFrames.date,
+    effectiveTextInFrames.cta1,
+    effectiveTextInFrames.cta2,
   ].join('|');
 
   const Component = componentByTemplate[template];
