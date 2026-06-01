@@ -930,7 +930,7 @@ export default function Home() {
     if (wantedTemplate) {
       const validTemplates = (templateOrder as readonly string[]) ?? Object.keys(templateLabels ?? {});
       if (validTemplates.includes(wantedTemplate)) {
-        setTemplate(wantedTemplate as TemplateId);
+        switchTemplate(wantedTemplate as TemplateId);
       }
     }
 
@@ -1163,6 +1163,26 @@ export default function Home() {
   const lastHistorySerializedRef = useRef('');
   const historyTimerRef = useRef<number | null>(null);
   const isRestoringHistoryRef = useRef(false);
+
+  // ─── CONFIGS ISOLADAS POR TEMPLATE ──────────────────────────
+  // Cada template salva seu próprio snapshot quando o usuário troca.
+  // Assim, alterar PRÉ-SAVE não afeta DISPONÍVEL e vice-versa.
+  const templateConfigsRef = useRef<Partial<Record<TemplateId, EditorHistorySnapshot>>>({});
+
+  function switchTemplate(nextId: TemplateId) {
+    if (nextId === template) return;
+    // Salva o estado atual no slot do template corrente
+    templateConfigsRef.current[template] = cloneHistoryValue(createEditorSnapshot());
+    // Carrega o estado salvo do próximo template (se existir)
+    const saved = templateConfigsRef.current[nextId];
+    if (saved) {
+      restoreEditorSnapshot({ ...saved, template: nextId });
+    } else {
+      // Primeira vez abrindo esse template — só troca, mantém defaults
+      setTemplate(nextId);
+    }
+    setPreviewNonce((n) => n + 1);
+  }
 
   function createEditorSnapshot(): EditorHistorySnapshot {
     return cloneHistoryValue({
@@ -2221,7 +2241,7 @@ export default function Home() {
     const full = d.items.find((g: any) => g.id === item.id);
     const snap = full?.projectSnapshot;
     if (!snap) return;
-    setTemplate(snap.template ?? snap.type);
+    switchTemplate(snap.template ?? snap.type);
     setReleaseDate(snap.releaseDate ?? '');
     setHeadline(snap.headline ?? '');
     setCta(snap.cta ?? '');
@@ -2846,9 +2866,9 @@ export default function Home() {
     };
 
     if (typeof c.template === 'string' && templateOrder.includes(c.template as TemplateId)) {
-      setTemplate(c.template as TemplateId);
+      switchTemplate(c.template as TemplateId);
     } else if (preset.id === 'brazu_phone_spotify') {
-      setTemplate('spotify_print');
+      switchTemplate('spotify_print');
     }
 
     if (typeof c.metricPrefix === 'string') setMetricPrefix(c.metricPrefix);
@@ -3038,7 +3058,7 @@ export default function Home() {
       // ─── Template ────────────────────────────────────────
       const newTemplate = full.template ?? plan.templateId;
       if (newTemplate && ['available_now','watch_youtube','milestone','out_now','spotify_print'].includes(newTemplate)) {
-        setTemplate(newTemplate as TemplateId);
+        switchTemplate(newTemplate as TemplateId);
       }
 
       // ─── Duração ────────────────────────────────────────
@@ -4274,7 +4294,7 @@ export default function Home() {
 
     const nextTemplate = preset.template ?? preset.type;
     if (['available_now', 'watch_youtube', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
-      setTemplate(nextTemplate as TemplateId);
+      switchTemplate(nextTemplate as TemplateId);
     }
 
     const nextTarget = preset.target ?? preset.renderTarget ?? m.renderTarget;
@@ -4750,7 +4770,7 @@ return (
         <Section title="Template">
           <div style={gridTwoCols}>
             {templateOrder.map((id) => (
-              <TemplateButton key={id} active={template === id} onClick={() => setTemplate(id)}>
+              <TemplateButton key={id} active={template === id} onClick={() => switchTemplate(id)}>
                 {templateLabels[id]}
               </TemplateButton>
             ))}
