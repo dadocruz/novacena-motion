@@ -40,6 +40,8 @@ export type PlatformName =
   | 'Deezer'
   | 'Apple Music'
   | 'YouTube Music'
+  | 'Amazon Music'
+  | 'Tidal'
   | 'YouTube';
 
 export type FramingMode =

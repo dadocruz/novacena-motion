@@ -24,6 +24,8 @@ export const PlatformNameSchema = z.enum([
   'Deezer',
   'Apple Music',
   'YouTube Music',
+  'Amazon Music',
+  'Tidal',
   'YouTube',
 ]);
 

@@ -21,7 +21,7 @@ export const componentByTemplate = {
   spotify_print: SpotifyPrint,
 };
 
-export const allPlatforms: PlatformName[] = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'];
+export const allPlatforms: PlatformName[] = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music', 'Amazon Music', 'Tidal'];
 
 export const GLOW_PRESETS: { label: string; color: string }[] = [
   { label: 'Roxo', color: 'rgba(190, 90, 255, 0.32)' },
@@ -36,7 +36,7 @@ export const GLOW_PRESETS: { label: string; color: string }[] = [
 
 export const BG_COLORS = ['#000000', '#030205', '#0a0a14', '#1a0a2a', '#0a1a14', '#2a0a14', '#1a1a2a'];
 
-export const PLATFORMS = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music'] as const;
+export const PLATFORMS = ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music', 'Amazon Music', 'Tidal'] as const;
 
 export const COVER_MOTION_OPTIONS: { value: CoverMotionId; label: string }[] = [
   { value: 'zoom_bounce', label: 'Zoom Bounce — Intro impacto' },

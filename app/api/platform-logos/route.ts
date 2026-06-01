@@ -19,31 +19,43 @@ export const maxDuration = 60;
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_EXT = ['.png', '.svg', '.webp', '.jpg', '.jpeg'];
 const ALLOWED_TYPES = ['image/png', 'image/svg+xml', 'image/webp', 'image/jpeg'];
-const ALLOWED_PLATFORMS = new Set(['Spotify', 'Deezer', 'Apple Music', 'YouTube Music']);
+const ALLOWED_PLATFORMS = new Set(['Spotify', 'Deezer', 'Apple Music', 'YouTube Music', 'Amazon Music', 'Tidal']);
 
 const DEFAULT_PLATFORM_LOGOS: CustomPlatformLogo[] = [
   {
     platform: 'Spotify',
-    path: '/logos/spotify/logo-color.png',
-    filename: 'logo-color.png',
+    path: '/logos/platforms/round-white/SPOTIFY.png',
+    filename: 'SPOTIFY.png',
     uploadedAt: 'factory',
   },
   {
     platform: 'Deezer',
-    path: '/logos/deezer/logo-color.png',
-    filename: 'logo-color.png',
+    path: '/logos/platforms/round-white/DEEZER.png',
+    filename: 'DEEZER.png',
     uploadedAt: 'factory',
   },
   {
     platform: 'Apple Music',
-    path: '/logos/apple-music/logo-color.png',
-    filename: 'logo-color.png',
+    path: '/logos/platforms/round-white/APPLE.png',
+    filename: 'APPLE.png',
     uploadedAt: 'factory',
   },
   {
     platform: 'YouTube Music',
-    path: '/logos/youtube-music/logo-color.png',
-    filename: 'logo-color.png',
+    path: '/logos/platforms/round-white/YOUTUBE.png',
+    filename: 'YOUTUBE.png',
+    uploadedAt: 'factory',
+  },
+  {
+    platform: 'Amazon Music',
+    path: '/logos/platforms/round-white/AMAZON.png',
+    filename: 'AMAZON.png',
+    uploadedAt: 'factory',
+  },
+  {
+    platform: 'Tidal',
+    path: '/logos/platforms/round-white/TIDAL.png',
+    filename: 'TIDAL.png',
     uploadedAt: 'factory',
   },
 ];
