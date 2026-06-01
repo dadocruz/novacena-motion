@@ -85,6 +85,7 @@ export const MotionConfigSchema = z
     logosInFrame: z.number().min(0).max(360).optional(),
     platformLogoSize: z.number().min(1).max(500).optional(),
     platformLogoGap: z.number().min(0).max(500).optional(),
+    platformLogoPack: z.enum(['standard', 'round', 'rectangular']).optional(),
     platformLogoTintEnabled: z.boolean().optional(),
     platformLogoTintColor: z.string().optional(),
     platformLogoWiggle: z.number().min(0).max(10).optional(),

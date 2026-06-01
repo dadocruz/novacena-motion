@@ -44,6 +44,8 @@ export type PlatformName =
   | 'Tidal'
   | 'YouTube';
 
+export type PlatformLogoPackId = 'standard' | 'round' | 'rectangular';
+
 export type FramingMode =
   | 'cover_crop'
   | 'contain_blur'
@@ -323,6 +325,7 @@ export type MotionConfig = {
   platformLogoSize?: number;
   platformLogoGap?: number;
   platformLogoScales?: Record<string, number>;
+  platformLogoPack?: PlatformLogoPackId;
   platformLogoTintEnabled?: boolean;
   platformLogoTintColor?: string;
   /** Pulso orgânico contínuo dos logos de plataforma. */

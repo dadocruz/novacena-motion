@@ -20,6 +20,7 @@ import {
   type TextTransitionId,
   type TextTransitionTuning,
   type MotionConfig,
+  type PlatformLogoPackId,
   type TemplateProps,
 } from '../../remotion/types'
 import {
@@ -138,7 +139,6 @@ import {
   TextAreaField,
   Field,
   TemplateButton,
-  ChipButton,
   SegmentedControl,
   ToggleRow,
   FontPicker,
@@ -195,6 +195,17 @@ const DEFAULT_TEXT_ROLE_LABELS: Partial<Record<FontRole, string>> = {
   cta2: 'Chamada 2',
 };
 type EditorTextTransitionRole = 'headline' | 'date' | 'cta1' | 'cta2';
+
+const PLATFORM_LOGO_PACK_OPTIONS: {
+  id: PlatformLogoPackId;
+  label: string;
+  hint: string;
+  available: boolean;
+}[] = [
+  { id: 'standard', label: 'Logos padrão', hint: 'Aguardando pacote', available: false },
+  { id: 'round', label: 'Logos redondos', hint: 'Brancos editáveis', available: true },
+  { id: 'rectangular', label: 'Logos retangulares', hint: 'Aguardando pacote', available: false },
+];
 
 const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<FontRole, string>>>> = {
   available_now: {
@@ -452,6 +463,7 @@ export default function Home() {
   const [platformLogoSize, setPlatformLogoSize] = useState<number>(factoryMotion.platformLogoSize ?? 58);
   const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 22);
   const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
+  const [platformLogoPack, setPlatformLogoPack] = useState<PlatformLogoPackId>(factoryMotion.platformLogoPack ?? 'round');
   const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
   const [platformLogoTintColor, setPlatformLogoTintColor] = useState<string>(factoryMotion.platformLogoTintColor ?? '#ffffff');
   const platformLogoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -1213,6 +1225,7 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
@@ -1338,6 +1351,7 @@ export default function Home() {
     setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
     setPlatformLogoGap(snapshot.platformLogoGap ?? 22);
     setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
+    setPlatformLogoPack((snapshot.platformLogoPack ?? 'round') as PlatformLogoPackId);
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(snapshot.overlays ?? []));
@@ -1540,6 +1554,7 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
       platformLogoWiggle: factoryMotion.platformLogoWiggle ?? 0.065,
@@ -1614,6 +1629,7 @@ export default function Home() {
       platformLogoScales,
       platformLogoGap,
       platformLogoSize,
+      platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
@@ -2172,6 +2188,7 @@ export default function Home() {
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 22);
       setPlatformLogoScales(m.platformLogoScales ?? {});
+      setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
       setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
       setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
       setCoverMotion(normalizeCoverMotionId(m.coverMotion));
@@ -2703,6 +2720,7 @@ export default function Home() {
       cta2: (m as any).cta2InFrame,
     } : {});
     setLogosInFrame((m as any).logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
+    setPlatformLogoPack(((m as any).platformLogoPack ?? 'round') as PlatformLogoPackId);
     setCustomLogos((m as any).customLogos ?? {});
     setPlatformLogoSize((m as any).platformLogoSize ?? 58);
     setPlatformLogoGap((m as any).platformLogoGap ?? 22);
@@ -2806,6 +2824,7 @@ export default function Home() {
     if (c.platformLogoScales && typeof c.platformLogoScales === 'object') setPlatformLogoScales(c.platformLogoScales);
     if (typeof c.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(c.platformLogoTintEnabled);
     if (typeof c.platformLogoTintColor === 'string') setPlatformLogoTintColor(c.platformLogoTintColor);
+    if (typeof c.platformLogoPack === 'string') setPlatformLogoPack(c.platformLogoPack as PlatformLogoPackId);
     if (typeof c.wiggleIntensity === 'number') setWiggleIntensity(c.wiggleIntensity);
     if (typeof c.particlesEnabled === 'boolean') setParticlesEnabled(c.particlesEnabled);
     if (typeof c.finalFlash === 'boolean') setFinalFlash(c.finalFlash);
@@ -4303,6 +4322,7 @@ export default function Home() {
     if (m.platformLogoScales && typeof m.platformLogoScales === 'object') setPlatformLogoScales(m.platformLogoScales);
     if (typeof m.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(m.platformLogoTintEnabled);
     if (typeof m.platformLogoTintColor === 'string') setPlatformLogoTintColor(m.platformLogoTintColor);
+    if (typeof m.platformLogoPack === 'string') setPlatformLogoPack(m.platformLogoPack as PlatformLogoPackId);
     if (m.customLogos && typeof m.customLogos === 'object') setCustomLogos(m.customLogos);
     if (Array.isArray(m.overlays)) setOverlays(m.overlays);
 
@@ -4834,16 +4854,6 @@ return (
               )}
             </>
           )}
-        </Section>
-
-        <Section title="Plataformas">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {allPlatforms.map((p) => (
-              <ChipButton key={p} active={platformsSel.includes(p)} onClick={() => togglePlatform(p)}>
-                {p}
-              </ChipButton>
-            ))}
-          </div>
         </Section>
 
             {!SAAS_EXPORT_MODE && (
@@ -6204,53 +6214,186 @@ return (
         {/* LOGOS DAS PLATAFORMAS */}
         <Section title="Logos das plataformas" draggablePanel>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 10 }}>
-            Substitua o ícone padrão de cada plataforma pelo seu próprio PNG/SVG.
+            Escolha o pacote visual e gerencie quais plataformas aparecem no template.
           </div>
-          {allPlatforms.map((p) => {
-            const hasCustom = !!customLogos[p];
-            return (
-              <div key={p} style={platformLogoRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: 6,
-                    background: 'var(--bg-2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    overflow: 'hidden',
-                  }}>
-                    {hasCustom ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={customLogos[p]} alt={p}
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <span style={{ fontSize: 10, color: 'var(--text-3)' }}>default</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: 12, color: 'var(--text-1)' }}>{p}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <button
-                    onClick={() => platformLogoInputRefs.current[p]?.click()}
-                    style={tinyAddBtn}
-                  >
-                    {hasCustom ? 'Trocar' : 'Subir'}
-                  </button>
-                  {hasCustom && (
-                    <button onClick={() => removePlatformLogo(p)} style={tinyDelBtn}>×</button>
-                  )}
-                </div>
-                <input
-                  ref={(el) => { platformLogoInputRefs.current[p] = el; }}
-                  type="file"
-                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) uploadPlatformLogo(p, f);
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={miniLabel}>ESTILO DOS LOGOS</div>
+            {PLATFORM_LOGO_PACK_OPTIONS.map((option) => {
+              const active = platformLogoPack === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={!option.available}
+                  onClick={() => {
+                    if (option.available) setPlatformLogoPack(option.id);
                   }}
-                  style={{ display: 'none' }}
-                />
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: 8,
+                    alignItems: 'center',
+                    textAlign: 'left',
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: active ? '1px solid var(--accent)' : '1px solid var(--border-1)',
+                    background: active ? 'rgba(184, 77, 255, 0.14)' : 'var(--bg-2)',
+                    color: option.available ? 'var(--text-1)' : 'var(--text-3)',
+                    opacity: option.available ? 1 : 0.58,
+                    cursor: option.available ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  <span style={{ display: 'grid', gap: 3 }}>
+                    <strong style={{ fontSize: 12 }}>{option.label}</strong>
+                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{option.hint}</span>
+                  </span>
+                  {active && <span style={{ fontSize: 12, color: 'var(--accent)' }}>Ativo</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+            <div style={miniLabel}>PLATAFORMAS ATIVAS</div>
+            {platformsSel.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {platformsSel.map((p) => (
+                  <button
+                    key={`active-platform-${p}`}
+                    type="button"
+                    onClick={() => setPlatformsSel((current) => current.filter((item) => item !== p))}
+                    title={`Remover ${p}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      minHeight: 34,
+                      padding: '7px 9px 7px 12px',
+                      borderRadius: 999,
+                      border: '1px solid var(--border-2)',
+                      background: 'var(--bg-2)',
+                      color: 'var(--text-1)',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: 12,
+                    }}
+                  >
+                    {p}
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        display: 'inline-grid',
+                        placeItems: 'center',
+                        width: 18,
+                        height: 18,
+                        borderRadius: 999,
+                        background: 'rgba(255,255,255,0.08)',
+                        color: 'var(--danger)',
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
               </div>
-            );
-          })}
+            ) : (
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                Nenhuma plataforma ativa neste template.
+              </div>
+            )}
+          </div>
+
+          {allPlatforms.some((p) => !platformsSel.includes(p)) && (
+            <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
+              <div style={miniLabel}>ADICIONAR PLATAFORMA</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {allPlatforms
+                  .filter((p) => !platformsSel.includes(p))
+                  .map((p) => (
+                    <button
+                      key={`add-platform-${p}`}
+                      type="button"
+                      onClick={() => setPlatformsSel((current) => (current.includes(p) ? current : [...current, p]))}
+                      style={{
+                        minHeight: 32,
+                        padding: '7px 10px',
+                        borderRadius: 999,
+                        border: '1px solid var(--border-1)',
+                        background: 'transparent',
+                        color: 'var(--text-2)',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      + {p}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          <details style={{ marginTop: 14 }}>
+            <summary
+              style={{
+                cursor: 'pointer',
+                color: 'var(--text-2)',
+                fontSize: 12,
+                fontWeight: 800,
+                listStyle: 'none',
+              }}
+            >
+              Upload manual por plataforma
+            </summary>
+            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+              {platformsSel.map((p) => {
+                const hasCustom = !!customLogos[p];
+                return (
+                  <div key={p} style={platformLogoRow}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <div style={{
+                        width: 34, height: 34, borderRadius: 6,
+                        background: 'var(--bg-2)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}>
+                        {hasCustom ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={customLogos[p]}
+                            alt={p}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                          />
+                        ) : (
+                          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>logo</span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: 12, color: 'var(--text-1)' }}>{p}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => platformLogoInputRefs.current[p]?.click()}
+                      style={tinyAddBtn}
+                    >
+                      Trocar
+                    </button>
+                    <input
+                      ref={(el) => { platformLogoInputRefs.current[p] = el; }}
+                      type="file"
+                      accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadPlatformLogo(p, f);
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </details>
         
             <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
               <div style={miniLabel}>AJUSTES DOS LOGOS</div>

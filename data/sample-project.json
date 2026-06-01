@@ -237,6 +237,7 @@
         "platformLogoSize": 89,
         "platformLogoGap": 22,
         "platformLogoScales": {},
+        "platformLogoPack": "round",
         "platformLogoTintEnabled": false,
         "platformLogoTintColor": "#ffffff",
         "platformLogoWiggle": 0.065,
