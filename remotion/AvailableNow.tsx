@@ -85,13 +85,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const platformLogoWiggle = motion.platformLogoWiggle ?? 0.065;
   const platformLogoWiggleSpeed = motion.platformLogoWiggleSpeed ?? 1;
   const logoCount = Math.max(1, visiblePlatforms.length);
-  const maxLogosWidth = 640;
+  const maxLogosWidth = 920;
   const totalRequestedLogoWidth = visiblePlatforms.reduce((sum, p) => {
     const size = Math.round(platformLogoSize * (platformLogoScales[p] ?? 1));
     return sum + (motion.customLogos?.[p] ? size * 2.8 : size);
   }, 0) + Math.max(0, logoCount - 1) * platformLogoGap;
   const logosFitScale = Math.min(1, maxLogosWidth / Math.max(1, totalRequestedLogoWidth));
-  const fittedLogoGap = Math.max(8, Math.round(platformLogoGap * logosFitScale));
+  const fittedLogoGap = Math.max(0, Math.round(platformLogoGap * logosFitScale));
 
   if (motion.layoutPreset === 'novacena_presave_typographic') {
     const textShadow = '0 2px 0 rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.10)';

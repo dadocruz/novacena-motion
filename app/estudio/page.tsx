@@ -479,7 +479,7 @@ export default function Home() {
   // ─── LOGOS CUSTOMIZADOS POR PLATAFORMA ────────────────────
   const [customLogos, setCustomLogos] = useState<Record<string, string>>(factoryMotion.customLogos ?? {});
   const [platformLogoSize, setPlatformLogoSize] = useState<number>(factoryMotion.platformLogoSize ?? 58);
-  const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 22);
+  const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 18);
   const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
   const [platformLogoPack, setPlatformLogoPack] = useState<PlatformLogoPackId>(factoryMotion.platformLogoPack ?? 'round');
   const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
@@ -1381,7 +1381,7 @@ export default function Home() {
     setUseVideoAudio(snapshot.useVideoAudio ?? true);
     setCustomLogos(cloneHistoryValue(snapshot.customLogos ?? {}));
     setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
-    setPlatformLogoGap(snapshot.platformLogoGap ?? 22);
+    setPlatformLogoGap(snapshot.platformLogoGap ?? 18);
     setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
     setPlatformLogoPack((snapshot.platformLogoPack ?? 'round') as PlatformLogoPackId);
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
@@ -2247,7 +2247,7 @@ export default function Home() {
       setPhoneWiggle(m.phoneWiggle ?? 0.7);
       setPhoneDynamicIsland(m.phoneDynamicIsland ?? true);
       setPlatformLogoSize(m.platformLogoSize ?? 58);
-      setPlatformLogoGap(m.platformLogoGap ?? 22);
+      setPlatformLogoGap(m.platformLogoGap ?? 18);
       setPlatformLogoScales(m.platformLogoScales ?? {});
       setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
       setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
@@ -2784,7 +2784,7 @@ export default function Home() {
     setPlatformLogoPack(((m as any).platformLogoPack ?? 'round') as PlatformLogoPackId);
     setCustomLogos((m as any).customLogos ?? {});
     setPlatformLogoSize((m as any).platformLogoSize ?? 58);
-    setPlatformLogoGap((m as any).platformLogoGap ?? 22);
+    setPlatformLogoGap((m as any).platformLogoGap ?? 18);
     setPlatformLogoScales((m as any).platformLogoScales ?? {});
     setPlatformLogoTintEnabled((m as any).platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor((m as any).platformLogoTintColor ?? '#ffffff');
@@ -3462,8 +3462,8 @@ export default function Home() {
       const totalStackHeight = headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + maxLogoSize;
       const stackTop = stageTop + Math.max(0, (stageHeight - totalStackHeight) / 2);
       const logoTopPx = stackTop + headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + 36;
-      const logoWidthPct = clamp(((totalLogoWidth + 56) / 1080) * 100, 24, 72);
-      const logoHeightPct = clamp(((maxLogoSize + 20) / compositionHeight) * 100, 5.2, 8.5);
+      const logoWidthPct = clamp(((totalLogoWidth + 56) / 1080) * 100, 24, 90);
+      const logoHeightPct = clamp(((maxLogoSize + 20) / compositionHeight) * 100, 5.2, 14);
 
       return {
         left: pct((100 - logoWidthPct) / 2),
@@ -6336,8 +6336,8 @@ return (
             <SliderRow
               label="Tamanho geral dos logos"
               value={platformLogoSize}
-              min={16}
-              max={120}
+              min={28}
+              max={160}
               step={1}
               onChange={setPlatformLogoSize}
               format={(v) => `${Math.round(v)}px`}
@@ -6346,7 +6346,7 @@ return (
               label="Distância entre logos"
               value={platformLogoGap}
               min={0}
-              max={80}
+              max={60}
               step={1}
               onChange={setPlatformLogoGap}
               format={(v) => `${Math.round(v)}px`}
