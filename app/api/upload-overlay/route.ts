@@ -9,7 +9,8 @@ import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpe
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const MAX_SIZE = 100 * 1024 * 1024;
+const MAX_SIZE = 500 * 1024 * 1024;
+const MAX_SIZE_LABEL = '500 MB';
 const ALLOWED_BLEND_MODES = new Set(['screen', 'overlay', 'lighten', 'soft-light', 'normal']);
 
 function cleanLabel(value: string, fallback: string): string {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
       const contentLength = Number(req.headers.get('content-length') || 0);
       if (contentLength > MAX_SIZE) {
         return NextResponse.json(
-          { ok: false, error: `Arquivo muito grande (${(contentLength / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 100 MB.` },
+          { ok: false, error: `Arquivo muito grande (${(contentLength / 1024 / 1024).toFixed(1)} MB). Máximo permitido: ${MAX_SIZE_LABEL}.` },
           { status: 413 }
         );
       }
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
-        { ok: false, error: 'Arquivo muito grande (máx 100 MB).' },
+        { ok: false, error: `Arquivo muito grande (máx ${MAX_SIZE_LABEL}).` },
         { status: 413 }
       );
     }
