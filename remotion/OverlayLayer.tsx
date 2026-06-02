@@ -301,6 +301,7 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           overlay.sourceDurationSec && overlay.sourceDurationSec > 0
             ? Math.max(1, Math.round(overlay.sourceDurationSec * fps))
             : sequenceDuration;
+        const needsLoop = sourceDurationInFrames < sequenceDuration;
 
         const commonStyle: React.CSSProperties = {
           width: '100%',
@@ -319,13 +320,13 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           >
             <AbsoluteFill>
               {overlay.type === 'video' ? (
-                overlay.loopMode === 'pingpong' ? (
+                overlay.loopMode === 'pingpong' && needsLoop ? (
                   <PingPongVideo
                     src={overlay.src}
                     sourceDurationInFrames={sourceDurationInFrames}
                     style={commonStyle}
                   />
-                ) : (
+                ) : needsLoop ? (
                   <Loop durationInFrames={sourceDurationInFrames}>
                     <OffthreadVideo
                       src={overlay.src}
@@ -333,6 +334,12 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
                       style={commonStyle}
                     />
                   </Loop>
+                ) : (
+                  <OffthreadVideo
+                    src={overlay.src}
+                    muted
+                    style={commonStyle}
+                  />
                 )
               ) : overlay.layout === 'element' ? (
                 <ElementImage overlay={overlay} />

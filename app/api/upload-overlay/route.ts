@@ -20,6 +20,11 @@ const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
   : existsSync('/usr/bin/ffmpeg')
     ? '/usr/bin/ffmpeg'
     : 'ffmpeg';
+const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
+  ? '/usr/local/bin/ffprobe'
+  : existsSync('/usr/bin/ffprobe')
+    ? '/usr/bin/ffprobe'
+    : 'ffprobe';
 
 function cleanLabel(value: string, fallback: string): string {
   const clean = value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 80);
@@ -38,6 +43,26 @@ function runFfmpeg(args: string[]): Promise<void> {
     proc.on('close', (code) => {
       if (code === 0) resolve();
       else reject(new Error(stderr.trim() || `ffmpeg saiu com código ${code}`));
+    });
+  });
+}
+
+function probeDuration(filePath: string): Promise<number> {
+  return new Promise((resolve) => {
+    const proc = spawn(FFPROBE_BIN, [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath,
+    ]);
+    let stdout = '';
+    proc.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    proc.on('error', () => resolve(0));
+    proc.on('close', () => {
+      const duration = Number.parseFloat(stdout.trim());
+      resolve(Number.isFinite(duration) && duration > 0 ? duration : 0);
     });
   });
 }
@@ -66,6 +91,12 @@ async function prepareVideoOverlay(dir: string, filename: string) {
 
   await unlink(inputPath).catch(() => {});
   return outputName;
+}
+
+async function resolveVideoDuration(dir: string, filename: string, fallback: number) {
+  const probed = await probeDuration(path.join(dir, filename));
+  if (probed > 0) return probed;
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : undefined;
 }
 
 export async function GET() {
@@ -98,16 +129,17 @@ export async function POST(req: NextRequest) {
 
       const filename = safeFileName(filenameParam, extParam || '.mp4');
       const dir = path.join(PUBLIC_UPLOADS, 'overlays');
+      const durationSecRaw = Number(req.nextUrl.searchParams.get('durationSec'));
       await mkdir(dir, { recursive: true });
       await pipeline(
         Readable.fromWeb(req.body as any),
         createWriteStream(path.join(dir, filename))
       );
       const storedFilename = await prepareVideoOverlay(dir, filename);
+      const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
 
       const label = cleanLabel(req.nextUrl.searchParams.get('label') || '', path.basename(filenameParam || filename, extParam || '.mp4'));
       const blendMode = req.nextUrl.searchParams.get('blendMode') || 'screen';
-      const durationSecRaw = Number(req.nextUrl.searchParams.get('durationSec'));
       if (!ALLOWED_BLEND_MODES.has(blendMode)) {
         return NextResponse.json(
           { ok: false, error: `Blend mode inválido: ${blendMode}.` },
@@ -121,7 +153,7 @@ export async function POST(req: NextRequest) {
         path: `/api/uploads/overlays/${storedFilename}`,
         type: 'video',
         blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
-        durationSec: Number.isFinite(durationSecRaw) && durationSecRaw > 0 ? durationSecRaw : undefined,
+        durationSec: storedDurationSec,
       });
       return NextResponse.json({ ok: true, overlay });
     }
@@ -163,13 +195,14 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     await saveFile(dir, filename, buffer);
     const storedFilename = isVideo ? await prepareVideoOverlay(dir, filename) : filename;
+    const storedDurationSec = isVideo ? await resolveVideoDuration(dir, storedFilename, durationSecRaw) : durationSecRaw;
     const overlay = await addOverlay({
       label: cleanLabel(label, path.basename(file.name, ext)),
       filename: storedFilename,
       path: `/api/uploads/overlays/${storedFilename}`,
       type: isVideo ? 'video' : 'image',
       blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
-      durationSec: Number.isFinite(durationSecRaw) && durationSecRaw > 0 ? durationSecRaw : undefined,
+      durationSec: typeof storedDurationSec === 'number' && Number.isFinite(storedDurationSec) && storedDurationSec > 0 ? storedDurationSec : undefined,
     });
     return NextResponse.json({ ok: true, overlay });
   } catch (err) {
