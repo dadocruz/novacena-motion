@@ -6505,7 +6505,12 @@ return (
                   playsInline
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
-                    if (Number.isFinite(duration) && duration > 0) setBgVideoDuration(duration);
+                    if (Number.isFinite(duration) && duration > 0) {
+                      setBgVideoDuration((current) => {
+                        if (current > 0 && duration + 1 < current * 0.8) return current;
+                        return Math.max(current, duration);
+                      });
+                    }
                   }}
                   onTimeUpdate={(event) => {
                     const current = event.currentTarget.currentTime;

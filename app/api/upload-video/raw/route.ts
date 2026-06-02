@@ -186,7 +186,15 @@ export async function POST(req: NextRequest) {
       if (ok && existsSync(webPath)) {
         try {
           const webStat = await stat(webPath);
-          if (webStat.size > 0) {
+          const webProbe = await probeVideo(webPath).catch(() => null);
+          const webDuration = Number(webProbe?.durationSec || 0);
+          const expectedDuration = Number(probe.durationSec || 0);
+          const durationLooksValid =
+            expectedDuration <= 0 ||
+            Math.abs(webDuration - expectedDuration) <= 1 ||
+            webDuration >= expectedDuration * 0.95;
+
+          if (webStat.size > 0 && webProbe?.hasVideo && durationLooksValid) {
             await unlink(localPath).catch(() => {});
             localPath = webPath; // para limpeza correta em caso de erro posterior
             servedFilename = webFilename;
