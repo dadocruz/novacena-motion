@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AbsoluteFill,
   Img,
+  Loop,
   OffthreadVideo,
   Sequence,
   Freeze,
@@ -306,6 +307,10 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           overlay.loopEnabled === true &&
           overlay.loopMode === 'pingpong' &&
           sourceDurationInFrames < sequenceDuration;
+        const needsNormalLoop =
+          overlay.loopEnabled === true &&
+          overlay.loopMode === 'normal' &&
+          sourceDurationInFrames < sequenceDuration;
 
         const commonStyle: React.CSSProperties = {
           width: '100%',
@@ -330,6 +335,14 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
                     sourceDurationInFrames={sourceDurationInFrames}
                     style={commonStyle}
                   />
+                ) : needsNormalLoop ? (
+                  <Loop durationInFrames={sourceDurationInFrames}>
+                    <OffthreadVideo
+                      src={overlay.src}
+                      muted
+                      style={commonStyle}
+                    />
+                  </Loop>
                 ) : (
                   <OffthreadVideo
                     src={overlay.src}

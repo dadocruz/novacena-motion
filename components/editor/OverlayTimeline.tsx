@@ -113,33 +113,22 @@ export function OverlayTimeline({
                 <option value="normal">normal</option>
               </select>
               {ov.type === 'video' ? (
-                (() => {
-                  const loopIsOn = ov.loopEnabled === true && ov.loopMode === 'pingpong';
-                  return (
-                <button
-                  type="button"
-                  onClick={() => onUpdate(ov.id, {
-                    loopMode: loopIsOn ? 'normal' : 'pingpong',
-                    loopEnabled: !loopIsOn,
-                  })}
-                  title="Toca até o fim, volta em reverso e repete"
-                  style={{
-                    height: 26,
-                    padding: '0 8px',
-                    borderRadius: 7,
-                    border: loopIsOn ? '1px solid var(--brand)' : '1px solid var(--border-1)',
-                    background: loopIsOn ? 'var(--surface-active)' : 'var(--surface-1)',
-                    color: 'var(--text-1)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
+                <select
+                  value={ov.loopEnabled ? (ov.loopMode ?? 'normal') : 'off'}
+                  onChange={(e) => {
+                    const value = e.target.value as 'off' | 'normal' | 'pingpong';
+                    onUpdate(ov.id, {
+                      loopEnabled: value !== 'off',
+                      loopMode: value === 'off' ? 'normal' : value,
+                    });
                   }}
+                  title="Escolha sem loop para vídeos longos; use loop para overlays curtos."
+                  style={tinySelect}
                 >
-                  loop ida/volta
-                </button>
-                  );
-                })()
+                  <option value="off">sem loop</option>
+                  <option value="normal">loop normal</option>
+                  <option value="pingpong">loop ida/volta</option>
+                </select>
               ) : (
                 <select
                   value={ov.layout ?? 'element'}
