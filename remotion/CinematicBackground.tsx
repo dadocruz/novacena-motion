@@ -233,8 +233,12 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
+                // Blur capado no preview: custo de GPU cresce com o raio² e
+                // blur grande num vídeo 1080×1920 a 30fps trava o editor.
+                // O render usa o blur cheio (branch OffthreadVideo acima).
+                filter: `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`,
                 transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+                willChange: 'transform',
               }}
             />
           )}
