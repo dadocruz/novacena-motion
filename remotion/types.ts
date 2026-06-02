@@ -127,6 +127,8 @@ export type OverlayPlacement = {
   blendMode: 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal';
   /** modo de repetição do vídeo do overlay */
   loopMode?: 'normal' | 'pingpong';
+  /** loop só é aplicado quando o usuário liga explicitamente */
+  loopEnabled?: boolean;
   /** duração original do asset usado para calcular o loop ping-pong */
   sourceDurationSec?: number;
   /** imagem como elemento livre, ou mídia em tela cheia */

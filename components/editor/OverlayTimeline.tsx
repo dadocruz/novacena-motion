@@ -113,16 +113,22 @@ export function OverlayTimeline({
                 <option value="normal">normal</option>
               </select>
               {ov.type === 'video' ? (
+                (() => {
+                  const loopIsOn = ov.loopEnabled === true && ov.loopMode === 'pingpong';
+                  return (
                 <button
                   type="button"
-                  onClick={() => onUpdate(ov.id, { loopMode: ov.loopMode === 'pingpong' ? 'normal' : 'pingpong' })}
+                  onClick={() => onUpdate(ov.id, {
+                    loopMode: loopIsOn ? 'normal' : 'pingpong',
+                    loopEnabled: !loopIsOn,
+                  })}
                   title="Toca até o fim, volta em reverso e repete"
                   style={{
                     height: 26,
                     padding: '0 8px',
                     borderRadius: 7,
-                    border: ov.loopMode === 'pingpong' ? '1px solid var(--brand)' : '1px solid var(--border-1)',
-                    background: ov.loopMode === 'pingpong' ? 'var(--surface-active)' : 'var(--surface-1)',
+                    border: loopIsOn ? '1px solid var(--brand)' : '1px solid var(--border-1)',
+                    background: loopIsOn ? 'var(--surface-active)' : 'var(--surface-1)',
                     color: 'var(--text-1)',
                     fontSize: 10,
                     fontWeight: 700,
@@ -132,6 +138,8 @@ export function OverlayTimeline({
                 >
                   loop ida/volta
                 </button>
+                  );
+                })()
               ) : (
                 <select
                   value={ov.layout ?? 'element'}

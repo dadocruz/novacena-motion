@@ -102,6 +102,7 @@ export const MotionConfigSchema = z
           opacity: z.number().min(0).max(1).optional(),
           blendMode: z.enum(['normal', 'screen', 'overlay', 'lighten', 'soft-light']).optional(),
           loopMode: z.enum(['normal', 'pingpong']).optional(),
+          loopEnabled: z.boolean().optional(),
           sourceDurationSec: z.number().min(0).optional(),
           layout: z.enum(['cover', 'element']).optional(),
           x: z.number().optional(),

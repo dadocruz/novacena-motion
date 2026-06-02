@@ -2915,6 +2915,7 @@ export default function Home() {
         opacity: isElement ? 1 : 0.45,
         blendMode: isElement ? 'normal' : 'screen',
         loopMode: 'normal',
+        loopEnabled: false,
         sourceDurationSec: asset.type === 'video' ? asset.durationSec ?? durationSeconds : undefined,
         layout: isElement ? 'element' : 'cover',
         x: 0,

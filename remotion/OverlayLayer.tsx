@@ -4,7 +4,6 @@ import {
   Img,
   OffthreadVideo,
   Sequence,
-  Loop,
   Freeze,
   interpolate,
   staticFile,
@@ -22,6 +21,7 @@ export type OverlayItem = {
   opacity?: number;
   blendMode?: OverlayBlendMode;
   loopMode?: 'normal' | 'pingpong';
+  loopEnabled?: boolean;
   sourceDurationSec?: number;
   layout?: 'cover' | 'element';
   x?: number;
@@ -94,6 +94,7 @@ function normalizeOverlay(item: string | OverlayItem): OverlayItem {
     opacity: item.opacity ?? 0.45,
     blendMode: item.blendMode ?? 'screen',
     loopMode: item.loopMode ?? 'normal',
+    loopEnabled: item.loopEnabled === true,
     sourceDurationSec: item.sourceDurationSec,
     layout: item.layout ?? 'cover',
     x: item.x ?? 0,
@@ -301,7 +302,10 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           overlay.sourceDurationSec && overlay.sourceDurationSec > 0
             ? Math.max(1, Math.round(overlay.sourceDurationSec * fps))
             : sequenceDuration;
-        const needsLoop = sourceDurationInFrames < sequenceDuration;
+        const needsPingPong =
+          overlay.loopEnabled === true &&
+          overlay.loopMode === 'pingpong' &&
+          sourceDurationInFrames < sequenceDuration;
 
         const commonStyle: React.CSSProperties = {
           width: '100%',
@@ -320,20 +324,12 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           >
             <AbsoluteFill>
               {overlay.type === 'video' ? (
-                overlay.loopMode === 'pingpong' && needsLoop ? (
+                needsPingPong ? (
                   <PingPongVideo
                     src={overlay.src}
                     sourceDurationInFrames={sourceDurationInFrames}
                     style={commonStyle}
                   />
-                ) : needsLoop ? (
-                  <Loop durationInFrames={sourceDurationInFrames}>
-                    <OffthreadVideo
-                      src={overlay.src}
-                      muted
-                      style={commonStyle}
-                    />
-                  </Loop>
                 ) : (
                   <OffthreadVideo
                     src={overlay.src}
