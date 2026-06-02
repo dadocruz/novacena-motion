@@ -3993,8 +3993,6 @@ export default function Home() {
 
     selectPreviewLayer(layer);
 
-    if (layer.kind === 'logos' && layer.id !== 'milestone-logo') return;
-
     const previewRect = previewFrameRef.current?.getBoundingClientRect();
     if (!previewRect?.width || !previewRect?.height) return;
 
