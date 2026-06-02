@@ -2017,7 +2017,9 @@ export default function Home() {
     return () => {
       try { player.removeEventListener?.('seeked', onSeeked); } catch { /* noop */ }
     };
-  }, [playerRemountKey, editPreviewLoop]);
+    // isClientReady garante que o efeito re-rode quando o <Player> finalmente
+    // monta (antes disso playerRef.current é null e o listener não anexa).
+  }, [playerRemountKey, editPreviewLoop, isClientReady]);
 
   const Component = componentByTemplate[template];
 
