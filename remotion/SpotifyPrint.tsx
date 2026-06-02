@@ -199,19 +199,8 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
           pointerEvents: 'none',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            top: topSafe,
-            left: safeX,
-            right: safeX,
-            display: 'flex',
-            justifyContent: 'center',
-            zIndex: 5,
-          }}
-        >
-          <SpotifyWordmark delay={logoIn} compact={!isStory} />
-        </div>
+        {/* Logo da plataforma: inserido pelo usuário via Overlays / elementos livres.
+            Não há wordmark embutido aqui. */}
 
         {/* PREFIX — ULTRAPASSAMOS */}
         <div

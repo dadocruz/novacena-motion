@@ -11,7 +11,6 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
-import { PlatformLogo } from './PlatformLogo';
 import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
@@ -35,11 +34,9 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
   const labelIn = props.motion?.cta1InFrame ?? LABEL_IN;
-  const logoIn = props.motion?.logosInFrame ?? LOGO_IN;
   const accents = [numberIn, MID_HIT, FINAL_HIT];
 
   const previewMode = props.motion?.previewMode === true;
-  const logoAnim = previewSafeAnim(scaleInBack(frame, logoIn, 18), previewMode);
   const txPrefix = (props.motion?.transitionDate ?? 'mask_reveal') as TextTransitionId;
   const txNumber = (props.motion?.transitionHeadline ?? 'scale_pop') as TextTransitionId;
   const txLabel = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'mask_reveal') as TextTransitionId;
@@ -68,7 +65,6 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const numberText = props.metricNumber || '100.000';
   const labelText = props.metricLabel || 'OUVINTES';
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
-  const spotifyLogoSize = Math.round(props.motion?.milestoneLogoSize ?? 84);
   const labelFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -237,29 +233,8 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           />
         </div>
 
-        {/* LOGO SPOTIFY */}
-        <div
-          data-novacena-preview-layer="milestone-logo"
-          style={{
-            marginTop: 56,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: spotifyLogoSize,
-            height: spotifyLogoSize,
-            transform: `translate(${props.motion?.milestoneLogoX ?? 0}px, ${props.motion?.milestoneLogoY ?? 0}px)`,
-            willChange: 'transform',
-            ...(showAll ? {} : logoAnim),
-          }}
-        >
-          <PlatformLogo
-            name="Spotify"
-            size={spotifyLogoSize}
-            customSrc={M.customLogos?.Spotify}
-            tintEnabled={M.platformLogoTintEnabled}
-            tintColor={M.platformLogoTintColor}
-          />
-        </div>
+        {/* Logo da plataforma: inserido pelo usuário via Overlays / elementos livres
+            (controles de posição/tamanho confiáveis). Não há logo embutido aqui. */}
       </AbsoluteFill>
 <AbsoluteFill
         style={{
