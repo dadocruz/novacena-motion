@@ -4,7 +4,9 @@ import {
   Img,
   Sequence,
   Freeze,
+  Loop,
   Video,
+  getRemotionEnvironment,
   interpolate,
   staticFile,
   useCurrentFrame,
@@ -261,12 +263,24 @@ const FrameControlledVideo: React.FC<{
 }> = ({ src, sourceDurationInFrames, loopEnabled, loopMode, style }) => {
   const frame = useCurrentFrame();
   const lastFrame = Math.max(1, sourceDurationInFrames - 1);
-  let mediaFrame = Math.min(frame, lastFrame);
 
+  // PREVIEW (Player): reprodução nativa, suave. Frame-controlar via <Freeze>
+  // força um seek por frame e TRAVA o editor. Aqui o vídeo toca em tempo real;
+  // o pingpong vira loop normal só no preview (o render faz o pingpong exato).
+  if (!getRemotionEnvironment().isRendering) {
+    const nativeVideo = <Video src={src} muted style={style} />;
+    return loopEnabled ? (
+      <Loop durationInFrames={Math.max(2, sourceDurationInFrames)}>{nativeVideo}</Loop>
+    ) : (
+      nativeVideo
+    );
+  }
+
+  // RENDER: frame-exato (inclui pingpong real).
+  let mediaFrame = Math.min(frame, lastFrame);
   if (loopEnabled && loopMode === 'normal') {
     mediaFrame = frame % sourceDurationInFrames;
   }
-
   if (loopEnabled && loopMode === 'pingpong') {
     const cycleDuration = Math.max(2, lastFrame * 2);
     const cycleFrame = frame % cycleDuration;
