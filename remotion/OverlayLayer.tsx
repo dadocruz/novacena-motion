@@ -65,7 +65,7 @@ function normalizeBlendMode(mode?: OverlayBlendMode): React.CSSProperties['mixBl
 
 function normalizeRenderableSrc(src: string) {
   if (src.startsWith('/api/uploads/')) {
-    return staticFile(src.replace('/api/uploads/', 'uploads/'));
+    return src;
   }
   if (src.startsWith('/uploads/')) {
     return staticFile(src.replace(/^\/+/, ''));
