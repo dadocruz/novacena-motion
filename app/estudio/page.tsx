@@ -6449,7 +6449,7 @@ return (
                   ref={bgTrimVideoRef}
                   src={bgVideo}
                   controls
-                  preload="auto"
+                  preload="metadata"
                   playsInline
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
