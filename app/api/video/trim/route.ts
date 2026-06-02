@@ -93,6 +93,10 @@ export async function POST(req: NextRequest) {
     await run(FFMPEG_BIN, [
       '-y',
       '-ss', String(parsed.startSec),
+      '-fflags', '+genpts+discardcorrupt',
+      '-err_detect', 'ignore_err',
+      '-analyzeduration', '100M',
+      '-probesize', '100M',
       '-i', filePath,
       '-t', String(parsed.durationSec),
       '-map', '0:v:0',

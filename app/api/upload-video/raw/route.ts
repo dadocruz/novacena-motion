@@ -50,6 +50,10 @@ function remuxFaststart(input: string, output: string): Promise<boolean> {
 function runPreviewFfmpeg(input: string, output: string, includeAudio: boolean): Promise<{ ok: boolean; error: string }> {
   const args = [
       '-v', 'error',
+      '-fflags', '+genpts+discardcorrupt',
+      '-err_detect', 'ignore_err',
+      '-analyzeduration', '100M',
+      '-probesize', '100M',
       '-i', input,
       '-map', '0:v:0',
       ...(includeAudio ? ['-map', '0:a?'] : []),
@@ -221,12 +225,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'O arquivo enviado não tem vídeo.' }, { status: 400 });
     }
 
+    const previewIsRequired =
+      fileStat.size > PREVIEW_REQUIRED_SIZE ||
+      Number(probe.durationSec || 0) > MAX_BACKGROUND_CLIP_SECONDS + 0.5 ||
+      ext !== '.mp4';
+
     // Torna o vídeo seekável no navegador (faststart). Containers MP4/MOV/M4V
     // costumam vir com o índice no fim — o que faz o preview voltar pro zero.
+    // Para bruto grande/longa duração, o navegador usa o proxy leve; manter o
+    // original evita remux por stream-copy corromper bitstreams H.264 sensíveis.
     // WEBM já é streamável, então é pulado. Falha → mantém o original.
     let servedFilename = filename;
     let servedSize = fileStat.size;
-    if (['.mp4', '.mov', '.m4v'].includes(ext)) {
+    if (!previewIsRequired && ['.mp4', '.mov', '.m4v'].includes(ext)) {
       const baseName = filename.replace(/\.(mp4|mov|m4v)$/i, '');
       const webFilename = `${baseName}-web.mp4`;
       const webPath = path.join(SOURCES_DIR, webFilename);
@@ -284,11 +295,6 @@ export async function POST(req: NextRequest) {
     } else if (existsSync(previewPath)) {
       await unlink(previewPath).catch(() => {});
     }
-
-    const previewIsRequired =
-      servedSize > PREVIEW_REQUIRED_SIZE ||
-      Number(probe.durationSec || 0) > MAX_BACKGROUND_CLIP_SECONDS + 0.5 ||
-      !servedFilename.toLowerCase().endsWith('.mp4');
 
     if (previewIsRequired && previewFilename === servedFilename) {
       return NextResponse.json(
