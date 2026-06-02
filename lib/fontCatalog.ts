@@ -42,6 +42,9 @@ export const PREMIUM_FONT_CATALOG: FontDef[] = [
   { id: 'premium-casanova-scotia', label: '⭐ Casanova Scotia', family: 'Casanova Scotia', file: '/fonts/premium/casanovascotia.otf', weight: 400, category: 'display', vibe: 'premium / clássico' },
   { id: 'premium-candrika', label: '⭐ Candrika', family: 'Candrika', file: '/fonts/premium/candrika.ttf', weight: 400, category: 'display', vibe: 'elegante / texto' },
   { id: 'premium-varane', label: '⭐ Varane', family: 'Varane', file: '/fonts/premium/varane.otf', weight: 400, category: 'display', vibe: 'editorial / premium' },
+  { id: 'premium-akhand-light', label: '⭐ Akhand Light', family: 'AkhandSoft Light', file: '/fonts/premium/akhandsoft-light.otf', weight: 300, category: 'display', vibe: 'YouTube / inscreva-se / clean' },
+  { id: 'premium-akhand-bold', label: '⭐ Akhand Bold', family: 'AkhandSoft Bold', file: '/fonts/premium/akhandsoft-bold.otf', weight: 800, category: 'display', vibe: 'YouTube / título / forte' },
+  { id: 'premium-akhand-black', label: '⭐ Akhand Black', family: 'AkhandSoft Black', file: '/fonts/premium/akhandsoft-black.otf', weight: 900, category: 'display', vibe: 'YouTube / número / impacto' },
 ];
 
 export const FONT_CATALOG: FontDef[] = [

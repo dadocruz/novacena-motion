@@ -44,6 +44,9 @@ const FONT_DEFINITIONS: Array<{ family: string; file: string; format: string }> 
   { family: 'Casanova Scotia', file: 'premium/casanovascotia.otf', format: 'opentype' },
   { family: 'Candrika', file: 'premium/candrika.ttf', format: 'truetype' },
   { family: 'Varane', file: 'premium/varane.otf', format: 'opentype' },
+  { family: 'AkhandSoft Light', file: 'premium/akhandsoft-light.otf', format: 'opentype' },
+  { family: 'AkhandSoft Bold', file: 'premium/akhandsoft-bold.otf', format: 'opentype' },
+  { family: 'AkhandSoft Black', file: 'premium/akhandsoft-black.otf', format: 'opentype' },
 
   // DISPLAY
   { family: 'TuskerGrotesk Super',   file: 'TuskerGrotesk-8800Super.otf',    format: 'opentype' },
