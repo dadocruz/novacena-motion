@@ -2021,7 +2021,6 @@ export default function Home() {
   // ─── HANDLERS ────────────────────────────────────────────
   function setPlatformScale(platform: string, value: number) {
     setPlatformLogoScales((prev) => ({ ...prev, [platform]: value }));
-    setPreviewNonce((n) => n + 1);
   }
 
   function clearManualPlatformLogos(platforms: PlatformName[] = platformsSel) {
