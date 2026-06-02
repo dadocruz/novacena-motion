@@ -787,6 +787,7 @@ export default function Home() {
   const bgImageInputRef = useRef<HTMLInputElement | null>(null);
   const bgTrimVideoRef = useRef<HTMLVideoElement | null>(null);
   const bgTrimSelectionEndRef = useRef<number | null>(null);
+  const bgTrimPreviewCursorRef = useRef(0);
   const photoMultiRef = useRef<HTMLInputElement | null>(null);
   const fontInputRef = useRef<HTMLInputElement | null>(null);
   const overlayInputRef = useRef<HTMLInputElement | null>(null);
@@ -2021,6 +2022,7 @@ export default function Home() {
 
   function setBgVideoStartAndPreview(value: number, shouldSeek = true) {
     const next = clampBgVideoStart(value);
+    bgTrimPreviewCursorRef.current = next;
     setBgVideoStartSec(next);
     setBgTrimPreviewTime(next);
     setBgTrimTimecodeInput(formatTimecode(next));
@@ -2033,6 +2035,7 @@ export default function Home() {
     const max = Math.max(0, bgVideoDuration || 0);
     const next = Math.max(0, Math.min(max, Number.isFinite(value) ? value : 0));
     bgTrimSelectionEndRef.current = null;
+    bgTrimPreviewCursorRef.current = next;
     setBgTrimPreviewTime(next);
     if (bgTrimVideoRef.current) {
       bgTrimVideoRef.current.currentTime = next;
@@ -2052,9 +2055,10 @@ export default function Home() {
   function playBgTrimSelection() {
     const video = bgTrimVideoRef.current;
     if (!video) return;
-    const current = Number.isFinite(video.currentTime) ? video.currentTime : bgTrimPreviewTime;
+    const current = Number.isFinite(video.currentTime) ? video.currentTime : bgTrimPreviewCursorRef.current;
     const start = Math.max(0, Math.min(bgVideoDuration || current, current));
     bgTrimSelectionEndRef.current = Math.min(bgVideoDuration || start + bgClipDuration, start + bgClipDuration);
+    bgTrimPreviewCursorRef.current = start;
     video.currentTime = start;
     setBgTrimPreviewTime(start);
     video.play().catch(() => {});
@@ -6450,13 +6454,14 @@ return (
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
                     if (Number.isFinite(duration) && duration > 0) setBgVideoDuration(duration);
-                    const targetTime = bgTrimPreviewTime > 0 ? bgTrimPreviewTime : bgVideoStartSec;
+                    const targetTime = bgTrimPreviewCursorRef.current > 0 ? bgTrimPreviewCursorRef.current : bgVideoStartSec;
                     if (targetTime > 0 && event.currentTarget.currentTime < 0.1) {
                       event.currentTarget.currentTime = Math.min(targetTime, duration || targetTime);
                     }
                   }}
                   onTimeUpdate={(event) => {
                     const current = event.currentTarget.currentTime;
+                    bgTrimPreviewCursorRef.current = current;
                     setBgTrimPreviewTime(current);
                     const selectionEnd = bgTrimSelectionEndRef.current;
                     if (selectionEnd !== null && current >= selectionEnd) {
@@ -6466,13 +6471,39 @@ return (
                   }}
                   onPlay={() => {
                     bgTrimSelectionEndRef.current = null;
-                    setBgTrimPreviewTime(bgTrimVideoRef.current?.currentTime ?? bgTrimPreviewTime);
+                    const video = bgTrimVideoRef.current;
+                    if (!video) return;
+                    const targetTime = bgTrimPreviewCursorRef.current;
+                    if (targetTime > 0.1 && video.currentTime < 0.1) {
+                      video.currentTime = Math.min(targetTime, bgVideoDuration || targetTime);
+                      setBgTrimPreviewTime(video.currentTime);
+                      requestAnimationFrame(() => {
+                        if (video.currentTime < 0.1) {
+                          video.currentTime = Math.min(targetTime, bgVideoDuration || targetTime);
+                        }
+                      });
+                      return;
+                    }
+                    bgTrimPreviewCursorRef.current = video.currentTime;
+                    setBgTrimPreviewTime(video.currentTime);
                   }}
                   onPause={() => {
                     bgTrimSelectionEndRef.current = null;
                   }}
                   onSeeking={() => {
                     bgTrimSelectionEndRef.current = null;
+                    const current = bgTrimVideoRef.current?.currentTime;
+                    if (Number.isFinite(current)) {
+                      bgTrimPreviewCursorRef.current = current as number;
+                      setBgTrimPreviewTime(current as number);
+                    }
+                  }}
+                  onSeeked={() => {
+                    const current = bgTrimVideoRef.current?.currentTime;
+                    if (Number.isFinite(current)) {
+                      bgTrimPreviewCursorRef.current = current as number;
+                      setBgTrimPreviewTime(current as number);
+                    }
                   }}
                   style={{
                     width: '100%',
