@@ -2052,8 +2052,11 @@ export default function Home() {
   function playBgTrimSelection() {
     const video = bgTrimVideoRef.current;
     if (!video) return;
-    bgTrimSelectionEndRef.current = bgVideoStartSec + bgClipDuration;
-    video.currentTime = bgVideoStartSec;
+    const current = Number.isFinite(video.currentTime) ? video.currentTime : bgTrimPreviewTime;
+    const start = Math.max(0, Math.min(bgVideoDuration || current, current));
+    bgTrimSelectionEndRef.current = Math.min(bgVideoDuration || start + bgClipDuration, start + bgClipDuration);
+    video.currentTime = start;
+    setBgTrimPreviewTime(start);
     video.play().catch(() => {});
   }
 
@@ -2762,12 +2765,26 @@ export default function Home() {
     const label = prompt('Nome do overlay (ex: Film Burn 01):', file.name);
     if (!label) return;
     const durationSec = await readVideoDuration(file);
-    const formData = new FormData();
-    formData.append('overlay', file);
-    formData.append('label', label);
-    formData.append('blendMode', 'screen');
-    if (durationSec > 0) formData.append('durationSec', String(durationSec));
-    const r = await fetch('/api/upload-overlay', { method: 'POST', body: formData });
+    const isVideoOverlay = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+    const r = isVideoOverlay
+      ? await fetch(`/api/upload-overlay?${new URLSearchParams({
+          filename: file.name,
+          label,
+          blendMode: 'screen',
+          ...(durationSec > 0 ? { durationSec: String(durationSec) } : {}),
+        }).toString()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        })
+      : await (async () => {
+          const formData = new FormData();
+          formData.append('overlay', file);
+          formData.append('label', label);
+          formData.append('blendMode', 'screen');
+          if (durationSec > 0) formData.append('durationSec', String(durationSec));
+          return fetch('/api/upload-overlay', { method: 'POST', body: formData });
+        })();
     const d = await r.json();
     if (d.ok) {
       setOverlayAssets((o) => [d.overlay, ...o]);
@@ -6433,7 +6450,10 @@ return (
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
                     if (Number.isFinite(duration) && duration > 0) setBgVideoDuration(duration);
-                    event.currentTarget.currentTime = bgVideoStartSec;
+                    const targetTime = bgTrimPreviewTime > 0 ? bgTrimPreviewTime : bgVideoStartSec;
+                    if (targetTime > 0 && event.currentTarget.currentTime < 0.1) {
+                      event.currentTarget.currentTime = Math.min(targetTime, duration || targetTime);
+                    }
                   }}
                   onTimeUpdate={(event) => {
                     const current = event.currentTarget.currentTime;
@@ -6445,6 +6465,7 @@ return (
                     }
                   }}
                   onPlay={() => {
+                    bgTrimSelectionEndRef.current = null;
                     setBgTrimPreviewTime(bgTrimVideoRef.current?.currentTime ?? bgTrimPreviewTime);
                   }}
                   onPause={() => {
@@ -6487,6 +6508,10 @@ return (
                     max={Math.max(0.1, bgVideoDuration)}
                     step={0.05}
                     value={Math.min(bgTrimPreviewTime, Math.max(0, bgVideoDuration || 0))}
+                    onPointerDown={() => {
+                      bgTrimSelectionEndRef.current = null;
+                      bgTrimVideoRef.current?.pause();
+                    }}
                     onChange={(event) => seekBgTrimPreview(parseFloat(event.target.value))}
                     style={{ width: '100%', accentColor: '#f97316' }}
                   />
@@ -6543,7 +6568,7 @@ return (
                       onClick={() => delta === 0 ? playBgTrimSelection() : nudgeBgVideoStart(delta)}
                       style={smallBtn}
                     >
-                      {delta === 0 ? 'Play trecho' : delta > 0 ? `+${delta}s` : `${delta}s`}
+                      {delta === 0 ? 'Play daqui' : delta > 0 ? `+${delta}s` : `${delta}s`}
                     </button>
                   ))}
                 </div>

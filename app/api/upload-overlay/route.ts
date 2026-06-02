@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
+import { createWriteStream } from 'fs';
 import { addOverlay, deleteOverlay, listOverlays } from '../../../lib/storage';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const MAX_SIZE = 100 * 1024 * 1024;
 const ALLOWED_BLEND_MODES = new Set(['screen', 'overlay', 'lighten', 'soft-light', 'normal']);
@@ -21,6 +24,56 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const contentType = (req.headers.get('content-type') || '').split(';')[0].toLowerCase();
+    const filenameParam = req.nextUrl.searchParams.get('filename') || '';
+    const extParam = path.extname(filenameParam).toLowerCase();
+
+    if (req.body && contentType && !contentType.includes('multipart/form-data')) {
+      const isVideo = ['.mp4', '.mov', '.webm', '.m4v'].includes(extParam);
+      if (!isVideo) {
+        return NextResponse.json(
+          { ok: false, error: 'Upload direto só é aceito para vídeos. Use PNG/JPG/WEBP/SVG como elemento.' },
+          { status: 400 }
+        );
+      }
+
+      const contentLength = Number(req.headers.get('content-length') || 0);
+      if (contentLength > MAX_SIZE) {
+        return NextResponse.json(
+          { ok: false, error: `Arquivo muito grande (${(contentLength / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 100 MB.` },
+          { status: 413 }
+        );
+      }
+
+      const filename = safeFileName(filenameParam, extParam || '.mp4');
+      const dir = path.join(PUBLIC_UPLOADS, 'overlays');
+      await import('fs/promises').then(({ mkdir }) => mkdir(dir, { recursive: true }));
+      await pipeline(
+        Readable.fromWeb(req.body as any),
+        createWriteStream(path.join(dir, filename))
+      );
+
+      const label = cleanLabel(req.nextUrl.searchParams.get('label') || '', path.basename(filenameParam || filename, extParam || '.mp4'));
+      const blendMode = req.nextUrl.searchParams.get('blendMode') || 'screen';
+      const durationSecRaw = Number(req.nextUrl.searchParams.get('durationSec'));
+      if (!ALLOWED_BLEND_MODES.has(blendMode)) {
+        return NextResponse.json(
+          { ok: false, error: `Blend mode inválido: ${blendMode}.` },
+          { status: 400 }
+        );
+      }
+
+      const overlay = await addOverlay({
+        label,
+        filename,
+        path: `/api/uploads/overlays/${filename}`,
+        type: 'video',
+        blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
+        durationSec: Number.isFinite(durationSecRaw) && durationSecRaw > 0 ? durationSecRaw : undefined,
+      });
+      return NextResponse.json({ ok: true, overlay });
+    }
+
     const form = await req.formData();
     const file = form.get('overlay');
     const label = (form.get('label') as string) || '';
