@@ -1038,8 +1038,13 @@ export default function FontsPanel({
                 onClick={() =>
                   patchStroke(
                     mode === 'none'
-                      ? { mode, width: 0 }
-                      : { mode, width: Math.max(strokeWidth, 1.5) }
+                      ? { mode, width: 0, opacity: 0, fillOpacity: 1 }
+                      : {
+                          mode,
+                          width: Math.max(strokeWidth, 1.5),
+                          opacity: currentStroke.mode === 'none' ? Math.max(strokeOpacity, 0.55) : strokeOpacity,
+                          fillOpacity: currentStroke.mode === 'none' ? 1 : strokeFillOpacity,
+                        }
                   )
                 }
                 style={seg(currentStroke.mode === mode)}

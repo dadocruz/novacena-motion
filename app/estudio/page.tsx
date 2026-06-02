@@ -1580,7 +1580,6 @@ export default function Home() {
     setHeadlineLH(snapshot.headlineLH ?? 1.1);
     setHeadlineX(snapshot.headlineX ?? 0);
     setHeadlineY(snapshot.headlineY ?? 0);
-    setPreviewNonce((n) => n + 1);
   }
 
   function undoEditorAction() {
