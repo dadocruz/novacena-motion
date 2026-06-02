@@ -142,7 +142,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
 
           {/* LOGOS */}
           {visiblePlatforms.length > 0 ? (
-            <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto', transform: `translate(${motion.platformLogoX ?? 0}px, ${motion.platformLogoY ?? 0}px)`, willChange: 'transform' }}>
+            <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo
                   key={p}

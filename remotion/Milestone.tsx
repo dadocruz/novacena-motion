@@ -65,7 +65,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const numberText = props.metricNumber || '100.000';
   const labelText = props.metricLabel || 'OUVINTES';
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
-  const spotifyLogoSize = Math.round((props.motion?.platformLogoSize ?? 84) * (props.motion?.platformLogoScales?.Spotify ?? 1));
+  const spotifyLogoSize = Math.round(props.motion?.milestoneLogoSize ?? 84);
   const labelFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -244,7 +244,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             justifyContent: 'center',
             width: spotifyLogoSize,
             height: spotifyLogoSize,
-            transform: `translate(${props.motion?.platformLogoX ?? 0}px, ${props.motion?.platformLogoY ?? 0}px)`,
+            transform: `translate(${props.motion?.milestoneLogoX ?? 0}px, ${props.motion?.milestoneLogoY ?? 0}px)`,
             willChange: 'transform',
             ...(showAll ? {} : logoAnim),
           }}

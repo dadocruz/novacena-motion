@@ -327,6 +327,10 @@ export type MotionConfig = {
   platformLogoScales?: Record<string, number>;
   platformLogoX?: number;
   platformLogoY?: number;
+  /** Logo fixo do template 100K / Milestone. Separado dos logos de plataformas. */
+  milestoneLogoSize?: number;
+  milestoneLogoX?: number;
+  milestoneLogoY?: number;
   platformLogoPack?: PlatformLogoPackId;
   platformLogoTintEnabled?: boolean;
   platformLogoTintColor?: string;

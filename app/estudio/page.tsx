@@ -483,6 +483,9 @@ export default function Home() {
   const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
   const [platformLogoX, setPlatformLogoX] = useState<number>(factoryMotion.platformLogoX ?? 0);
   const [platformLogoY, setPlatformLogoY] = useState<number>(factoryMotion.platformLogoY ?? 0);
+  const [milestoneLogoSize, setMilestoneLogoSize] = useState<number>(factoryMotion.milestoneLogoSize ?? 84);
+  const [milestoneLogoX, setMilestoneLogoX] = useState<number>(factoryMotion.milestoneLogoX ?? 0);
+  const [milestoneLogoY, setMilestoneLogoY] = useState<number>(factoryMotion.milestoneLogoY ?? 0);
   const [platformLogoPack, setPlatformLogoPack] = useState<PlatformLogoPackId>(factoryMotion.platformLogoPack ?? 'round');
   const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
   const [platformLogoTintColor, setPlatformLogoTintColor] = useState<string>(factoryMotion.platformLogoTintColor ?? '#ffffff');
@@ -1301,6 +1304,9 @@ export default function Home() {
     setPlatformLogoScales(m.platformLogoScales ?? {});
     setPlatformLogoX(m.platformLogoX ?? 0);
     setPlatformLogoY(m.platformLogoY ?? 0);
+    setMilestoneLogoSize(m.milestoneLogoSize ?? 84);
+    setMilestoneLogoX(m.milestoneLogoX ?? 0);
+    setMilestoneLogoY(m.milestoneLogoY ?? 0);
     setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
@@ -1401,6 +1407,9 @@ export default function Home() {
       platformLogoScales,
       platformLogoX,
       platformLogoY,
+      milestoneLogoSize,
+      milestoneLogoX,
+      milestoneLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -1529,6 +1538,9 @@ export default function Home() {
     setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
     setPlatformLogoX(snapshot.platformLogoX ?? 0);
     setPlatformLogoY(snapshot.platformLogoY ?? 0);
+    setMilestoneLogoSize(snapshot.milestoneLogoSize ?? 84);
+    setMilestoneLogoX(snapshot.milestoneLogoX ?? 0);
+    setMilestoneLogoY(snapshot.milestoneLogoY ?? 0);
     setPlatformLogoPack((snapshot.platformLogoPack ?? 'round') as PlatformLogoPackId);
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
@@ -1734,6 +1746,9 @@ export default function Home() {
       platformLogoScales,
       platformLogoX,
       platformLogoY,
+      milestoneLogoSize,
+      milestoneLogoX,
+      milestoneLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -1811,6 +1826,9 @@ export default function Home() {
       platformLogoSize,
       platformLogoX,
       platformLogoY,
+      milestoneLogoSize,
+      milestoneLogoX,
+      milestoneLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -2400,6 +2418,9 @@ export default function Home() {
       setPlatformLogoScales(m.platformLogoScales ?? {});
       setPlatformLogoX(m.platformLogoX ?? 0);
       setPlatformLogoY(m.platformLogoY ?? 0);
+      setMilestoneLogoSize(m.milestoneLogoSize ?? 84);
+      setMilestoneLogoX(m.milestoneLogoX ?? 0);
+      setMilestoneLogoY(m.milestoneLogoY ?? 0);
       setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
       setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
       setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
@@ -2939,6 +2960,9 @@ export default function Home() {
     setPlatformLogoScales((m as any).platformLogoScales ?? {});
     setPlatformLogoX((m as any).platformLogoX ?? 0);
     setPlatformLogoY((m as any).platformLogoY ?? 0);
+    setMilestoneLogoSize((m as any).milestoneLogoSize ?? 84);
+    setMilestoneLogoX((m as any).milestoneLogoX ?? 0);
+    setMilestoneLogoY((m as any).milestoneLogoY ?? 0);
     setPlatformLogoTintEnabled((m as any).platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor((m as any).platformLogoTintColor ?? '#ffffff');
     setDurationSeconds((factoryAvailableNow.durationSeconds ?? (m as any).durationSeconds) ?? 8);
@@ -3038,6 +3062,9 @@ export default function Home() {
     if (c.platformLogoScales && typeof c.platformLogoScales === 'object') setPlatformLogoScales(c.platformLogoScales);
     if (typeof c.platformLogoX === 'number') setPlatformLogoX(c.platformLogoX);
     if (typeof c.platformLogoY === 'number') setPlatformLogoY(c.platformLogoY);
+    if (typeof c.milestoneLogoSize === 'number') setMilestoneLogoSize(c.milestoneLogoSize);
+    if (typeof c.milestoneLogoX === 'number') setMilestoneLogoX(c.milestoneLogoX);
+    if (typeof c.milestoneLogoY === 'number') setMilestoneLogoY(c.milestoneLogoY);
     if (typeof c.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(c.platformLogoTintEnabled);
     if (typeof c.platformLogoTintColor === 'string') setPlatformLogoTintColor(c.platformLogoTintColor);
     if (typeof c.platformLogoPack === 'string') setPlatformLogoPack(c.platformLogoPack as PlatformLogoPackId);
@@ -3768,12 +3795,14 @@ export default function Home() {
     if (template === 'milestone') {
       const coverPct = clamp((Math.min(coverSize, 460) / 1080) * 100, 22, 64);
       const coverHeightPct = clamp((Math.min(coverSize, 460) / compositionHeight) * 100, 14, 38);
+      const milestoneLogoPct = clamp((milestoneLogoSize / 1080) * 100, 4, 22);
+      const milestoneLogoHeightPct = clamp((milestoneLogoSize / compositionHeight) * 100, 3, 16);
       return [
         { id: 'milestone-date', kind: 'text', role: 'date', label: 'Texto acima', rect: measuredRect('milestone-date', roleRect(12, 12, 76, 8, 'date')) },
         { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: measuredRect('milestone-cover', mediaRect(50, 37, coverPct, coverHeightPct, coverX, coverY)) },
         { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: measuredRect('milestone-number', roleRect(6, 52, 88, 16, 'headline')) },
         { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: measuredRect('milestone-label', roleRect(14, 68, 72, 9, 'cta1')) },
-        { id: 'milestone-logo', kind: 'logos', label: 'Logo Spotify', rect: measuredRect('milestone-logo', mediaRect(50, 74, clamp((platformLogoSize / 1080) * 100, 4, 22), clamp((platformLogoSize / compositionHeight) * 100, 3, 16), platformLogoX, platformLogoY)) },
+        { id: 'milestone-logo', kind: 'logos', label: 'Logo Spotify', rect: measuredRect('milestone-logo', mediaRect(50, 74, milestoneLogoPct, milestoneLogoHeightPct, milestoneLogoX, milestoneLogoY)) },
         ...elementHotspots,
       ];
     }
@@ -3824,7 +3853,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
@@ -3872,6 +3901,9 @@ export default function Home() {
     }
 
     if (layer.kind === 'logos') {
+      if (layer.id === 'milestone-logo') {
+        return { x: milestoneLogoX, y: milestoneLogoY };
+      }
       return { x: platformLogoX, y: platformLogoY };
     }
 
@@ -3903,6 +3935,11 @@ export default function Home() {
     }
 
     if (layer.kind === 'logos') {
+      if (layer.id === 'milestone-logo') {
+        setMilestoneLogoX(x);
+        setMilestoneLogoY(y);
+        return;
+      }
       setPlatformLogoX(x);
       setPlatformLogoY(y);
       return;
@@ -3923,6 +3960,9 @@ export default function Home() {
     }
 
     if (layer.kind === 'logos') {
+      if (layer.id === 'milestone-logo') {
+        return milestoneLogoSize / 84;
+      }
       return platformLogoSize / 89;
     }
 
@@ -3936,6 +3976,10 @@ export default function Home() {
     }
 
     if (layer.kind === 'logos') {
+      if (layer.id === 'milestone-logo') {
+        setMilestoneLogoSize(Math.max(24, Math.min(240, Math.round(scale * 84))));
+        return;
+      }
       setPlatformLogoSize(Math.max(24, Math.min(240, Math.round(scale * 89))));
       return;
     }
@@ -3948,6 +3992,8 @@ export default function Home() {
     if (event.button !== 0) return;
 
     selectPreviewLayer(layer);
+
+    if (layer.kind === 'logos' && layer.id !== 'milestone-logo') return;
 
     const previewRect = previewFrameRef.current?.getBoundingClientRect();
     if (!previewRect?.width || !previewRect?.height) return;
@@ -4666,6 +4712,9 @@ export default function Home() {
     if (m.platformLogoScales && typeof m.platformLogoScales === 'object') setPlatformLogoScales(m.platformLogoScales);
     if (typeof m.platformLogoX === 'number') setPlatformLogoX(m.platformLogoX);
     if (typeof m.platformLogoY === 'number') setPlatformLogoY(m.platformLogoY);
+    if (typeof m.milestoneLogoSize === 'number') setMilestoneLogoSize(m.milestoneLogoSize);
+    if (typeof m.milestoneLogoX === 'number') setMilestoneLogoX(m.milestoneLogoX);
+    if (typeof m.milestoneLogoY === 'number') setMilestoneLogoY(m.milestoneLogoY);
     if (typeof m.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(m.platformLogoTintEnabled);
     if (typeof m.platformLogoTintColor === 'string') setPlatformLogoTintColor(m.platformLogoTintColor);
     if (typeof m.platformLogoPack === 'string') setPlatformLogoPack(m.platformLogoPack as PlatformLogoPackId);
@@ -5563,6 +5612,12 @@ return (
                   (layer.kind === 'element' && layer.overlayId === selectedOverlayId);
                 const dragging = previewDraggingLayerId === layer.id;
                 const accent = previewLayerAccent(layer.kind);
+                const draggableLayer =
+                  layer.kind === 'element' ||
+                  layer.kind === 'text' ||
+                  layer.kind === 'cover' ||
+                  layer.kind === 'phone' ||
+                  layer.id === 'milestone-logo';
 
                 return (
                   <button
@@ -5570,7 +5625,7 @@ return (
                     type="button"
                     data-preview-layer-hit="true"
                     aria-label={`Selecionar ${previewLayerKindLabel(layer)}`}
-                    title={layer.kind === 'element' || layer.kind === 'logos' ? `${previewLayerKindLabel(layer)} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${previewLayerKindLabel(layer)}`}
+                    title={draggableLayer ? `${previewLayerKindLabel(layer)} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${previewLayerKindLabel(layer)}`}
                     onPointerDown={(event) => beginPreviewLayerDrag(event, layer)}
                     onPointerMove={(event) => movePreviewLayer(event, layer)}
                     onPointerUp={endPreviewLayerDrag}
@@ -5602,7 +5657,7 @@ return (
                         : selected
                           ? `0 0 0 1px rgba(0,0,0,0.42), 0 0 24px ${accent}40`
                           : 'none',
-                      cursor: dragging ? 'grabbing' : 'grab',
+                      cursor: draggableLayer ? (dragging ? 'grabbing' : 'grab') : 'pointer',
                       outline: 'none',
                       touchAction: 'none',
                       ...layer.rect,
@@ -6615,43 +6670,48 @@ return (
           </div>
 
           <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
-            <div style={miniLabel}>CONTROLE DO CONJUNTO</div>
+            <div style={miniLabel}>{template === 'milestone' ? 'CONTROLE DO LOGO SPOTIFY' : 'CONTROLE DO CONJUNTO'}</div>
             <SliderRow
-              label="Tamanho geral dos logos"
-              value={platformLogoSize}
+              label={template === 'milestone' ? 'Tamanho do logo Spotify' : 'Tamanho geral dos logos'}
+              value={template === 'milestone' ? milestoneLogoSize : platformLogoSize}
               min={28}
-              max={160}
+              max={template === 'milestone' ? 240 : 160}
               step={1}
-              onChange={setPlatformLogoSize}
+              onChange={template === 'milestone' ? setMilestoneLogoSize : setPlatformLogoSize}
               format={(v) => `${Math.round(v)}px`}
             />
-            <SliderRow
-              label="Distância entre logos"
-              value={platformLogoGap}
-              min={0}
-              max={180}
-              step={1}
-              onChange={setPlatformLogoGap}
-              format={(v) => `${Math.round(v)}px`}
-            />
-            <SliderRow
-              label="Posição X dos logos"
-              value={platformLogoX}
-              min={-520}
-              max={520}
-              step={1}
-              onChange={setPlatformLogoX}
-              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
-            />
-            <SliderRow
-              label="Posição Y dos logos"
-              value={platformLogoY}
-              min={-920}
-              max={920}
-              step={1}
-              onChange={setPlatformLogoY}
-              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
-            />
+            {template === 'milestone' ? (
+              <>
+                <SliderRow
+                  label="Posição X do logo Spotify"
+                  value={milestoneLogoX}
+                  min={-520}
+                  max={520}
+                  step={1}
+                  onChange={setMilestoneLogoX}
+                  format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
+                />
+                <SliderRow
+                  label="Posição Y do logo Spotify"
+                  value={milestoneLogoY}
+                  min={-920}
+                  max={920}
+                  step={1}
+                  onChange={setMilestoneLogoY}
+                  format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
+                />
+              </>
+            ) : (
+              <SliderRow
+                label="Distância entre logos"
+                value={platformLogoGap}
+                min={0}
+                max={180}
+                step={1}
+                onChange={setPlatformLogoGap}
+                format={(v) => `${Math.round(v)}px`}
+              />
+            )}
           </div>
 
           <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
