@@ -2582,7 +2582,8 @@ export default function Home() {
           return;
         }
 
-        reject(new Error(data?.error || `Upload falhou (${xhr.status}).`));
+        const detail = data?.detail ? ` (${String(data.detail).slice(0, 180)})` : '';
+        reject(new Error(data?.error ? `${data.error}${detail}` : `Upload falhou (${xhr.status}).`));
       };
 
       xhr.onerror = () => reject(new Error('Falha de rede durante o upload.'));
@@ -2613,7 +2614,7 @@ export default function Home() {
       const d = await uploadRawVideoWithProgress(file);
 
       if (!d.ok) {
-        setVideoUploadMsg(`Erro: ${d.error}`);
+        setVideoUploadMsg(`Erro: ${d.error}${d.detail ? ` (${String(d.detail).slice(0, 180)})` : ''}`);
         return;
       }
 
@@ -2648,7 +2649,7 @@ export default function Home() {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha desconhecida';
-      setVideoUploadMsg(`Erro: ${message}`);
+      setVideoUploadMsg(`Erro no upload/processamento: ${message}`);
     } finally {
       setUploadingVideo(false);
       setVideoUploadProgress(null);

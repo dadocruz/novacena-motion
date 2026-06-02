@@ -47,25 +47,42 @@ function remuxFaststart(input: string, output: string): Promise<boolean> {
   });
 }
 
-function createPreviewProxy(input: string, output: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const proc = spawn(FFMPEG_BIN, [
+function runPreviewFfmpeg(input: string, output: string, includeAudio: boolean): Promise<{ ok: boolean; error: string }> {
+  const args = [
       '-v', 'error',
       '-i', input,
       '-map', '0:v:0',
-      '-map', '0:a?',
-      '-vf', 'scale=540:-2,fps=24,format=yuv420p',
+      ...(includeAudio ? ['-map', '0:a?'] : []),
+      '-vf', 'scale=360:-2,fps=20,format=yuv420p',
       '-c:v', 'libx264',
       '-preset', 'ultrafast',
       '-crf', '32',
-      '-c:a', 'aac',
-      '-b:a', '96k',
+      ...(includeAudio ? ['-c:a', 'aac', '-b:a', '96k'] : ['-an']),
       '-movflags', '+faststart',
       '-y', output,
-    ]);
-    proc.on('close', (code) => resolve(code === 0));
-    proc.on('error', () => resolve(false));
+    ];
+
+  return new Promise((resolve) => {
+    const proc = spawn(FFMPEG_BIN, args);
+    let stderr = '';
+    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    proc.on('close', (code) => resolve({ ok: code === 0, error: stderr.trim() }));
+    proc.on('error', (error) => resolve({ ok: false, error: error.message }));
   });
+}
+
+async function createPreviewProxy(input: string, output: string) {
+  let result = await runPreviewFfmpeg(input, output, true);
+  if (result.ok) return { ...result, mode: 'audio' as const };
+
+  await unlink(output).catch(() => {});
+  const audioError = result.error;
+  result = await runPreviewFfmpeg(input, output, false);
+  return {
+    ...result,
+    mode: 'silent' as const,
+    error: result.error || audioError,
+  };
 }
 
 function durationLooksValid(actualDuration: number, expectedDuration: number) {
@@ -242,9 +259,13 @@ export async function POST(req: NextRequest) {
     const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
     const previewCandidate = `${previewBaseName}-preview.mp4`;
     const previewPath = path.join(SOURCES_DIR, previewCandidate);
-    const previewOk = await createPreviewProxy(localPath, previewPath).catch(() => false);
+    const previewResult = await createPreviewProxy(localPath, previewPath).catch((error) => ({
+      ok: false,
+      mode: 'failed' as const,
+      error: error instanceof Error ? error.message : 'falha desconhecida ao criar preview',
+    }));
 
-    if (previewOk && existsSync(previewPath)) {
+    if (previewResult.ok && existsSync(previewPath)) {
       try {
         const previewStat = await stat(previewPath);
         const previewProbe = await probeVideo(previewPath).catch(() => null);
@@ -270,9 +291,16 @@ export async function POST(req: NextRequest) {
       !servedFilename.toLowerCase().endsWith('.mp4');
 
     if (previewIsRequired && previewFilename === servedFilename) {
-      await unlink(localPath).catch(() => {});
       return NextResponse.json(
-        { ok: false, error: 'O bruto foi recebido, mas nao consegui preparar um preview leve para navegar no video. Tente outro arquivo ou reexporte em MP4/H.264.' },
+        {
+          ok: false,
+          error: 'O bruto foi recebido, mas nao consegui preparar um preview leve para navegar no video. Tente outro arquivo ou reexporte em MP4/H.264.',
+          detail: previewResult.error || null,
+          sourcePath: publicPath,
+          filename: servedFilename,
+          size: servedSize,
+          ...probe,
+        },
         { status: 500 }
       );
     }
@@ -289,6 +317,7 @@ export async function POST(req: NextRequest) {
       previewSize,
       type: contentType,
       previewType: previewFilename.endsWith('.mp4') ? 'video/mp4' : contentType,
+      previewMode: previewFilename === servedFilename ? 'source' : previewResult.mode,
       ...probe,
     });
   } catch (error) {
