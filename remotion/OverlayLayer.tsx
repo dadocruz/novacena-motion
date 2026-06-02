@@ -3,9 +3,9 @@ import {
   AbsoluteFill,
   Img,
   Loop,
-  OffthreadVideo,
   Sequence,
   Freeze,
+  Video,
   interpolate,
   staticFile,
   useCurrentFrame,
@@ -266,7 +266,7 @@ const PingPongVideo: React.FC<{
 
   return (
     <Freeze frame={mediaFrame}>
-      <OffthreadVideo
+      <Video
         src={src}
         muted
         style={style}
@@ -337,14 +337,14 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
                   />
                 ) : needsNormalLoop ? (
                   <Loop durationInFrames={sourceDurationInFrames}>
-                    <OffthreadVideo
+                    <Video
                       src={overlay.src}
                       muted
                       style={commonStyle}
                     />
                   </Loop>
                 ) : (
-                  <OffthreadVideo
+                  <Video
                     src={overlay.src}
                     muted
                     style={commonStyle}
