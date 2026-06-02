@@ -6449,15 +6449,11 @@ return (
                   ref={bgTrimVideoRef}
                   src={bgVideo}
                   controls
-                  preload="metadata"
+                  preload="auto"
                   playsInline
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
                     if (Number.isFinite(duration) && duration > 0) setBgVideoDuration(duration);
-                    const targetTime = bgTrimPreviewCursorRef.current > 0 ? bgTrimPreviewCursorRef.current : bgVideoStartSec;
-                    if (targetTime > 0 && event.currentTarget.currentTime < 0.1) {
-                      event.currentTarget.currentTime = Math.min(targetTime, duration || targetTime);
-                    }
                   }}
                   onTimeUpdate={(event) => {
                     const current = event.currentTarget.currentTime;
@@ -6469,40 +6465,14 @@ return (
                       event.currentTarget.pause();
                     }
                   }}
-                  onPlay={() => {
+                  onSeeked={(event) => {
+                    // Arrastar no player nativo = navegação livre: limpa a janela
+                    // de reprodução automática para não pausar num ponto antigo.
                     bgTrimSelectionEndRef.current = null;
-                    const video = bgTrimVideoRef.current;
-                    if (!video) return;
-                    const targetTime = bgTrimPreviewCursorRef.current;
-                    if (targetTime > 0.1 && video.currentTime < 0.1) {
-                      video.currentTime = Math.min(targetTime, bgVideoDuration || targetTime);
-                      setBgTrimPreviewTime(video.currentTime);
-                      requestAnimationFrame(() => {
-                        if (video.currentTime < 0.1) {
-                          video.currentTime = Math.min(targetTime, bgVideoDuration || targetTime);
-                        }
-                      });
-                      return;
-                    }
-                    bgTrimPreviewCursorRef.current = video.currentTime;
-                    setBgTrimPreviewTime(video.currentTime);
-                  }}
-                  onPause={() => {
-                    bgTrimSelectionEndRef.current = null;
-                  }}
-                  onSeeking={() => {
-                    bgTrimSelectionEndRef.current = null;
-                    const current = bgTrimVideoRef.current?.currentTime;
+                    const current = event.currentTarget.currentTime;
                     if (Number.isFinite(current)) {
-                      bgTrimPreviewCursorRef.current = current as number;
-                      setBgTrimPreviewTime(current as number);
-                    }
-                  }}
-                  onSeeked={() => {
-                    const current = bgTrimVideoRef.current?.currentTime;
-                    if (Number.isFinite(current)) {
-                      bgTrimPreviewCursorRef.current = current as number;
-                      setBgTrimPreviewTime(current as number);
+                      bgTrimPreviewCursorRef.current = current;
+                      setBgTrimPreviewTime(current);
                     }
                   }}
                   style={{
