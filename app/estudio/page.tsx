@@ -602,6 +602,9 @@ export default function Home() {
   const [templatesMenuOpen, setTemplatesMenuOpen] = useState(false);
 
   const playerRef = useRef<any>(null);
+  // true logo antes de um seek que NÓS disparamos (seekTo programático),
+  // pra distinguir de um clique do usuário na timeline (que deve pausar).
+  const programmaticSeekRef = useRef(false);
   const previewFrameRef = useRef<HTMLDivElement | null>(null);
   const lastTextPreviewRoleRef = useRef<TextPreviewRole>('headline');
   const previewDragRef = useRef<{
@@ -721,6 +724,7 @@ export default function Home() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         try {
+          programmaticSeekRef.current = true;
           playerRef.current?.seekTo?.(0);
           playerRef.current?.play?.();
         } catch {
@@ -735,6 +739,7 @@ export default function Home() {
 
     requestAnimationFrame(() => {
       try {
+        programmaticSeekRef.current = true;
         playerRef.current?.seekTo?.(0);
       } catch {
         // fallback silencioso
@@ -1992,6 +1997,28 @@ export default function Home() {
     bgVideoNeedsTrim,
   ].join('|');
 
+  // Pausa o player quando o usuário clica/arrasta a timeline depois de dar play.
+  // O Remotion só dispara 'seeked' em scrub manual ou seekTo imperativo —
+  // nunca no playback normal nem no loop. Seeks que nós disparamos são
+  // marcados em programmaticSeekRef e ignorados aqui.
+  React.useEffect(() => {
+    const player = playerRef.current;
+    if (!player?.addEventListener) return;
+    const onSeeked = () => {
+      if (programmaticSeekRef.current) {
+        programmaticSeekRef.current = false;
+        return;
+      }
+      // Durante o preview-loop de transição mantemos a reprodução em loop.
+      if (editPreviewLoop) return;
+      try { player.pause?.(); } catch { /* noop */ }
+    };
+    player.addEventListener('seeked', onSeeked);
+    return () => {
+      try { player.removeEventListener?.('seeked', onSeeked); } catch { /* noop */ }
+    };
+  }, [playerRemountKey, editPreviewLoop]);
+
   const Component = componentByTemplate[template];
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
@@ -2131,6 +2158,7 @@ export default function Home() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         try {
+          programmaticSeekRef.current = true;
           playerRef.current?.seekTo?.(range.startFrame);
           playerRef.current?.play?.();
         } catch {
