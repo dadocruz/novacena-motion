@@ -15,6 +15,11 @@ const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
   : existsSync('/usr/bin/ffmpeg')
     ? '/usr/bin/ffmpeg'
     : 'ffmpeg';
+const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
+  ? '/usr/local/bin/ffprobe'
+  : existsSync('/usr/bin/ffprobe')
+    ? '/usr/bin/ffprobe'
+    : 'ffprobe';
 const SOURCE_PARTS = ['public', 'uploads', 'video-sources'] as const;
 const VIDEO_PARTS = ['public', 'uploads', 'videos'] as const;
 
@@ -43,6 +48,61 @@ function run(command: string, args: string[]): Promise<void> {
   });
 }
 
+function runFfprobe(filepath: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(FFPROBE_BIN, [
+      '-v', 'error',
+      '-print_format', 'json',
+      '-show_format',
+      '-show_streams',
+      filepath,
+    ]);
+
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || `ffprobe saiu com código ${code}`));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error('ffprobe retornou JSON inválido'));
+      }
+    });
+    proc.on('error', reject);
+  });
+}
+
+async function probeVideo(filepath: string) {
+  const data = await runFfprobe(filepath);
+  const streams: any[] = data.streams || [];
+  const videoStream = streams.find((s) => s.codec_type === 'video');
+  const audioStream = streams.find((s) => s.codec_type === 'audio');
+  const format = data.format || {};
+
+  return {
+    durationSec: Number.parseFloat(format.duration || videoStream?.duration || audioStream?.duration || '0') || 0,
+    hasVideo: Boolean(videoStream),
+  };
+}
+
+async function validateTrimmedOutput(outputPath: string, expectedDuration: number) {
+  const outputStat = await stat(outputPath);
+  const outputProbe = await probeVideo(outputPath).catch(() => null);
+  const outputDuration = Number(outputProbe?.durationSec || 0);
+  const durationOk = outputDuration >= Math.max(0.5, expectedDuration * 0.75);
+  if (outputStat.size < 128 * 1024 || !outputProbe?.hasVideo || !durationOk) {
+    throw new Error(
+      `Corte gerou arquivo inválido (${(outputStat.size / 1024 / 1024).toFixed(2)} MB, ${outputDuration.toFixed(1)}s).`
+    );
+  }
+  return { outputStat, outputDuration };
+}
+
 function sourcePathToFile(sourcePath: string) {
   const normalized = sourcePath.replace(/^https?:\/\/[^/]+/, '');
   if (!normalized.startsWith('/api/uploads/video-sources/')) {
@@ -63,6 +123,39 @@ function safeOutputBase(name: string) {
   const ext = path.extname(name);
   const base = path.basename(name, ext).replace(/^[0-9]+-/, '');
   return base.replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 42) || 'clip';
+}
+
+function trimArgs(filePath: string, outputPath: string, startSec: number, durationSec: number, vf: string, accurateSeek: boolean) {
+  const inputArgs = [
+    '-fflags', '+genpts+discardcorrupt',
+    '-err_detect', 'ignore_err',
+    '-analyzeduration', '100M',
+    '-probesize', '100M',
+    '-ignore_unknown',
+    '-i', filePath,
+  ];
+
+  return [
+    '-y',
+    ...(accurateSeek ? [] : ['-ss', String(startSec)]),
+    ...inputArgs,
+    ...(accurateSeek ? ['-ss', String(startSec)] : []),
+    '-t', String(durationSec),
+    '-map', '0:v:0',
+    '-map', '0:a:0?',
+    '-sn',
+    '-dn',
+    '-vf', vf,
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '20',
+    '-c:a', 'aac',
+    '-b:a', '192k',
+    '-movflags', '+faststart',
+    '-avoid_negative_ts', 'make_zero',
+    '-max_muxing_queue_size', '1024',
+    outputPath,
+  ];
 }
 
 export async function POST(req: NextRequest) {
@@ -90,29 +183,22 @@ export async function POST(req: NextRequest) {
       'format=yuv420p',
     ].join(',');
 
-    await run(FFMPEG_BIN, [
-      '-y',
-      '-ss', String(parsed.startSec),
-      '-fflags', '+genpts+discardcorrupt',
-      '-err_detect', 'ignore_err',
-      '-analyzeduration', '100M',
-      '-probesize', '100M',
-      '-ignore_unknown',
-      '-i', filePath,
-      '-t', String(parsed.durationSec),
-      '-map', '0:v:0',
-      '-map', '0:a:0?',
-      '-sn',
-      '-dn',
-      '-vf', vf,
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '20',
-      '-c:a', 'aac',
-      '-b:a', '192k',
-      '-movflags', '+faststart',
-      outputPath,
-    ]);
+    let validation: Awaited<ReturnType<typeof validateTrimmedOutput>>;
+    try {
+      await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, false));
+      validation = await validateTrimmedOutput(outputPath, parsed.durationSec);
+    } catch (fastError) {
+      await unlink(outputPath).catch(() => {});
+      try {
+        await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, true));
+        validation = await validateTrimmedOutput(outputPath, parsed.durationSec);
+      } catch (accurateError) {
+        await unlink(outputPath).catch(() => {});
+        const firstMessage = fastError instanceof Error ? fastError.message : String(fastError);
+        const secondMessage = accurateError instanceof Error ? accurateError.message : String(accurateError);
+        throw new Error(`Nao consegui gerar um clipe valido desse bruto. Corte rapido: ${firstMessage} | Corte preciso: ${secondMessage}`);
+      }
+    }
 
     if (parsed.deleteSource) {
       await unlink(filePath).catch(() => {});
@@ -128,15 +214,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const outputStat = await stat(outputPath);
     return NextResponse.json({
       ok: true,
       videoSrc: `/api/uploads/videos/${outputName}`,
       filename: outputName,
-      durationSec: parsed.durationSec,
+      durationSec: validation.outputDuration || parsed.durationSec,
       width,
       height,
-      size: outputStat.size,
+      size: validation.outputStat.size,
       deletedSource: parsed.deleteSource,
     });
   } catch (error) {

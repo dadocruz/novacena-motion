@@ -1987,6 +1987,9 @@ export default function Home() {
     effectiveTextInFrames.date,
     effectiveTextInFrames.cta1,
     effectiveTextInFrames.cta2,
+    bgVideo,
+    bgVideoDuration,
+    bgVideoNeedsTrim,
   ].join('|');
 
   const Component = componentByTemplate[template];
