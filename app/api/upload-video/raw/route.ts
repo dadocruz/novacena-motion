@@ -13,6 +13,8 @@ export const maxDuration = 900;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
+const PREVIEW_REQUIRED_SIZE = 100 * 1024 * 1024;
+const MAX_BACKGROUND_CLIP_SECONDS = 60;
 const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mpg', '.mkv', '.avi', '.3gp', '.3gpp'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
@@ -43,6 +45,35 @@ function remuxFaststart(input: string, output: string): Promise<boolean> {
     proc.on('close', (code) => resolve(code === 0));
     proc.on('error', () => resolve(false));
   });
+}
+
+function createPreviewProxy(input: string, output: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const proc = spawn(FFMPEG_BIN, [
+      '-v', 'error',
+      '-i', input,
+      '-map', '0:v:0',
+      '-map', '0:a?',
+      '-vf', 'scale=540:-2,fps=24,format=yuv420p',
+      '-c:v', 'libx264',
+      '-preset', 'ultrafast',
+      '-crf', '32',
+      '-c:a', 'aac',
+      '-b:a', '96k',
+      '-movflags', '+faststart',
+      '-y', output,
+    ]);
+    proc.on('close', (code) => resolve(code === 0));
+    proc.on('error', () => resolve(false));
+  });
+}
+
+function durationLooksValid(actualDuration: number, expectedDuration: number) {
+  return (
+    expectedDuration <= 0 ||
+    Math.abs(actualDuration - expectedDuration) <= 1 ||
+    actualDuration >= expectedDuration * 0.95
+  );
 }
 
 function safeFileName(name: string): string {
@@ -189,12 +220,7 @@ export async function POST(req: NextRequest) {
           const webProbe = await probeVideo(webPath).catch(() => null);
           const webDuration = Number(webProbe?.durationSec || 0);
           const expectedDuration = Number(probe.durationSec || 0);
-          const durationLooksValid =
-            expectedDuration <= 0 ||
-            Math.abs(webDuration - expectedDuration) <= 1 ||
-            webDuration >= expectedDuration * 0.95;
-
-          if (webStat.size > 0 && webProbe?.hasVideo && durationLooksValid) {
+          if (webStat.size > 0 && webProbe?.hasVideo && durationLooksValid(webDuration, expectedDuration)) {
             await unlink(localPath).catch(() => {});
             localPath = webPath; // para limpeza correta em caso de erro posterior
             servedFilename = webFilename;
@@ -211,13 +237,58 @@ export async function POST(req: NextRequest) {
     }
 
     const publicPath = `/api/uploads/video-sources/${servedFilename}`;
+    let previewFilename = servedFilename;
+    let previewSize = servedSize;
+    const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
+    const previewCandidate = `${previewBaseName}-preview.mp4`;
+    const previewPath = path.join(SOURCES_DIR, previewCandidate);
+    const previewOk = await createPreviewProxy(localPath, previewPath).catch(() => false);
+
+    if (previewOk && existsSync(previewPath)) {
+      try {
+        const previewStat = await stat(previewPath);
+        const previewProbe = await probeVideo(previewPath).catch(() => null);
+        const previewDuration = Number(previewProbe?.durationSec || 0);
+        const expectedDuration = Number(probe.durationSec || 0);
+
+        if (previewStat.size > 0 && previewProbe?.hasVideo && durationLooksValid(previewDuration, expectedDuration)) {
+          previewFilename = previewCandidate;
+          previewSize = previewStat.size;
+        } else {
+          await unlink(previewPath).catch(() => {});
+        }
+      } catch {
+        await unlink(previewPath).catch(() => {});
+      }
+    } else if (existsSync(previewPath)) {
+      await unlink(previewPath).catch(() => {});
+    }
+
+    const previewIsRequired =
+      servedSize > PREVIEW_REQUIRED_SIZE ||
+      Number(probe.durationSec || 0) > MAX_BACKGROUND_CLIP_SECONDS + 0.5 ||
+      !servedFilename.toLowerCase().endsWith('.mp4');
+
+    if (previewIsRequired && previewFilename === servedFilename) {
+      await unlink(localPath).catch(() => {});
+      return NextResponse.json(
+        { ok: false, error: 'O bruto foi recebido, mas nao consegui preparar um preview leve para navegar no video. Tente outro arquivo ou reexporte em MP4/H.264.' },
+        { status: 500 }
+      );
+    }
+
+    const previewPublicPath = `/api/uploads/video-sources/${previewFilename}`;
     return NextResponse.json({
       ok: true,
       sourcePath: publicPath,
-      videoSrc: publicPath,
+      previewSrc: previewPublicPath,
+      videoSrc: previewPublicPath,
       filename: servedFilename,
+      previewFilename,
       size: servedSize,
+      previewSize,
       type: contentType,
+      previewType: previewFilename.endsWith('.mp4') ? 'video/mp4' : contentType,
       ...probe,
     });
   } catch (error) {

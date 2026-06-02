@@ -20,6 +20,7 @@ const VIDEO_PARTS = ['public', 'uploads', 'videos'] as const;
 
 const TrimSchema = z.object({
   sourcePath: z.string().min(1),
+  previewPath: z.string().optional().default(''),
   startSec: z.number().min(0).default(0),
   durationSec: z.number().min(1).max(60).default(40),
   target: z.enum(['story', 'feed']).default('story'),
@@ -108,6 +109,16 @@ export async function POST(req: NextRequest) {
 
     if (parsed.deleteSource) {
       await unlink(filePath).catch(() => {});
+      if (parsed.previewPath && parsed.previewPath !== parsed.sourcePath) {
+        try {
+          const preview = sourcePathToFile(parsed.previewPath);
+          if (preview.filePath !== filePath) {
+            await unlink(preview.filePath).catch(() => {});
+          }
+        } catch {
+          // Preview path is best-effort cleanup only; the cut already succeeded.
+        }
+      }
     }
 
     const outputStat = await stat(outputPath);

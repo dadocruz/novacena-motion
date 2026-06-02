@@ -165,6 +165,8 @@ type LocalAssetRef = {
   lastModified?: number;
   trimStartSec?: number;
   trimDurationSec?: number;
+  sourcePath?: string;
+  previewSrc?: string;
   serverPreviewSrc?: string;
   renderReadySrc?: string;
 };
@@ -790,6 +792,7 @@ export default function Home() {
   const bgTrimVideoRef = useRef<HTMLVideoElement | null>(null);
   const bgTrimSelectionEndRef = useRef<number | null>(null);
   const bgTrimPreviewCursorRef = useRef(0);
+  const bgTrimProgrammaticSeekRef = useRef(false);
   const photoMultiRef = useRef<HTMLInputElement | null>(null);
   const fontInputRef = useRef<HTMLInputElement | null>(null);
   const overlayInputRef = useRef<HTMLInputElement | null>(null);
@@ -2029,6 +2032,7 @@ export default function Home() {
     setBgTrimPreviewTime(next);
     setBgTrimTimecodeInput(formatTimecode(next));
     if (shouldSeek && bgTrimVideoRef.current) {
+      bgTrimProgrammaticSeekRef.current = true;
       bgTrimVideoRef.current.currentTime = next;
     }
   }
@@ -2061,9 +2065,27 @@ export default function Home() {
     const start = Math.max(0, Math.min(bgVideoDuration || current, current));
     bgTrimSelectionEndRef.current = Math.min(bgVideoDuration || start + bgClipDuration, start + bgClipDuration);
     bgTrimPreviewCursorRef.current = start;
-    video.currentTime = start;
     setBgTrimPreviewTime(start);
-    video.play().catch(() => {});
+
+    const play = () => {
+      setBgTrimPreviewTime(video.currentTime || start);
+      video.play().catch(() => {});
+    };
+
+    video.pause();
+    if (Math.abs((video.currentTime || 0) - start) < 0.08) {
+      play();
+      return;
+    }
+
+    bgTrimProgrammaticSeekRef.current = true;
+    video.addEventListener('seeked', play, { once: true });
+    video.currentTime = start;
+    window.setTimeout(() => {
+      if (Math.abs((video.currentTime || 0) - start) < 0.25 && video.paused) {
+        play();
+      }
+    }, 120);
   }
 
   // ─── HANDLERS ────────────────────────────────────────────
@@ -2539,7 +2561,11 @@ export default function Home() {
 
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable || event.total <= 0) return;
-        setVideoUploadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        const progress = Math.min(100, Math.round((event.loaded / event.total) * 100));
+        setVideoUploadProgress(progress);
+        if (progress >= 100) {
+          setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação…');
+        }
       };
 
       xhr.onload = () => {
@@ -2594,7 +2620,9 @@ export default function Home() {
       const totalDuration = Number(d.durationSec) || browserDuration || 0;
       const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
       const shouldTrim = totalDuration > clipDuration + 0.5;
-      setBgVideo(d.videoSrc);
+      const sourcePath = d.sourcePath || d.videoSrc;
+      const previewSrc = d.previewSrc || d.videoSrc;
+      setBgVideo(previewSrc);
       setBgVideoLocalAsset({
         id: `local-bg-${file.size}-${file.lastModified}`,
         kind: 'backgroundVideo',
@@ -2603,7 +2631,9 @@ export default function Home() {
         type: file.type || 'video/mp4',
         durationSec: totalDuration,
         lastModified: file.lastModified,
-        serverPreviewSrc: d.videoSrc,
+        sourcePath,
+        previewSrc,
+        serverPreviewSrc: previewSrc,
       });
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
@@ -2613,7 +2643,7 @@ export default function Home() {
       setBgVideoOriginalName(file.name);
       setVideoUploadMsg(
         shouldTrim
-          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
+          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Preview leve pronto; escolha o início, ajuste o visual ou use inteiro.`
           : `Vídeo pronto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
       );
     } catch (error) {
@@ -2644,11 +2674,14 @@ export default function Home() {
     setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}…`);
 
     try {
+      const sourcePath = bgVideoLocalAsset?.sourcePath || bgVideo;
+      const previewPath = bgVideoLocalAsset?.previewSrc || bgVideoLocalAsset?.serverPreviewSrc || bgVideo;
       const r = await fetch('/api/video/trim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sourcePath: bgVideo,
+          sourcePath,
+          previewPath: previewPath !== sourcePath ? previewPath : undefined,
           startSec: bgVideoStartSec,
           durationSec: clipDuration,
           target,
@@ -2669,6 +2702,9 @@ export default function Home() {
         trimStartSec,
         trimDurationSec: d.durationSec ?? clipDuration,
         renderReadySrc: d.videoSrc,
+        sourcePath: undefined,
+        previewSrc: d.videoSrc,
+        serverPreviewSrc: d.videoSrc,
       } : asset);
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
@@ -6501,7 +6537,7 @@ return (
                   ref={bgTrimVideoRef}
                   src={bgVideo}
                   controls
-                  preload="metadata"
+                  preload="auto"
                   playsInline
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
@@ -6523,9 +6559,13 @@ return (
                     }
                   }}
                   onSeeked={(event) => {
-                    // Arrastar no player nativo = navegação livre: limpa a janela
-                    // de reprodução automática para não pausar num ponto antigo.
-                    bgTrimSelectionEndRef.current = null;
+                    const isProgrammaticSeek = bgTrimProgrammaticSeekRef.current;
+                    bgTrimProgrammaticSeekRef.current = false;
+                    if (!isProgrammaticSeek) {
+                      // Arrastar no player nativo = navegação livre: limpa a janela
+                      // de reprodução automática para não pausar num ponto antigo.
+                      bgTrimSelectionEndRef.current = null;
+                    }
                     const current = event.currentTarget.currentTime;
                     if (Number.isFinite(current)) {
                       bgTrimPreviewCursorRef.current = current;
