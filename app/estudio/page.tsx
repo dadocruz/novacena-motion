@@ -2004,7 +2004,7 @@ export default function Home() {
         return;
       }
       // Durante o preview-loop de transição mantemos a reprodução em loop.
-      if (editPreviewLoop) return;
+      if (editPreviewLoop && activeStudioTool !== 'overlay' && !selectedOverlayId) return;
       try { player.pause?.(); } catch { /* noop */ }
     };
     player.addEventListener('seeked', onSeeked);
@@ -2013,11 +2013,13 @@ export default function Home() {
     };
     // isClientReady garante que o efeito re-rode quando o <Player> finalmente
     // monta (antes disso playerRef.current é null e o listener não anexa).
-  }, [playerRemountKey, editPreviewLoop, isClientReady]);
+  }, [playerRemountKey, editPreviewLoop, activeStudioTool, selectedOverlayId, isClientReady]);
 
   const Component = componentByTemplate[template];
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
+  const shouldUseFocusedPreviewLoop = Boolean(editPreviewLoop) && activeStudioTool !== 'overlay' && !selectedOverlayId;
+  const focusedPreviewLoop = shouldUseFocusedPreviewLoop ? editPreviewLoop : null;
   const bgIsImage = Boolean(bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo));
   const bgClipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
   const bgVideoStartMax = bgVideoNeedsTrim
@@ -5687,8 +5689,8 @@ return (
                   style={{ width: '100%', height: '100%' }}
                   controls
                   loop
-                  inFrame={editPreviewLoop?.startFrame ?? null}
-                  outFrame={editPreviewLoop?.endFrame ?? null}
+                  inFrame={focusedPreviewLoop?.startFrame ?? null}
+                  outFrame={focusedPreviewLoop?.endFrame ?? null}
                   initialFrame={0}
                 />
               ) : (
