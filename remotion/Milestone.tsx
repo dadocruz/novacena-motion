@@ -23,11 +23,14 @@ const NUMBER_IN = 78;
 const LABEL_IN = 106;
 const MID_HIT = 130;
 const LOGO_IN = 150;
-const FINAL_HIT = 208;
-const FINAL_POSTER = 222;
+const FINAL_HIT_BASE = 208;
+const FINAL_POSTER_BASE = 222;
 
 export const Milestone: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
+  const durationFrames = (props.motion?.durationSeconds ?? 8) * 30;
+  const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
+  const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(60, 220, 130, 0.32)');
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;

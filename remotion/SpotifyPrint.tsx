@@ -23,8 +23,8 @@ const LABEL_IN = 76;
 const PHONE_IN = 98;
 const MID_HIT = 130;
 const LOGO_IN = 6;
-const FINAL_HIT = 208;
-const FINAL_POSTER = 222;
+const FINAL_HIT_BASE = 208;
+const FINAL_POSTER_BASE = 222;
 
 function fittedFontSize(text: string, maxWidth: number, preferred: number, min: number, ratio = 0.58) {
   const clean = text.trim().replace(/\s+/g, ' ');
@@ -90,6 +90,9 @@ const SpotifyWordmark: React.FC<{ delay: number; compact?: boolean }> = ({ delay
  */
 export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
+  const durationFrames = (props.motion?.durationSeconds ?? 8) * 30;
+  const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
+  const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(30, 215, 96, 0.40)');
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const phoneIn = PHONE_IN;

@@ -23,8 +23,8 @@ const COVER_IN = 50;
 const CHANNEL_IN = 96;
 const CTA_IN = 124;
 const MID_HIT = 140;
-const FINAL_HIT = 208;
-const FINAL_POSTER = 222;
+const FINAL_HIT_BASE = 208;
+const FINAL_POSTER_BASE = 222;
 const SAFE_TOP = 285;
 const SAFE_BOTTOM = 1635;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -56,6 +56,9 @@ const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => 
 
 export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
+  const durationFrames = (props.motion?.durationSeconds ?? 8) * 30;
+  const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
+  const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const accents = [MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(255, 40, 40, 0.32)');
   const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;

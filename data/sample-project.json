@@ -426,9 +426,10 @@
       "type": "out_now",
       "headline": "DISPONÍVEL",
       "cta": "EM TODAS AS PLATAFORMAS DIGITAIS",
+      "cta2": "EM TODAS AS PLATAFORMAS DIGITAIS",
       "releaseDate": "",
-      "showCta1": true,
-      "showCta2": false
+      "showCta1": false,
+      "showCta2": true
     },
     "spotify_print": {
       "type": "spotify_print",

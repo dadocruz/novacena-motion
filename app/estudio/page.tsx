@@ -993,20 +993,34 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // Quando troca template, atualiza defaults
-  useEffect(() => {
-    const next = getProject(template) as ReturnType<typeof getProject> & { showCta1?: boolean; showCta2?: boolean; showCover?: boolean };
+  // Aplica os textos/toggles de fábrica de UM template específico.
+  // Usado na montagem inicial e na PRIMEIRA vez que cada template é aberto.
+  // NÃO é chamado em toda troca — switchTemplate salva/restaura a config
+  // de cada template independentemente (ver switchTemplate).
+  function applyTemplateContentDefaults(tid: TemplateId) {
+    const next = getProject(tid) as ReturnType<typeof getProject> & { showCta1?: boolean; showCta2?: boolean; showCover?: boolean };
     setHeadline(next.headline);
     setReleaseDate(next.releaseDate ?? '');
     setCta(next.cta);
     setCta2(next.cta2 ?? next.cta ?? '');
     setShowCta1(next.showCta1 ?? true);
-    setShowCta2(next.showCta2 ?? (template === 'available_now'));
+    setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
     setMetricLabel(next.metricLabel ?? 'OUVINTES');
+  }
+
+  // Aplica defaults APENAS na montagem inicial (template inicial = available_now).
+  // Trocas posteriores são geridas por switchTemplate (save/restore por template),
+  // que mantém cada template totalmente independente.
+  const didApplyInitialTemplateRef = useRef(false);
+  useEffect(() => {
+    if (didApplyInitialTemplateRef.current) return;
+    didApplyInitialTemplateRef.current = true;
+    applyTemplateContentDefaults(template);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
   // Carregar arquivos renderizados ao montar
@@ -1106,13 +1120,14 @@ export default function Home() {
     }
 
     if (role === 'cta1') {
-      setFontCta(id);
+      // Só altera o slot do CTA1 — não toca no fontCta compartilhado,
+      // senão a mudança vazaria para o CTA2.
       setFontCta1(id);
       return;
     }
 
     if (role === 'cta2') {
-      setFontCta(id);
+      // Só altera o slot do CTA2 — independente do CTA1.
       setFontCta2(id);
       return;
     }
@@ -1183,21 +1198,15 @@ export default function Home() {
     // Carrega o estado salvo do próximo template (se existir)
     const saved = templateConfigsRef.current[nextId];
     if (saved) {
+      // Revisita: restaura a config independente salva desse template
       restoreEditorSnapshot({ ...saved, template: nextId });
     } else {
+      // Primeira abertura: aplica os defaults de fábrica do template
       setTemplate(nextId);
-      // Defaults corretos para cada template na primeira abertura
-      if (nextId === 'out_now') {
-        setHeadline('DISPONÍVEL');
-        setShowCta1(false);
-        setShowCta2(true);
-        setCta2('EM TODAS AS PLATAFORMAS DIGITAIS');
-        setReleaseDate('');
-      } else if (nextId === 'available_now') {
-        setShowCta1(true);
-        setShowCta2(true);
-      } else if (nextId === 'watch_youtube') {
+      if (nextId === 'watch_youtube') {
         applyWatchYoutubeDefaults();
+      } else {
+        applyTemplateContentDefaults(nextId);
       }
     }
     setPreviewNonce((n) => n + 1);
@@ -3838,7 +3847,6 @@ export default function Home() {
         { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: measuredRect('outnow-title', roleRect(6, 11, 88, 18, 'headline')) },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: measuredRect('cover', mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY)) },
         { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: 'CTA de plataformas', rect: measuredRect('outnow-cta', roleRect(10, 72, 80, 8, 'cta2')) },
-        ...(releaseDate ? [{ id: 'outnow-date', kind: 'text' as const, role: 'date' as const, label: 'Data / desde', rect: measuredRect('outnow-date', roleRect(18, 81, 64, 7, 'date')) }] : []),
         { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', { left: '30%', top: '84%', width: '40%', height: '8%' }) },
         ...elementHotspots,
       ];
