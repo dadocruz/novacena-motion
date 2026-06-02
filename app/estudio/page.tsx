@@ -481,6 +481,8 @@ export default function Home() {
   const [platformLogoSize, setPlatformLogoSize] = useState<number>(factoryMotion.platformLogoSize ?? 58);
   const [platformLogoGap, setPlatformLogoGap] = useState<number>(factoryMotion.platformLogoGap ?? 18);
   const [platformLogoScales, setPlatformLogoScales] = useState<Record<string, number>>(factoryMotion.platformLogoScales ?? {});
+  const [platformLogoX, setPlatformLogoX] = useState<number>(factoryMotion.platformLogoX ?? 0);
+  const [platformLogoY, setPlatformLogoY] = useState<number>(factoryMotion.platformLogoY ?? 0);
   const [platformLogoPack, setPlatformLogoPack] = useState<PlatformLogoPackId>(factoryMotion.platformLogoPack ?? 'round');
   const [platformLogoTintEnabled, setPlatformLogoTintEnabled] = useState<boolean>(factoryMotion.platformLogoTintEnabled ?? false);
   const [platformLogoTintColor, setPlatformLogoTintColor] = useState<string>(factoryMotion.platformLogoTintColor ?? '#ffffff');
@@ -1297,6 +1299,8 @@ export default function Home() {
     setPlatformLogoSize(m.platformLogoSize ?? 89);
     setPlatformLogoGap(m.platformLogoGap ?? 22);
     setPlatformLogoScales(m.platformLogoScales ?? {});
+    setPlatformLogoX(m.platformLogoX ?? 0);
+    setPlatformLogoY(m.platformLogoY ?? 0);
     setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
@@ -1395,6 +1399,8 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoX,
+      platformLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -1521,6 +1527,8 @@ export default function Home() {
     setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
     setPlatformLogoGap(snapshot.platformLogoGap ?? 18);
     setPlatformLogoScales(cloneHistoryValue(snapshot.platformLogoScales ?? {}));
+    setPlatformLogoX(snapshot.platformLogoX ?? 0);
+    setPlatformLogoY(snapshot.platformLogoY ?? 0);
     setPlatformLogoPack((snapshot.platformLogoPack ?? 'round') as PlatformLogoPackId);
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
@@ -1724,6 +1732,8 @@ export default function Home() {
       platformLogoSize,
       platformLogoGap,
       platformLogoScales,
+      platformLogoX,
+      platformLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -1799,6 +1809,8 @@ export default function Home() {
       platformLogoScales,
       platformLogoGap,
       platformLogoSize,
+      platformLogoX,
+      platformLogoY,
       platformLogoPack,
       platformLogoTintEnabled,
       platformLogoTintColor,
@@ -2386,6 +2398,8 @@ export default function Home() {
       setPlatformLogoSize(m.platformLogoSize ?? 58);
       setPlatformLogoGap(m.platformLogoGap ?? 18);
       setPlatformLogoScales(m.platformLogoScales ?? {});
+      setPlatformLogoX(m.platformLogoX ?? 0);
+      setPlatformLogoY(m.platformLogoY ?? 0);
       setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
       setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
       setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
@@ -2923,6 +2937,8 @@ export default function Home() {
     setPlatformLogoSize((m as any).platformLogoSize ?? 58);
     setPlatformLogoGap((m as any).platformLogoGap ?? 18);
     setPlatformLogoScales((m as any).platformLogoScales ?? {});
+    setPlatformLogoX((m as any).platformLogoX ?? 0);
+    setPlatformLogoY((m as any).platformLogoY ?? 0);
     setPlatformLogoTintEnabled((m as any).platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor((m as any).platformLogoTintColor ?? '#ffffff');
     setDurationSeconds((factoryAvailableNow.durationSeconds ?? (m as any).durationSeconds) ?? 8);
@@ -3020,6 +3036,8 @@ export default function Home() {
     if (typeof c.platformLogoSize === 'number') setPlatformLogoSize(c.platformLogoSize);
     if (typeof c.platformLogoGap === 'number') setPlatformLogoGap(c.platformLogoGap);
     if (c.platformLogoScales && typeof c.platformLogoScales === 'object') setPlatformLogoScales(c.platformLogoScales);
+    if (typeof c.platformLogoX === 'number') setPlatformLogoX(c.platformLogoX);
+    if (typeof c.platformLogoY === 'number') setPlatformLogoY(c.platformLogoY);
     if (typeof c.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(c.platformLogoTintEnabled);
     if (typeof c.platformLogoTintColor === 'string') setPlatformLogoTintColor(c.platformLogoTintColor);
     if (typeof c.platformLogoPack === 'string') setPlatformLogoPack(c.platformLogoPack as PlatformLogoPackId);
@@ -3755,6 +3773,7 @@ export default function Home() {
         { id: 'milestone-cover', kind: 'cover', label: 'Capa', rect: measuredRect('milestone-cover', mediaRect(50, 37, coverPct, coverHeightPct, coverX, coverY)) },
         { id: 'milestone-number', kind: 'text', role: 'headline', label: 'Número', rect: measuredRect('milestone-number', roleRect(6, 52, 88, 16, 'headline')) },
         { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: measuredRect('milestone-label', roleRect(14, 68, 72, 9, 'cta1')) },
+        { id: 'milestone-logo', kind: 'logos', label: 'Logo Spotify', rect: measuredRect('milestone-logo', mediaRect(50, 74, clamp((platformLogoSize / 1080) * 100, 4, 22), clamp((platformLogoSize / compositionHeight) * 100, 3, 16), platformLogoX, platformLogoY)) },
         ...elementHotspots,
       ];
     }
@@ -3805,7 +3824,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
@@ -3852,6 +3871,10 @@ export default function Home() {
       return { x: coverX, y: coverY };
     }
 
+    if (layer.kind === 'logos') {
+      return { x: platformLogoX, y: platformLogoY };
+    }
+
     if (layer.kind === 'element' && layer.overlayId) {
       const overlay = overlays.find((item) => item.id === layer.overlayId);
       return { x: overlay?.x ?? 0, y: overlay?.y ?? 0 };
@@ -3879,6 +3902,12 @@ export default function Home() {
       return;
     }
 
+    if (layer.kind === 'logos') {
+      setPlatformLogoX(x);
+      setPlatformLogoY(y);
+      return;
+    }
+
     if (layer.kind === 'element' && layer.overlayId) {
       updateOverlay(layer.overlayId, { x, y });
     }
@@ -3893,12 +3922,21 @@ export default function Home() {
       return overlays.find((item) => item.id === layer.overlayId)?.scale ?? 0.42;
     }
 
+    if (layer.kind === 'logos') {
+      return platformLogoSize / 89;
+    }
+
     return 1;
   }
 
   function setPreviewLayerScale(layer: PreviewLayerHotspot, scale: number) {
     if (layer.kind === 'text' && layer.role) {
       updTxN(setTxScale, layer.role, Math.max(0.2, Math.min(4, Math.round(scale * 100) / 100)));
+      return;
+    }
+
+    if (layer.kind === 'logos') {
+      setPlatformLogoSize(Math.max(24, Math.min(240, Math.round(scale * 89))));
       return;
     }
 
@@ -3910,7 +3948,6 @@ export default function Home() {
     if (event.button !== 0) return;
 
     selectPreviewLayer(layer);
-    if (layer.kind === 'logos') return;
 
     const previewRect = previewFrameRef.current?.getBoundingClientRect();
     if (!previewRect?.width || !previewRect?.height) return;
@@ -3921,7 +3958,7 @@ export default function Home() {
       kind: layer.kind,
       role: layer.role,
       overlayId: layer.overlayId,
-      mode: (layer.kind === 'element' || layer.kind === 'text') && event.shiftKey ? 'scale' : 'move',
+      mode: (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos') && event.shiftKey ? 'scale' : 'move',
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -3951,7 +3988,7 @@ export default function Home() {
     const dx = dxPreview * (1080 / drag.previewWidth);
     const dy = dyPreview * (compositionHeight / drag.previewHeight);
 
-    if (drag.mode === 'scale' && (layer.kind === 'element' || layer.kind === 'text')) {
+    if (drag.mode === 'scale' && (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos')) {
       const delta = (dxPreview - dyPreview) / Math.max(120, drag.previewWidth * 0.35);
       setPreviewLayerScale(layer, (drag.startScale ?? 1) + delta);
     } else {
@@ -4627,6 +4664,8 @@ export default function Home() {
     if (typeof m.platformLogoSize === 'number') setPlatformLogoSize(m.platformLogoSize);
     if (typeof m.platformLogoGap === 'number') setPlatformLogoGap(m.platformLogoGap);
     if (m.platformLogoScales && typeof m.platformLogoScales === 'object') setPlatformLogoScales(m.platformLogoScales);
+    if (typeof m.platformLogoX === 'number') setPlatformLogoX(m.platformLogoX);
+    if (typeof m.platformLogoY === 'number') setPlatformLogoY(m.platformLogoY);
     if (typeof m.platformLogoTintEnabled === 'boolean') setPlatformLogoTintEnabled(m.platformLogoTintEnabled);
     if (typeof m.platformLogoTintColor === 'string') setPlatformLogoTintColor(m.platformLogoTintColor);
     if (typeof m.platformLogoPack === 'string') setPlatformLogoPack(m.platformLogoPack as PlatformLogoPackId);
@@ -5531,7 +5570,7 @@ return (
                     type="button"
                     data-preview-layer-hit="true"
                     aria-label={`Selecionar ${previewLayerKindLabel(layer)}`}
-                    title={layer.kind === 'element' ? `${previewLayerKindLabel(layer)} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${previewLayerKindLabel(layer)}`}
+                    title={layer.kind === 'element' || layer.kind === 'logos' ? `${previewLayerKindLabel(layer)} · arraste para mover · Shift+arraste para escalar` : `Selecionar ${previewLayerKindLabel(layer)}`}
                     onPointerDown={(event) => beginPreviewLayerDrag(event, layer)}
                     onPointerMove={(event) => movePreviewLayer(event, layer)}
                     onPointerUp={endPreviewLayerDrag}
@@ -5563,7 +5602,7 @@ return (
                         : selected
                           ? `0 0 0 1px rgba(0,0,0,0.42), 0 0 24px ${accent}40`
                           : 'none',
-                      cursor: layer.kind === 'logos' ? 'pointer' : dragging ? 'grabbing' : 'grab',
+                      cursor: dragging ? 'grabbing' : 'grab',
                       outline: 'none',
                       touchAction: 'none',
                       ...layer.rect,

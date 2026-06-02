@@ -65,6 +65,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const numberText = props.metricNumber || '100.000';
   const labelText = props.metricLabel || 'OUVINTES';
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
+  const spotifyLogoSize = Math.round((props.motion?.platformLogoSize ?? 84) * (props.motion?.platformLogoScales?.Spotify ?? 1));
   const labelFont = findFont(
     props.motion?.fontCta1 ?? props.motion?.fontCta ?? DEFAULT_FONTS.cta,
     props.motion?.customFonts ?? []
@@ -235,14 +236,17 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
 
         {/* LOGO SPOTIFY */}
         <div
+          data-novacena-preview-layer="milestone-logo"
           style={{
             marginTop: 56,
+            transform: `translate(${props.motion?.platformLogoX ?? 0}px, ${props.motion?.platformLogoY ?? 0}px)`,
+            willChange: 'transform',
             ...(showAll ? {} : logoAnim),
           }}
         >
           <PlatformLogo
             name="Spotify"
-            size={84}
+            size={spotifyLogoSize}
             customSrc={M.customLogos?.Spotify}
             tintEnabled={M.platformLogoTintEnabled}
             tintColor={M.platformLogoTintColor}

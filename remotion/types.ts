@@ -325,6 +325,8 @@ export type MotionConfig = {
   platformLogoSize?: number;
   platformLogoGap?: number;
   platformLogoScales?: Record<string, number>;
+  platformLogoX?: number;
+  platformLogoY?: number;
   platformLogoPack?: PlatformLogoPackId;
   platformLogoTintEnabled?: boolean;
   platformLogoTintColor?: string;
