@@ -1646,13 +1646,10 @@ export default function Home() {
 
 
   function setTextOpacityLive(value: number) {
-    stopTransitionPreviewLoopForManualEdit();
     setTextOpacity(value);
-    setPreviewNonce((n) => n + 1);
   }
 
   function changeTextStroke(role: FontRole, stroke: any) {
-    stopTransitionPreviewLoopForManualEdit();
     const nextStroke = {
       mode: stroke?.mode ?? stroke?.type ?? 'none',
       width: Number(stroke?.width ?? 0),
@@ -1676,8 +1673,6 @@ export default function Home() {
 
     if (role === 'cta1') setStrokeCta1(nextStroke);
     if (role === 'cta2') setStrokeCta2(nextStroke);
-
-    setPreviewNonce((n) => n + 1);
   }
 
   const motion: MotionConfig = useMemo(
@@ -7122,8 +7117,6 @@ return (
             styleCta1={styleCta1}
             styleCta2={styleCta2}
             onChangeTextStyle={(role, next) => {
-              stopTransitionPreviewLoopForManualEdit();
-
               if (role === 'headline') setStyleHeadline(next);
               if (role === 'date') setStyleDate(next);
               if (role === 'cta') {
