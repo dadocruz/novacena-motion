@@ -239,6 +239,11 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           data-novacena-preview-layer="milestone-logo"
           style={{
             marginTop: 56,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: spotifyLogoSize,
+            height: spotifyLogoSize,
             transform: `translate(${props.motion?.platformLogoX ?? 0}px, ${props.motion?.platformLogoY ?? 0}px)`,
             willChange: 'transform',
             ...(showAll ? {} : logoAnim),

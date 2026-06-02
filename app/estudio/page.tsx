@@ -6634,6 +6634,24 @@ return (
               onChange={setPlatformLogoGap}
               format={(v) => `${Math.round(v)}px`}
             />
+            <SliderRow
+              label="Posição X dos logos"
+              value={platformLogoX}
+              min={-520}
+              max={520}
+              step={1}
+              onChange={setPlatformLogoX}
+              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
+            />
+            <SliderRow
+              label="Posição Y dos logos"
+              value={platformLogoY}
+              min={-920}
+              max={920}
+              step={1}
+              onChange={setPlatformLogoY}
+              format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`}
+            />
           </div>
 
           <div style={{ marginTop: 14, display: 'grid', gap: 8 }}>
