@@ -149,6 +149,7 @@ type RenderEngine = 'desktop' | 'local' | 'lambda';
 const SAAS_EXPORT_MODE =
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+const MAX_BACKGROUND_CLIP_SECONDS = 60;
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -534,6 +535,7 @@ export default function Home() {
   const [lambdaOutputUrl, setLambdaOutputUrl] = useState<string | null>(null);
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
   const [processingVideoClip, setProcessingVideoClip] = useState(false);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [bgTrimPreviewTime, setBgTrimPreviewTime] = useState(0);
@@ -809,7 +811,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!bgVideo || bgVideoDuration <= 0) return;
-    const maxStart = Math.max(0, bgVideoNeedsTrim ? bgVideoDuration - Math.min(durationSeconds, 40) : bgVideoDuration);
+    const maxStart = Math.max(0, bgVideoNeedsTrim ? bgVideoDuration - Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS) : bgVideoDuration);
     setBgVideoStartSec((current) => Math.min(current, maxStart));
   }, [bgVideo, bgVideoDuration, bgVideoNeedsTrim, durationSeconds]);
 
@@ -1988,7 +1990,7 @@ export default function Home() {
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
   const bgIsImage = Boolean(bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo));
-  const bgClipDuration = Math.min(durationSeconds, 40);
+  const bgClipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
   const bgVideoStartMax = bgVideoNeedsTrim
     ? Math.max(0, bgVideoDuration - bgClipDuration)
     : Math.max(0.1, bgVideoDuration);
@@ -2527,10 +2529,47 @@ export default function Home() {
     }
   }
 
+  function uploadRawVideoWithProgress(file: File) {
+    return new Promise<any>((resolve, reject) => {
+      const uploadUrl = `/api/upload-video/raw?filename=${encodeURIComponent(file.name)}`;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.responseType = 'json';
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total <= 0) return;
+        setVideoUploadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      };
+
+      xhr.onload = () => {
+        const data = xhr.response || (() => {
+          try {
+            return JSON.parse(xhr.responseText || '{}');
+          } catch {
+            return null;
+          }
+        })();
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data);
+          return;
+        }
+
+        reject(new Error(data?.error || `Upload falhou (${xhr.status}).`));
+      };
+
+      xhr.onerror = () => reject(new Error('Falha de rede durante o upload.'));
+      xhr.onabort = () => reject(new Error('Upload cancelado.'));
+      xhr.send(file);
+    });
+  }
+
   async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingVideo(true);
+    setVideoUploadProgress(0);
     setVideoUploadMsg('Enviando bruto pesado sem compactar na memória…');
 
     try {
@@ -2545,15 +2584,7 @@ export default function Home() {
       const browserDuration = Number.isFinite(tempVideo.duration) ? tempVideo.duration : 0;
       URL.revokeObjectURL(videoUrl);
 
-      const uploadUrl = `/api/upload-video/raw?filename=${encodeURIComponent(file.name)}`;
-      const r = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-        },
-        body: file,
-      });
-      const d = await r.json();
+      const d = await uploadRawVideoWithProgress(file);
 
       if (!d.ok) {
         setVideoUploadMsg(`Erro: ${d.error}`);
@@ -2561,7 +2592,7 @@ export default function Home() {
       }
 
       const totalDuration = Number(d.durationSec) || browserDuration || 0;
-      const clipDuration = Math.min(durationSeconds, 40);
+      const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
       const shouldTrim = totalDuration > clipDuration + 0.5;
       setBgVideo(d.videoSrc);
       setBgVideoLocalAsset({
@@ -2590,6 +2621,7 @@ export default function Home() {
       setVideoUploadMsg(`Erro: ${message}`);
     } finally {
       setUploadingVideo(false);
+      setVideoUploadProgress(null);
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
   }
@@ -2607,7 +2639,7 @@ export default function Home() {
   async function processBgVideoClip() {
     if (!bgVideo || !bgVideoNeedsTrim) return;
 
-    const clipDuration = Math.min(durationSeconds, 40);
+    const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
     setProcessingVideoClip(true);
     setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}…`);
 
@@ -6080,8 +6112,8 @@ return (
         <Section title="Projeto" draggablePanel>
           <div style={{ marginBottom: 12 }}>
             <div style={miniInputLabel}>Duração</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
-              {[8, 15, 20, 30, 40].map((d) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
+              {[8, 15, 20, 30, 40, 60].map((d) => (
                 <button
                   key={d}
                   onClick={() => setDurationSeconds(d)}
@@ -6100,17 +6132,37 @@ return (
             </div>
             <button onClick={() => videoInputRef.current?.click()} disabled={uploadingVideo || processingVideoClip} style={dashedUpload}>
               {uploadingVideo
-                ? 'Enviando bruto…'
+                ? videoUploadProgress !== null
+                  ? `Enviando bruto… ${videoUploadProgress}%`
+                  : 'Enviando bruto…'
                 : bgVideo && !bgIsImage
                   ? bgVideoNeedsTrim
                     ? `✓ Bruto (${bgVideoDuration.toFixed(1)}s)`
                     : `✓ Clip otimizado (${bgVideoDuration.toFixed(1)}s)`
                   : bgIsImage
                     ? `✓ Imagem BG${bgVideoOriginalName ? ` · ${bgVideoOriginalName}` : ''}`
-                  : '+ Carregar MP4/MOV/WEBM/M4V pesado'}
+                  : '+ Carregar vídeo bruto pesado'}
             </button>
-            <input ref={videoInputRef} type="file" accept="video/*,.mp4,.mov,.webm,.m4v"
+            <input ref={videoInputRef} type="file" accept="video/*,.mp4,.mov,.webm,.m4v,.mpeg,.mpg,.mkv,.avi,.3gp,.3gpp"
               onChange={handleVideoUpload} style={{ display: 'none' }} />
+            {uploadingVideo && videoUploadProgress !== null && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      width: `${videoUploadProgress}%`,
+                      height: '100%',
+                      borderRadius: 999,
+                      background: 'linear-gradient(90deg, rgba(168,85,247,0.95), rgba(249,115,22,0.95))',
+                      transition: 'width 160ms ease',
+                    }}
+                  />
+                </div>
+                <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-3)' }}>
+                  {videoUploadProgress}% enviado. Pode demorar em vídeos grandes.
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => bgImageInputRef.current?.click()}

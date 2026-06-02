@@ -11,8 +11,9 @@ export async function GET(
   const { path: pathParts } = await params;
   const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
   const filePath = path.join(uploadsDir, ...pathParts);
+  const relativePath = path.relative(uploadsDir, filePath);
 
-  if (!filePath.startsWith(uploadsDir)) {
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
@@ -28,6 +29,13 @@ export async function GET(
     '.mp4': 'video/mp4',
     '.mov': 'video/quicktime',
     '.webm': 'video/webm',
+    '.m4v': 'video/x-m4v',
+    '.mpeg': 'video/mpeg',
+    '.mpg': 'video/mpeg',
+    '.mkv': 'video/x-matroska',
+    '.avi': 'video/x-msvideo',
+    '.3gp': 'video/3gpp',
+    '.3gpp': 'video/3gpp',
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
@@ -48,8 +56,20 @@ export async function GET(
     if (range) {
       const match = range.match(/bytes=(\d*)-(\d*)/);
       if (match) {
-        const start = match[1] ? parseInt(match[1], 10) : 0;
-        const end = match[2] ? Math.min(parseInt(match[2], 10), fileStat.size - 1) : fileStat.size - 1;
+        const [, startRaw, endRaw] = match;
+        let start: number;
+        let end: number;
+
+        if (!startRaw && endRaw) {
+          const suffixLength = parseInt(endRaw, 10);
+          start = Number.isFinite(suffixLength) && suffixLength > 0
+            ? Math.max(fileStat.size - suffixLength, 0)
+            : NaN;
+          end = fileStat.size - 1;
+        } else {
+          start = startRaw ? parseInt(startRaw, 10) : 0;
+          end = endRaw ? Math.min(parseInt(endRaw, 10), fileStat.size - 1) : fileStat.size - 1;
+        }
 
         if (Number.isFinite(start) && Number.isFinite(end) && start <= end && start < fileStat.size) {
           const stream = Readable.toWeb(createReadStream(filePath, { start, end })) as ReadableStream<Uint8Array>;
@@ -65,6 +85,15 @@ export async function GET(
           });
         }
       }
+
+      return new NextResponse(null, {
+        status: 416,
+        headers: {
+          'Content-Range': `bytes */${fileStat.size}`,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
     }
 
     const stream = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>;

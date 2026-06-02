@@ -9,12 +9,11 @@ import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const maxDuration = 900;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
-const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v'];
-const ALLOWED_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-m4v', 'application/octet-stream'];
+const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mpg', '.mkv', '.avi', '.3gp', '.3gpp'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
   : existsSync('/usr/bin/ffprobe')
@@ -127,14 +126,14 @@ export async function POST(req: NextRequest) {
 
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
-        { ok: false, error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV, WEBM ou M4V.` },
+        { ok: false, error: `Extensão não suportada: ${ext || 'sem extensão'}. Use MP4, MOV, WEBM, M4V, MPEG, MKV, AVI ou 3GP.` },
         { status: 400 }
       );
     }
 
     if (!isAllowedContentType(contentType)) {
       return NextResponse.json(
-        { ok: false, error: `Tipo não suportado: ${contentType}. Use MP4, MOV, WEBM ou M4V.` },
+        { ok: false, error: `Tipo não suportado: ${contentType}. Use um arquivo de vídeo.` },
         { status: 400 }
       );
     }

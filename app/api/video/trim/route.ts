@@ -8,7 +8,7 @@ import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-export const maxDuration = 300;
+export const maxDuration = 900;
 
 const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
   ? '/usr/local/bin/ffmpeg'
@@ -21,7 +21,7 @@ const VIDEO_PARTS = ['public', 'uploads', 'videos'] as const;
 const TrimSchema = z.object({
   sourcePath: z.string().min(1),
   startSec: z.number().min(0).default(0),
-  durationSec: z.number().min(1).max(40).default(40),
+  durationSec: z.number().min(1).max(60).default(40),
   target: z.enum(['story', 'feed']).default('story'),
   deleteSource: z.boolean().optional().default(true),
 });
