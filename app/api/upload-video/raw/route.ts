@@ -20,6 +20,31 @@ const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   : existsSync('/usr/bin/ffprobe')
     ? '/usr/bin/ffprobe'
     : 'ffprobe';
+const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
+  ? '/usr/local/bin/ffmpeg'
+  : existsSync('/usr/bin/ffmpeg')
+    ? '/usr/bin/ffmpeg'
+    : 'ffmpeg';
+
+// Remux para "faststart" (move o moov atom para o início) por stream copy —
+// sem re-encode, rápido. Faz o vídeo ser seekável no navegador (corrige o
+// preview de trim que voltava pro zero ao dar play num ponto qualquer).
+// Retorna true só se gerou um arquivo válido; qualquer falha cai no fallback.
+function remuxFaststart(input: string, output: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const proc = spawn(FFMPEG_BIN, [
+      '-v', 'error',
+      '-i', input,
+      '-c', 'copy',
+      '-movflags', '+faststart',
+      '-y', output,
+    ]);
+    let stderr = '';
+    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    proc.on('close', (code) => resolve(code === 0));
+    proc.on('error', () => resolve(false));
+  });
+}
 
 function safeFileName(name: string): string {
   const ext = path.extname(name || '.mp4').toLowerCase() || '.mp4';
@@ -149,13 +174,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'O arquivo enviado não tem vídeo.' }, { status: 400 });
     }
 
-    const publicPath = `/api/uploads/video-sources/${filename}`;
+    // Torna o vídeo seekável no navegador (faststart). Containers MP4/MOV/M4V
+    // costumam vir com o índice no fim — o que faz o preview voltar pro zero.
+    // WEBM já é streamável, então é pulado. Falha → mantém o original.
+    let servedFilename = filename;
+    let servedSize = fileStat.size;
+    if (['.mp4', '.mov', '.m4v'].includes(ext)) {
+      const baseName = filename.replace(/\.(mp4|mov|m4v)$/i, '');
+      const webFilename = `${baseName}-web.mp4`;
+      const webPath = path.join(SOURCES_DIR, webFilename);
+      const ok = await remuxFaststart(localPath, webPath).catch(() => false);
+      if (ok && existsSync(webPath)) {
+        try {
+          const webStat = await stat(webPath);
+          if (webStat.size > 0) {
+            await unlink(localPath).catch(() => {});
+            localPath = webPath; // para limpeza correta em caso de erro posterior
+            servedFilename = webFilename;
+            servedSize = webStat.size;
+          } else {
+            await unlink(webPath).catch(() => {});
+          }
+        } catch {
+          await unlink(webPath).catch(() => {});
+        }
+      } else if (existsSync(webPath)) {
+        await unlink(webPath).catch(() => {});
+      }
+    }
+
+    const publicPath = `/api/uploads/video-sources/${servedFilename}`;
     return NextResponse.json({
       ok: true,
       sourcePath: publicPath,
       videoSrc: publicPath,
-      filename,
-      size: fileStat.size,
+      filename: servedFilename,
+      size: servedSize,
       type: contentType,
       ...probe,
     });
