@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Audio, Img, OffthreadVideo, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
+import { AbsoluteFill, Audio, Img, OffthreadVideo, Video, getRemotionEnvironment, useCurrentFrame, useVideoConfig, interpolate } from 'remotion';
 import { easings, eased, elegantWiggle, hitPulse } from './motionEngine';
 import type { BackgroundConfig } from './types';
 
@@ -205,19 +205,39 @@ export const CinematicBackground: React.FC<Props> = ({
         </AbsoluteFill>
       ) : videoSrc ? (
         <AbsoluteFill style={{ opacity: videoOpacity }}>
-          <OffthreadVideo
-            src={videoSrc}
-            startFrom={videoStartFrame}
-            muted={!useVideoAudio}
-            volume={useVideoAudio ? (f) => calcVolume(f) : 0}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
-              transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
-            }}
-          />
+          {/* No render usa OffthreadVideo (frame-exato via ffmpeg). No preview do
+              Player usa <Video> HTML5 nativo — OffthreadVideo no preview faz seek
+              frame-a-frame e TRAVA com vídeo pesado. */}
+          {getRemotionEnvironment().isRendering ? (
+            <OffthreadVideo
+              src={videoSrc}
+              startFrom={videoStartFrame}
+              muted={!useVideoAudio}
+              volume={useVideoAudio ? (f) => calcVolume(f) : 0}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
+                transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+              }}
+            />
+          ) : (
+            <Video
+              src={videoSrc}
+              startFrom={videoStartFrame}
+              muted={!useVideoAudio}
+              volume={useVideoAudio ? (f) => calcVolume(f) : 0}
+              pauseWhenBuffering
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
+                transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+              }}
+            />
+          )}
         </AbsoluteFill>
       ) : coverImage ? (
         <Img
