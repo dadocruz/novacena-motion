@@ -2598,18 +2598,18 @@ export default function Home() {
     setUploadingVideo(true);
     setVideoUploadProgress(0);
     setVideoUploadMsg('Enviando bruto pesado sem compactar na memória…');
+    let localPreviewUrl = '';
 
     try {
-      const videoUrl = URL.createObjectURL(file);
+      localPreviewUrl = URL.createObjectURL(file);
       const tempVideo = document.createElement('video');
       tempVideo.preload = 'metadata';
-      tempVideo.src = videoUrl;
+      tempVideo.src = localPreviewUrl;
       await new Promise<void>((resolve) => {
         tempVideo.onloadedmetadata = () => resolve();
         tempVideo.onerror = () => resolve();
       });
       const browserDuration = Number.isFinite(tempVideo.duration) ? tempVideo.duration : 0;
-      URL.revokeObjectURL(videoUrl);
 
       const d = await uploadRawVideoWithProgress(file);
 
@@ -2622,7 +2622,12 @@ export default function Home() {
       const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
       const shouldTrim = totalDuration > clipDuration + 0.5;
       const sourcePath = d.sourcePath || d.videoSrc;
-      const previewSrc = d.previewSrc || d.videoSrc;
+      const serverPreviewSrc = d.previewSrc || d.videoSrc;
+      const previewSrc = d.previewFailed ? localPreviewUrl : serverPreviewSrc;
+      if (!d.previewFailed && localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+        localPreviewUrl = '';
+      }
       setBgVideo(previewSrc);
       setBgVideoLocalAsset({
         id: `local-bg-${file.size}-${file.lastModified}`,
@@ -2634,7 +2639,7 @@ export default function Home() {
         lastModified: file.lastModified,
         sourcePath,
         previewSrc,
-        serverPreviewSrc: previewSrc,
+        serverPreviewSrc,
       });
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
@@ -2644,10 +2649,11 @@ export default function Home() {
       setBgVideoOriginalName(file.name);
       setVideoUploadMsg(
         shouldTrim
-          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Preview leve pronto; escolha o início, ajuste o visual ou use inteiro.`
+          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
           : `Vídeo pronto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
       );
     } catch (error) {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
       const message = error instanceof Error ? error.message : 'falha desconhecida';
       setVideoUploadMsg(`Erro no upload/processamento: ${message}`);
     } finally {
@@ -2676,7 +2682,8 @@ export default function Home() {
 
     try {
       const sourcePath = bgVideoLocalAsset?.sourcePath || bgVideo;
-      const previewPath = bgVideoLocalAsset?.previewSrc || bgVideoLocalAsset?.serverPreviewSrc || bgVideo;
+      const cleanupPreviewPath = bgVideoLocalAsset?.serverPreviewSrc || '';
+      const previewPath = cleanupPreviewPath.startsWith('/api/uploads/') ? cleanupPreviewPath : '';
       const r = await fetch('/api/video/trim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

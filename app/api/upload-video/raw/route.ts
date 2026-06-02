@@ -300,18 +300,22 @@ export async function POST(req: NextRequest) {
     }
 
     if (previewIsRequired && previewFilename === servedFilename) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: 'O bruto foi recebido, mas nao consegui preparar um preview leve para navegar no video. Tente outro arquivo ou reexporte em MP4/H.264.',
-          detail: previewResult.error || null,
-          sourcePath: publicPath,
-          filename: servedFilename,
-          size: servedSize,
-          ...probe,
-        },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        ok: true,
+        sourcePath: publicPath,
+        previewSrc: publicPath,
+        videoSrc: publicPath,
+        filename: servedFilename,
+        previewFilename,
+        size: servedSize,
+        previewSize,
+        type: contentType,
+        previewType: contentType,
+        previewMode: 'local-fallback',
+        previewFailed: true,
+        previewError: previewResult.error || null,
+        ...probe,
+      });
     }
 
     const previewPublicPath = `/api/uploads/video-sources/${previewFilename}`;
