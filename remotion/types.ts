@@ -31,6 +31,7 @@ export type RenderTarget = 'story' | 'feed';
 export type TemplateId =
   | 'available_now'
   | 'watch_youtube'
+  | 'youtube_subscribe'
   | 'milestone'
   | 'out_now'
   | 'spotify_print';

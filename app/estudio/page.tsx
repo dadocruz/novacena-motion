@@ -240,6 +240,10 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
     date: 'Canal do YouTube',
     cta1: 'CTA do video',
   },
+  youtube_subscribe: {
+    headline: 'INSCREVA-SE',
+    date: '@ do canal',
+  },
   milestone: {
     date: 'Texto acima',
     headline: 'Numero',
@@ -258,6 +262,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
+  youtube_subscribe: ['headline', 'date'],
   milestone: ['date', 'headline', 'cta1'],
   out_now: ['headline', 'cta2'],
   spotify_print: ['date', 'headline', 'cta1'],
@@ -1218,6 +1223,11 @@ export default function Home() {
         applyWatchYoutubeDefaults();
       } else {
         applyTemplateContentDefaults(nextId);
+        if (nextId === 'youtube_subscribe') {
+          // Fonte padrão Akhand Light (headline "INSCREVA-SE" + @canal)
+          setFontHeadline('premium-akhand-light');
+          setFontDate('premium-akhand-light');
+        }
       }
     }
     setPreviewNonce((n) => n + 1);
@@ -3355,7 +3365,7 @@ export default function Home() {
 
       // ─── Template ────────────────────────────────────────
       const newTemplate = full.template ?? plan.templateId;
-      if (newTemplate && ['available_now','watch_youtube','milestone','out_now','spotify_print'].includes(newTemplate)) {
+      if (newTemplate && ['available_now','watch_youtube','youtube_subscribe','milestone','out_now','spotify_print'].includes(newTemplate)) {
         switchTemplate(newTemplate as TemplateId);
       }
 
@@ -3965,6 +3975,14 @@ export default function Home() {
         ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0)) }] : []),
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: measuredRect('youtube-channel', roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date')) },
         ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) }] : []),
+        ...elementHotspots,
+      ];
+    }
+
+    if (template === 'youtube_subscribe') {
+      return [
+        { id: 'ytsub-headline', kind: 'text', role: 'headline', label: 'INSCREVA-SE', rect: measuredRect('ytsub-headline', roleRect(10, 66, 80, 12, 'headline')) },
+        { id: 'ytsub-channel', kind: 'text', role: 'date', label: '@ do canal', rect: measuredRect('ytsub-channel', roleRect(20, 82, 60, 6, 'date')) },
         ...elementHotspots,
       ];
     }
@@ -4734,7 +4752,7 @@ export default function Home() {
     }
 
     const nextTemplate = preset.template ?? preset.type;
-    if (['available_now', 'watch_youtube', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
+    if (['available_now', 'watch_youtube', 'youtube_subscribe', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
       switchTemplate(nextTemplate as TemplateId);
     }
 
@@ -5341,6 +5359,14 @@ return (
               {showCta1 && (
                 <TextAreaField label="CTA do video" value={cta} onChange={setCta} placeholder="CLIPE OFICIAL DISPONIVEL" rows={2} />
               )}
+            </>
+          ) : template === 'youtube_subscribe' ? (
+            <>
+              <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
+                Arte de inscrição. "INSCREVA-SE NO CANAL" e fixo; aqui voce edita o @ do canal. Use video de fundo no painel Capa/Motion.
+              </div>
+              <Field label="Headline" value={headline} onChange={setHeadline} placeholder="INSCREVA-SE" />
+              <Field label="@ do canal" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
             </>
           ) : template === 'milestone' ? (
             <>
@@ -7131,8 +7157,8 @@ return (
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : headline}
-            sampleDate={template === 'spotify_print' || template === 'milestone' ? metricPrefix : template === 'watch_youtube' ? channelName : releaseDate}
+            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : template === 'youtube_subscribe' ? (headline || 'INSCREVA-SE') : headline}
+            sampleDate={template === 'spotify_print' || template === 'milestone' ? metricPrefix : (template === 'watch_youtube' || template === 'youtube_subscribe') ? channelName : releaseDate}
             sampleCta={template === 'spotify_print' || template === 'milestone' ? metricLabel : cta}
             sampleCta2={cta2}
             txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}

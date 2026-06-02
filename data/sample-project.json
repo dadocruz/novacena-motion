@@ -414,6 +414,29 @@
         "overlays": []
       }
     },
+    "youtube_subscribe": {
+      "type": "youtube_subscribe",
+      "headline": "INSCREVA-SE",
+      "channelName": "@SEUCANAL",
+      "showCover": false,
+      "durationSeconds": 8,
+      "posterFrame": {
+        "enabled": true,
+        "frameSec": 3.37,
+        "holdSec": 1,
+        "outroEnabled": true
+      },
+      "motion": {
+        "fontHeadline": "premium-akhand-light",
+        "fontDate": "premium-akhand-light",
+        "transitionHeadline": "mask_reveal",
+        "transitionDate": "scale_pop",
+        "particlesEnabled": true,
+        "finalFlash": true,
+        "durationSeconds": 8,
+        "overlays": []
+      }
+    },
     "milestone": {
       "type": "milestone",
       "headline": "ULTRAPASSAMOS",

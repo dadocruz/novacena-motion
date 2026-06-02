@@ -9,6 +9,7 @@ import type {
 } from '../remotion/types';
 import { AvailableNow } from '../remotion/AvailableNow';
 import { WatchOnYouTube } from '../remotion/WatchOnYouTube';
+import { YouTubeSubscribe } from '../remotion/YouTubeSubscribe';
 import { Milestone } from '../remotion/Milestone';
 import { OutNow } from '../remotion/OutNow';
 import { SpotifyPrint } from '../remotion/SpotifyPrint';
@@ -16,6 +17,7 @@ import { SpotifyPrint } from '../remotion/SpotifyPrint';
 export const componentByTemplate = {
   available_now: AvailableNow,
   watch_youtube: WatchOnYouTube,
+  youtube_subscribe: YouTubeSubscribe,
   milestone: Milestone,
   out_now: OutNow,
   spotify_print: SpotifyPrint,
@@ -169,6 +171,7 @@ export const DEFAULT_TEXT_WIGGLE_VALUES = {
 export const TEXT_IN_FRAME_DEFAULTS_BY_TEMPLATE: Record<TemplateId, Record<TextPreviewRole, number>> = {
   available_now: { headline: 0, date: 38, cta1: 78, cta2: 138 },
   watch_youtube: { headline: 14, date: 96, cta1: 124, cta2: 124 },
+  youtube_subscribe: { headline: 12, date: 70, cta1: 124, cta2: 124 },
   milestone: { headline: 78, date: 14, cta1: 106, cta2: 106 },
   out_now: { headline: 14, date: 130, cta1: 88, cta2: 88 },
   spotify_print: { headline: 78, date: 14, cta1: 106, cta2: 106 },
@@ -306,6 +309,7 @@ export function renderScriptFor(template: TemplateId, target: RenderTarget): str
   const suffix = target === 'feed' ? ':feed' : '';
   if (template === 'available_now') return `render:available${suffix}`;
   if (template === 'watch_youtube') return `render:youtube${suffix}`;
+  if (template === 'youtube_subscribe') return `render:youtubesubscribe${suffix}`;
   if (template === 'milestone') return `render:milestone${suffix}`;
   if (template === 'spotify_print') return `render:spotifyprint${suffix}`;
   return `render:outnow${suffix}`;

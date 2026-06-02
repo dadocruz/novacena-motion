@@ -16,6 +16,11 @@ export const TEMPLATE_INFO: Record<TemplateId, { label: string; description: str
     description: 'Premiação de vídeo',
     emoji: '📺',
   },
+  youtube_subscribe: {
+    label: 'Inscreva-se',
+    description: 'Chamada para canal',
+    emoji: '🔔',
+  },
   milestone: {
     label: 'Milestone',
     description: 'Celebração de conquista',

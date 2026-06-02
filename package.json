@@ -17,6 +17,8 @@
     "render:available:feed": "remotion render remotion-entry/index.ts AvailableNowFeed out/available-now-feed.mp4",
     "render:youtube": "remotion render remotion-entry/index.ts WatchOnYouTube out/youtube-story.mp4",
     "render:youtube:feed": "remotion render remotion-entry/index.ts WatchOnYouTubeFeed out/youtube-feed.mp4",
+    "render:youtubesubscribe": "remotion render remotion-entry/index.ts YouTubeSubscribe out/youtube-subscribe-story.mp4",
+    "render:youtubesubscribe:feed": "remotion render remotion-entry/index.ts YouTubeSubscribeFeed out/youtube-subscribe-feed.mp4",
     "render:milestone": "remotion render remotion-entry/index.ts Milestone out/milestone-story.mp4",
     "render:milestone:feed": "remotion render remotion-entry/index.ts MilestoneFeed out/milestone-feed.mp4",
     "render:outnow": "remotion render remotion-entry/index.ts OutNow out/out-now-story.mp4",

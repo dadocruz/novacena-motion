@@ -7,6 +7,7 @@ export const templateOrder: TemplateId[] = [
   'available_now',
   'out_now',
   'watch_youtube',
+  'youtube_subscribe',
   'milestone',
   'spotify_print',
 ];
@@ -14,6 +15,7 @@ export const templateOrder: TemplateId[] = [
 export const templateLabels: Record<TemplateId, string> = {
   available_now: 'PRÉ-SAVE',
   watch_youtube: 'Assista no YouTube',
+  youtube_subscribe: 'Inscreva-se',
   milestone: '100k / Milestone',
   out_now: 'DISPONÍVEL',
   spotify_print: '📱 Spotify Print',
