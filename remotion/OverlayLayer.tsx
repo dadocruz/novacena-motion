@@ -2,7 +2,6 @@ import React from 'react';
 import {
   AbsoluteFill,
   Img,
-  Loop,
   Sequence,
   Freeze,
   Video,
@@ -253,16 +252,26 @@ const ElementImage: React.FC<{ overlay: OverlayItem }> = ({ overlay }) => {
   );
 };
 
-const PingPongVideo: React.FC<{
+const FrameControlledVideo: React.FC<{
   src: string;
   sourceDurationInFrames: number;
+  loopEnabled: boolean;
+  loopMode: 'normal' | 'pingpong';
   style: React.CSSProperties;
-}> = ({ src, sourceDurationInFrames, style }) => {
+}> = ({ src, sourceDurationInFrames, loopEnabled, loopMode, style }) => {
   const frame = useCurrentFrame();
   const lastFrame = Math.max(1, sourceDurationInFrames - 1);
-  const cycleDuration = Math.max(2, lastFrame * 2);
-  const cycleFrame = frame % cycleDuration;
-  const mediaFrame = cycleFrame <= lastFrame ? cycleFrame : cycleDuration - cycleFrame;
+  let mediaFrame = Math.min(frame, lastFrame);
+
+  if (loopEnabled && loopMode === 'normal') {
+    mediaFrame = frame % sourceDurationInFrames;
+  }
+
+  if (loopEnabled && loopMode === 'pingpong') {
+    const cycleDuration = Math.max(2, lastFrame * 2);
+    const cycleFrame = frame % cycleDuration;
+    mediaFrame = cycleFrame <= lastFrame ? cycleFrame : cycleDuration - cycleFrame;
+  }
 
   return (
     <Freeze frame={mediaFrame}>
@@ -303,14 +312,6 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           overlay.sourceDurationSec && overlay.sourceDurationSec > 0
             ? Math.max(1, Math.round(overlay.sourceDurationSec * fps))
             : sequenceDuration;
-        const needsPingPong =
-          overlay.loopEnabled === true &&
-          overlay.loopMode === 'pingpong' &&
-          sourceDurationInFrames < sequenceDuration;
-        const needsNormalLoop =
-          overlay.loopEnabled === true &&
-          overlay.loopMode === 'normal' &&
-          sourceDurationInFrames < sequenceDuration;
 
         const commonStyle: React.CSSProperties = {
           width: '100%',
@@ -329,27 +330,13 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           >
             <AbsoluteFill>
               {overlay.type === 'video' ? (
-                needsPingPong ? (
-                  <PingPongVideo
-                    src={overlay.src}
-                    sourceDurationInFrames={sourceDurationInFrames}
-                    style={commonStyle}
-                  />
-                ) : needsNormalLoop ? (
-                  <Loop durationInFrames={sourceDurationInFrames}>
-                    <Video
-                      src={overlay.src}
-                      muted
-                      style={commonStyle}
-                    />
-                  </Loop>
-                ) : (
-                  <Video
-                    src={overlay.src}
-                    muted
-                    style={commonStyle}
-                  />
-                )
+                <FrameControlledVideo
+                  src={overlay.src}
+                  sourceDurationInFrames={sourceDurationInFrames}
+                  loopEnabled={overlay.loopEnabled === true}
+                  loopMode={overlay.loopMode ?? 'normal'}
+                  style={commonStyle}
+                />
               ) : overlay.layout === 'element' ? (
                 <ElementImage overlay={overlay} />
               ) : (
