@@ -18,9 +18,9 @@ export const templateLabels: Record<TemplateId, string> = {
   watch_youtube: 'Assista no YouTube',
   youtube_subscribe: 'Inscreva-se',
   youtube_views: 'Visualizações YT',
-  milestone: '100k / Milestone',
+  milestone: 'Plays no single',
   out_now: 'DISPONÍVEL',
-  spotify_print: '📱 Spotify Print',
+  spotify_print: 'Ouvintes Mensais',
 };
 
 export function getProject(template: TemplateId): MotionProject {
