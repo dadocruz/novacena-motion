@@ -75,19 +75,31 @@ async function prepareVideoOverlay(dir: string, filename: string) {
   const outputName = filename.replace(/\.(mov|m4v)$/i, '-alpha.webm');
   const outputPath = path.join(dir, outputName);
 
+  // Alpha em .mov costuma ser ProRes 4444 (yuva444p12le), que o Chrome NÃO
+  // decodifica. Transcodamos para WebM VP9 com alpha (yuva420p). A flag
+  // -metadata alpha_mode=1 é OBRIGATÓRIA: sem ela o Chrome trata o vídeo como
+  // opaco (ignora a transparência). -deadline realtime + row-mt deixa rápido
+  // (~30s p/ 60s 1080×1920) pra não estourar o timeout do upload.
   await runFfmpeg([
     '-y',
     '-i', inputPath,
     '-an',
+    '-vf', 'format=yuva420p',
     '-c:v', 'libvpx-vp9',
     '-pix_fmt', 'yuva420p',
+    '-metadata:s:v:0', 'alpha_mode=1',
     '-auto-alt-ref', '0',
-    '-deadline', 'good',
-    '-cpu-used', '4',
+    '-deadline', 'realtime',
+    '-cpu-used', '8',
+    '-row-mt', '1',
     '-b:v', '0',
-    '-crf', '28',
+    '-crf', '30',
     outputPath,
   ]);
+
+  // Se o webm não foi gerado (falha de encode), mantém o original pra não
+  // quebrar o upload — mas o ideal é o webm.
+  if (!existsSync(outputPath)) return filename;
 
   await unlink(inputPath).catch(() => {});
   return outputName;
