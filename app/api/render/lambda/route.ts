@@ -19,6 +19,8 @@ const COMPOSITION_MAP: Record<string, string> = {
   'watch_youtube:feed': 'WatchOnYouTubeFeed',
   youtube_subscribe: 'YouTubeSubscribe',
   'youtube_subscribe:feed': 'YouTubeSubscribeFeed',
+  youtube_views: 'YouTubeViews',
+  'youtube_views:feed': 'YouTubeViewsFeed',
   milestone: 'Milestone',
   'milestone:feed': 'MilestoneFeed',
   out_now: 'OutNow',

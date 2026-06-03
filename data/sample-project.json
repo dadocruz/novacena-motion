@@ -437,6 +437,33 @@
         "overlays": []
       }
     },
+    "youtube_views": {
+      "type": "youtube_views",
+      "headline": "+ 20 MILHÕES",
+      "metricPrefix": "ULTRAPASSAMOS",
+      "metricNumber": "+ 20 MILHÕES",
+      "metricLabel": "DE VISUALIZAÇÕES",
+      "channelName": "",
+      "showCover": false,
+      "durationSeconds": 8,
+      "posterFrame": {
+        "enabled": true,
+        "frameSec": 3.37,
+        "holdSec": 1,
+        "outroEnabled": true
+      },
+      "motion": {
+        "fontHeadline": "premium-akhand-black",
+        "fontDate": "premium-bebas-neue",
+        "fontCta1": "premium-bebas-neue",
+        "transitionHeadline": "scale_pop",
+        "transitionDate": "mask_reveal",
+        "particlesEnabled": true,
+        "finalFlash": true,
+        "durationSeconds": 8,
+        "overlays": []
+      }
+    },
     "milestone": {
       "type": "milestone",
       "headline": "ULTRAPASSAMOS",

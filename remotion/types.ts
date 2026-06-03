@@ -32,6 +32,7 @@ export type TemplateId =
   | 'available_now'
   | 'watch_youtube'
   | 'youtube_subscribe'
+  | 'youtube_views'
   | 'milestone'
   | 'out_now'
   | 'spotify_print';

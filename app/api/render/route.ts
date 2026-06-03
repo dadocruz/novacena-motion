@@ -50,7 +50,7 @@ export const maxDuration = 900;
 
 const RenderRequestSchema = z.object({
   project: z.object({
-    type: z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'milestone', 'out_now', 'spotify_print', 'collaborator']),
+    type: z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'spotify_print', 'collaborator']),
     artistName: z.string().min(1),
     songTitle: z.string().min(1),
     formats: z.array(z.enum(['story', 'feed'])),
@@ -175,6 +175,8 @@ export async function POST(request: NextRequest) {
         'render:youtube:feed':   { id: 'WatchOnYouTubeFeed', out: 'out/youtube-feed.mp4',        target: 'feed'  },
         'render:youtubesubscribe':      { id: 'YouTubeSubscribe',     out: 'out/youtube-subscribe-story.mp4', target: 'story' },
         'render:youtubesubscribe:feed': { id: 'YouTubeSubscribeFeed', out: 'out/youtube-subscribe-feed.mp4',  target: 'feed'  },
+        'render:youtubeviews':      { id: 'YouTubeViews',     out: 'out/youtube-views-story.mp4', target: 'story' },
+        'render:youtubeviews:feed': { id: 'YouTubeViewsFeed', out: 'out/youtube-views-feed.mp4',  target: 'feed'  },
         'render:milestone':      { id: 'Milestone',          out: 'out/milestone-story.mp4',     target: 'story' },
         'render:milestone:feed': { id: 'MilestoneFeed',      out: 'out/milestone-feed.mp4',      target: 'feed'  },
         'render:outnow':         { id: 'OutNow',             out: 'out/out-now-story.mp4',       target: 'story' },

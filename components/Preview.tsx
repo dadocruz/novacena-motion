@@ -11,6 +11,7 @@ import type { TemplateId, MotionProject } from '../remotion/types';
 const importAvailableNow = () => import('../remotion/AvailableNow').then((m) => ({ default: m.AvailableNow }));
 const importWatchOnYouTube = () => import('../remotion/WatchOnYouTube').then((m) => ({ default: m.WatchOnYouTube }));
 const importYouTubeSubscribe = () => import('../remotion/YouTubeSubscribe').then((m) => ({ default: m.YouTubeSubscribe }));
+const importYouTubeViews = () => import('../remotion/YouTubeViews').then((m) => ({ default: m.YouTubeViews }));
 const importMilestone = () => import('../remotion/Milestone').then((m) => ({ default: m.Milestone }));
 const importOutNow = () => import('../remotion/OutNow').then((m) => ({ default: m.OutNow }));
 const importSpotifyPrint = () => import('../remotion/SpotifyPrint').then((m) => ({ default: m.SpotifyPrint }));
@@ -18,6 +19,7 @@ const importSpotifyPrint = () => import('../remotion/SpotifyPrint').then((m) => 
 const AvailableNow = React.lazy(importAvailableNow);
 const WatchOnYouTube = React.lazy(importWatchOnYouTube);
 const YouTubeSubscribe = React.lazy(importYouTubeSubscribe);
+const YouTubeViews = React.lazy(importYouTubeViews);
 const Milestone = React.lazy(importMilestone);
 const OutNow = React.lazy(importOutNow);
 const SpotifyPrint = React.lazy(importSpotifyPrint);
@@ -29,6 +31,7 @@ if (typeof window !== 'undefined') {
     importAvailableNow(),
     importWatchOnYouTube(),
     importYouTubeSubscribe(),
+    importYouTubeViews(),
     importMilestone(),
     importOutNow(),
     importSpotifyPrint(),
@@ -39,6 +42,7 @@ const COMPONENTS: Record<TemplateId, React.LazyExoticComponent<any>> = {
   available_now: AvailableNow,
   watch_youtube: WatchOnYouTube,
   youtube_subscribe: YouTubeSubscribe,
+  youtube_views: YouTubeViews,
   milestone: Milestone,
   out_now: OutNow,
   spotify_print: SpotifyPrint,

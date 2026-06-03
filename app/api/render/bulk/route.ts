@@ -6,7 +6,7 @@ const BulkRenderSchema = z.object({
     z.object({
       artistName: z.string(),
       songTitle: z.string(),
-      templates: z.array(z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'milestone', 'out_now', 'spotify_print'])),
+      templates: z.array(z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'spotify_print'])),
       formats: z.array(z.enum(['story', 'feed'])).optional().default(['story', 'feed']),
     })
   ),

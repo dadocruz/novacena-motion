@@ -21,6 +21,11 @@ export const TEMPLATE_INFO: Record<TemplateId, { label: string; description: str
     description: 'Chamada para canal',
     emoji: '🔔',
   },
+  youtube_views: {
+    label: 'Visualizações YT',
+    description: 'Marca de views no YouTube',
+    emoji: '▶️',
+  },
   milestone: {
     label: 'Milestone',
     description: 'Celebração de conquista',

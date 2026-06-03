@@ -244,6 +244,11 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
     headline: 'INSCREVA-SE',
     date: '@ do canal',
   },
+  youtube_views: {
+    date: 'ULTRAPASSAMOS',
+    headline: 'Numero',
+    cta1: 'Metrica',
+  },
   milestone: {
     date: 'Texto acima',
     headline: 'Numero',
@@ -263,6 +268,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
   youtube_subscribe: ['headline', 'date'],
+  youtube_views: ['date', 'headline', 'cta1'],
   milestone: ['date', 'headline', 'cta1'],
   out_now: ['headline', 'cta2'],
   spotify_print: ['date', 'headline', 'cta1'],
@@ -1227,6 +1233,13 @@ export default function Home() {
           // Fonte padrão Akhand Light (headline "INSCREVA-SE" + @canal)
           setFontHeadline('premium-akhand-light');
           setFontDate('premium-akhand-light');
+        }
+        if (nextId === 'youtube_views') {
+          // Número em Akhand Black; prefixo/métrica/canal em Bebas Neue
+          setFontHeadline('premium-akhand-black');
+          setFontDate('premium-bebas-neue');
+          setFontCta1('premium-bebas-neue');
+          setFontCta('premium-bebas-neue');
         }
       }
     }
@@ -3365,7 +3378,7 @@ export default function Home() {
 
       // ─── Template ────────────────────────────────────────
       const newTemplate = full.template ?? plan.templateId;
-      if (newTemplate && ['available_now','watch_youtube','youtube_subscribe','milestone','out_now','spotify_print'].includes(newTemplate)) {
+      if (newTemplate && ['available_now','watch_youtube','youtube_subscribe','youtube_views','milestone','out_now','spotify_print'].includes(newTemplate)) {
         switchTemplate(newTemplate as TemplateId);
       }
 
@@ -3983,6 +3996,16 @@ export default function Home() {
       return [
         { id: 'ytsub-headline', kind: 'text', role: 'headline', label: 'INSCREVA-SE', rect: measuredRect('ytsub-headline', roleRect(10, 66, 80, 12, 'headline')) },
         { id: 'ytsub-channel', kind: 'text', role: 'date', label: '@ do canal', rect: measuredRect('ytsub-channel', roleRect(20, 82, 60, 6, 'date')) },
+        ...elementHotspots,
+      ];
+    }
+
+    if (template === 'youtube_views') {
+      return [
+        { id: 'ytviews-prefix', kind: 'text', role: 'date', label: 'ULTRAPASSAMOS', rect: measuredRect('ytviews-prefix', roleRect(14, 47, 72, 6, 'date')) },
+        { id: 'ytviews-number', kind: 'text', role: 'headline', label: 'Numero', rect: measuredRect('ytviews-number', roleRect(8, 54, 84, 14, 'headline')) },
+        { id: 'ytviews-label', kind: 'text', role: 'cta1', label: 'Metrica', rect: measuredRect('ytviews-label', roleRect(16, 69, 68, 5, 'cta1')) },
+        ...(channelName ? [{ id: 'ytviews-channel', kind: 'text' as const, role: 'cta2' as const, label: '@ do canal', rect: measuredRect('ytviews-channel', roleRect(24, 76, 52, 5, 'cta2')) }] : []),
         ...elementHotspots,
       ];
     }
@@ -4752,7 +4775,7 @@ export default function Home() {
     }
 
     const nextTemplate = preset.template ?? preset.type;
-    if (['available_now', 'watch_youtube', 'youtube_subscribe', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
+    if (['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
       switchTemplate(nextTemplate as TemplateId);
     }
 
@@ -5367,6 +5390,18 @@ return (
               </div>
               <Field label="Headline" value={headline} onChange={setHeadline} placeholder="INSCREVA-SE" />
               <Field label="@ do canal" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
+            </>
+          ) : template === 'youtube_views' ? (
+            <>
+              <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
+                Marca de visualizações no YouTube. Use video de fundo no painel Capa/Motion.
+              </div>
+              <Field label="Texto acima" value={metricPrefix} onChange={setMetricPrefix} placeholder="ULTRAPASSAMOS" />
+              <div style={gridTwoCols}>
+                <Field label="Numero" value={metricNumber} onChange={setMetricNumber} placeholder="+ 20 MILHÕES" />
+                <Field label="Metrica" value={metricLabel} onChange={setMetricLabel} placeholder="DE VISUALIZAÇÕES" />
+              </div>
+              <Field label="@ do canal (opcional)" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
             </>
           ) : template === 'milestone' ? (
             <>
@@ -7157,8 +7192,8 @@ return (
             }}
             textOpacity={textOpacity} onChangeTextOpacity={setTextOpacityLive}
             uploadInputRef={fontInputRef} uploadFont={uploadFont}
-            sampleHeadline={template === 'spotify_print' || template === 'milestone' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : template === 'youtube_subscribe' ? (headline || 'INSCREVA-SE') : headline}
-            sampleDate={template === 'spotify_print' || template === 'milestone' ? metricPrefix : (template === 'watch_youtube' || template === 'youtube_subscribe') ? channelName : releaseDate}
+            sampleHeadline={template === 'spotify_print' || template === 'milestone' || template === 'youtube_views' ? metricNumber : template === 'watch_youtube' ? 'ASSISTA NO YOUTUBE' : template === 'youtube_subscribe' ? (headline || 'INSCREVA-SE') : headline}
+            sampleDate={template === 'spotify_print' || template === 'milestone' || template === 'youtube_views' ? metricPrefix : (template === 'watch_youtube' || template === 'youtube_subscribe') ? channelName : releaseDate}
             sampleCta={template === 'spotify_print' || template === 'milestone' ? metricLabel : cta}
             sampleCta2={cta2}
             txScale={txScale} txLS={txLS} txLH={txLH} txOX={txOX} txOY={txOY}

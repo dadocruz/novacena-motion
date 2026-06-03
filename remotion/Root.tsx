@@ -3,6 +3,7 @@ import { Composition, continueRender, delayRender, staticFile } from 'remotion';
 import { AvailableNow } from './AvailableNow';
 import { WatchOnYouTube } from './WatchOnYouTube';
 import { YouTubeSubscribe } from './YouTubeSubscribe';
+import { YouTubeViews } from './YouTubeViews';
 import { Milestone } from './Milestone';
 import { OutNow } from './OutNow';
 import { SpotifyPrint } from './SpotifyPrint';
@@ -132,6 +133,9 @@ const WatchOnYouTubeWithFonts: React.FC<any> = (props) => (
 const YouTubeSubscribeWithFonts: React.FC<any> = (props) => (
   <FontsInjector><YouTubeSubscribe {...props} /></FontsInjector>
 );
+const YouTubeViewsWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><YouTubeViews {...props} /></FontsInjector>
+);
 const MilestoneWithFonts: React.FC<any> = (props) => (
   <FontsInjector><Milestone {...props} /></FontsInjector>
 );
@@ -146,6 +150,7 @@ const templates = [
   { id: 'AvailableNow', component: AvailableNowWithFonts, project: getProject('available_now') },
   { id: 'WatchOnYouTube', component: WatchOnYouTubeWithFonts, project: getProject('watch_youtube') },
   { id: 'YouTubeSubscribe', component: YouTubeSubscribeWithFonts, project: getProject('youtube_subscribe') },
+  { id: 'YouTubeViews', component: YouTubeViewsWithFonts, project: getProject('youtube_views') },
   { id: 'Milestone', component: MilestoneWithFonts, project: getProject('milestone') },
   { id: 'OutNow', component: OutNowWithFonts, project: getProject('out_now') },
   { id: 'SpotifyPrint', component: SpotifyPrintWithFonts, project: getProject('spotify_print') },
