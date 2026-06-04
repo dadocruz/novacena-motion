@@ -3,9 +3,9 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
-import { createWriteStream } from 'fs';
+import { createReadStream, createWriteStream } from 'fs';
 import { existsSync } from 'fs';
-import { mkdir, unlink, stat } from 'fs/promises';
+import { mkdir, rm, stat, unlink } from 'fs/promises';
 import { addOverlay, deleteOverlay, listOverlays } from '../../../lib/storage';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
 
@@ -14,7 +14,9 @@ export const maxDuration = 300;
 
 const MAX_SIZE = 500 * 1024 * 1024;
 const MAX_SIZE_LABEL = '500 MB';
+const CHUNK_SIZE_LIMIT = 12 * 1024 * 1024;
 const ALLOWED_BLEND_MODES = new Set(['screen', 'overlay', 'lighten', 'soft-light', 'normal']);
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.webm', '.m4v']);
 const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
   ? '/usr/local/bin/ffmpeg'
   : existsSync('/usr/bin/ffmpeg')
@@ -125,6 +127,45 @@ async function resolveVideoDuration(dir: string, filename: string, fallback: num
   return Number.isFinite(fallback) && fallback > 0 ? fallback : undefined;
 }
 
+function cleanUploadId(value: string) {
+  return value.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
+}
+
+function chunkPartName(index: number) {
+  return `${String(index).padStart(6, '0')}.part`;
+}
+
+async function assembleChunks(chunkDir: string, totalChunks: number, outputPath: string) {
+  await new Promise<void>((resolve, reject) => {
+    const output = createWriteStream(outputPath);
+    let index = 0;
+
+    const pipeNext = () => {
+      if (index >= totalChunks) {
+        output.end();
+        return;
+      }
+
+      const input = createReadStream(path.join(chunkDir, chunkPartName(index)));
+      index += 1;
+      input.on('error', reject);
+      input.on('end', pipeNext);
+      input.pipe(output, { end: false });
+    };
+
+    output.on('error', reject);
+    output.on('finish', resolve);
+    pipeNext();
+  });
+}
+
+async function allChunksReady(chunkDir: string, totalChunks: number) {
+  for (let index = 0; index < totalChunks; index += 1) {
+    if (!existsSync(path.join(chunkDir, chunkPartName(index)))) return false;
+  }
+  return true;
+}
+
 export async function GET() {
   const overlays = await listOverlays();
   return NextResponse.json({ ok: true, overlays });
@@ -135,9 +176,126 @@ export async function POST(req: NextRequest) {
     const contentType = (req.headers.get('content-type') || '').split(';')[0].toLowerCase();
     const filenameParam = req.nextUrl.searchParams.get('filename') || '';
     const extParam = path.extname(filenameParam).toLowerCase();
+    const isChunkedUpload = req.nextUrl.searchParams.get('chunked') === '1';
+
+    if (isChunkedUpload) {
+      if (!req.body) {
+        return NextResponse.json({ ok: false, error: 'Corpo do upload vazio.' }, { status: 400 });
+      }
+
+      const isVideo = VIDEO_EXTENSIONS.has(extParam);
+      if (!isVideo) {
+        return NextResponse.json(
+          { ok: false, error: 'Upload em partes é aceito apenas para vídeos de overlay.' },
+          { status: 400 }
+        );
+      }
+
+      const uploadId = cleanUploadId(req.nextUrl.searchParams.get('uploadId') || '');
+      const chunkIndex = Number(req.nextUrl.searchParams.get('chunkIndex'));
+      const totalChunks = Number(req.nextUrl.searchParams.get('totalChunks'));
+      const totalSize = Number(req.nextUrl.searchParams.get('totalSize') || 0);
+      const durationSecRaw = Number(req.nextUrl.searchParams.get('durationSec'));
+      const contentLength = Number(req.headers.get('content-length') || 0);
+
+      if (!uploadId || !Number.isInteger(chunkIndex) || !Number.isInteger(totalChunks) || totalChunks <= 0 || chunkIndex < 0 || chunkIndex >= totalChunks) {
+        return NextResponse.json({ ok: false, error: 'Upload em partes inválido.' }, { status: 400 });
+      }
+
+      if (totalSize > MAX_SIZE) {
+        return NextResponse.json(
+          { ok: false, error: `Arquivo muito grande (${(totalSize / 1024 / 1024).toFixed(1)} MB). Máximo permitido: ${MAX_SIZE_LABEL}.` },
+          { status: 413 }
+        );
+      }
+
+      if (contentLength > CHUNK_SIZE_LIMIT) {
+        return NextResponse.json(
+          { ok: false, error: 'Parte do upload grande demais. Recarregue a página e tente novamente.' },
+          { status: 413 }
+        );
+      }
+
+      const dir = path.join(PUBLIC_UPLOADS, 'overlays');
+      const chunkDir = path.join(dir, '.chunks', uploadId);
+      await mkdir(chunkDir, { recursive: true });
+
+      const partPath = path.join(chunkDir, chunkPartName(chunkIndex));
+      await pipeline(
+        Readable.fromWeb(req.body as any),
+        createWriteStream(partPath)
+      );
+
+      if (contentLength > 0) {
+        const partSize = (await stat(partPath).catch(() => null))?.size ?? 0;
+        if (partSize < contentLength * 0.98) {
+          await unlink(partPath).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `Upload incompleto nesta parte: recebido ${(partSize / 1024 / 1024).toFixed(1)} MB de ${(contentLength / 1024 / 1024).toFixed(1)} MB.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const ready = await allChunksReady(chunkDir, totalChunks);
+      if (!ready) {
+        return NextResponse.json({
+          ok: true,
+          partial: true,
+          receivedChunks: chunkIndex + 1,
+          totalChunks,
+        });
+      }
+
+      await mkdir(dir, { recursive: true });
+      const filename = safeFileName(filenameParam, extParam || '.mp4');
+      const finalPath = path.join(dir, filename);
+      await assembleChunks(chunkDir, totalChunks, finalPath);
+      await rm(chunkDir, { recursive: true, force: true }).catch(() => {});
+
+      if (totalSize > 0) {
+        const assembledSize = (await stat(finalPath).catch(() => null))?.size ?? 0;
+        if (assembledSize < totalSize * 0.98) {
+          await unlink(finalPath).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `Upload incompleto: recebido ${(assembledSize / 1024 / 1024).toFixed(1)} MB de ${(totalSize / 1024 / 1024).toFixed(1)} MB.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const storedFilename = await prepareVideoOverlay(dir, filename);
+      const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
+
+      const label = cleanLabel(req.nextUrl.searchParams.get('label') || '', path.basename(filenameParam || filename, extParam || '.mp4'));
+      const blendMode = req.nextUrl.searchParams.get('blendMode') || 'screen';
+      if (!ALLOWED_BLEND_MODES.has(blendMode)) {
+        return NextResponse.json(
+          { ok: false, error: `Blend mode inválido: ${blendMode}.` },
+          { status: 400 }
+        );
+      }
+
+      const overlay = await addOverlay({
+        label,
+        filename: storedFilename,
+        path: `/api/uploads/overlays/${storedFilename}`,
+        type: 'video',
+        blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
+        durationSec: typeof storedDurationSec === 'number' && Number.isFinite(storedDurationSec) && storedDurationSec > 0 ? storedDurationSec : undefined,
+      });
+
+      return NextResponse.json({ ok: true, overlay });
+    }
 
     if (req.body && contentType && !contentType.includes('multipart/form-data')) {
-      const isVideo = ['.mp4', '.mov', '.webm', '.m4v'].includes(extParam);
+      const isVideo = VIDEO_EXTENSIONS.has(extParam);
       if (!isVideo) {
         return NextResponse.json(
           { ok: false, error: 'Upload direto só é aceito para vídeos. Use PNG/JPG/WEBP/SVG como elemento.' },
@@ -221,7 +379,7 @@ export async function POST(req: NextRequest) {
       );
     }
     const ext = path.extname(file.name).toLowerCase();
-    const isVideo = ['.mp4', '.mov', '.webm'].includes(ext);
+    const isVideo = VIDEO_EXTENSIONS.has(ext);
     const isImage = ['.png', '.jpg', '.jpeg', '.webp', '.svg'].includes(ext);
     if (!isVideo && !isImage) {
       return NextResponse.json(

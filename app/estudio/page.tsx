@@ -549,6 +549,9 @@ export default function Home() {
   const [renderFiles, setRenderFiles] = useState<{name: string; size: number; mtime: string}[]>([]);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
+  const [uploadingOverlay, setUploadingOverlay] = useState(false);
+  const [overlayUploadProgress, setOverlayUploadProgress] = useState<number | null>(null);
+  const [overlayUploadMsg, setOverlayUploadMsg] = useState('');
   const [processingVideoClip, setProcessingVideoClip] = useState(false);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [bgTrimPreviewTime, setBgTrimPreviewTime] = useState(0);
@@ -2898,39 +2901,145 @@ export default function Home() {
     setUserFonts((u) => u.filter((f) => f.id !== id));
   }
 
+  function uploadOverlayChunkWithProgress(
+    chunk: Blob,
+    uploadUrl: string,
+    contentType: string,
+    onChunkProgress: (progress: number) => void
+  ) {
+    return new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.responseType = 'json';
+      xhr.setRequestHeader('Content-Type', contentType || 'application/octet-stream');
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total <= 0) return;
+        onChunkProgress(Math.min(1, event.loaded / event.total));
+      };
+
+      xhr.onload = () => {
+        const data = xhr.response || (() => {
+          try {
+            return JSON.parse(xhr.responseText || '{}');
+          } catch {
+            return null;
+          }
+        })();
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data);
+          return;
+        }
+
+        reject(new Error(data?.error || `Upload falhou (${xhr.status}).`));
+      };
+
+      xhr.onerror = () => reject(new Error('Falha de rede durante o upload do overlay.'));
+      xhr.onabort = () => reject(new Error('Upload de overlay cancelado.'));
+      xhr.send(chunk);
+    });
+  }
+
+  async function uploadOverlayVideoInChunks(file: File, label: string, durationSec: number) {
+    const chunkSize = 8 * 1024 * 1024;
+    const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
+    const uploadId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let finalData: any = null;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(file.size, start + chunkSize);
+      const chunk = file.slice(start, end);
+      const isLastChunk = chunkIndex === totalChunks - 1;
+      const params = new URLSearchParams({
+        chunked: '1',
+        uploadId,
+        chunkIndex: String(chunkIndex),
+        totalChunks: String(totalChunks),
+        totalSize: String(file.size),
+        filename: file.name,
+        label,
+        blendMode: 'screen',
+        ...(durationSec > 0 ? { durationSec: String(durationSec) } : {}),
+      });
+
+      setOverlayUploadMsg(
+        isLastChunk
+          ? 'Enviando ultima parte. Depois vou converter o alpha para o player...'
+          : `Enviando overlay pesado em partes (${chunkIndex + 1}/${totalChunks})...`
+      );
+
+      const data = await uploadOverlayChunkWithProgress(
+        chunk,
+        `/api/upload-overlay?${params.toString()}`,
+        file.type || 'application/octet-stream',
+        (chunkProgress) => {
+          const overall = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+          setOverlayUploadProgress(Math.min(99, Math.round(overall)));
+        }
+      );
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Falha ao subir overlay.');
+      }
+
+      if (isLastChunk) {
+        setOverlayUploadMsg('Upload completo. Processando overlay alpha na VPS...');
+      }
+
+      if (data.overlay) {
+        finalData = data;
+      }
+    }
+
+    return finalData || { ok: false, error: 'Upload terminou sem retornar o overlay processado.' };
+  }
+
   async function uploadOverlay(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     const label = prompt('Nome do overlay (ex: Film Burn 01):', file.name);
     if (!label) return;
-    const durationSec = await readVideoDuration(file);
-    const isVideoOverlay = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
-    const r = isVideoOverlay
-      ? await fetch(`/api/upload-overlay?${new URLSearchParams({
-          filename: file.name,
-          label,
-          blendMode: 'screen',
-          ...(durationSec > 0 ? { durationSec: String(durationSec) } : {}),
-        }).toString()}`, {
-          method: 'POST',
-          headers: { 'Content-Type': file.type || 'application/octet-stream' },
-          body: file,
-        })
-      : await (async () => {
+    setUploadingOverlay(true);
+    setOverlayUploadProgress(0);
+    setOverlayUploadMsg('Preparando overlay...');
+
+    try {
+      const durationSec = await readVideoDuration(file);
+      const isVideoOverlay = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+      const d = isVideoOverlay
+        ? await uploadOverlayVideoInChunks(file, label, durationSec)
+        : await (async () => {
           const formData = new FormData();
           formData.append('overlay', file);
           formData.append('label', label);
           formData.append('blendMode', 'screen');
           if (durationSec > 0) formData.append('durationSec', String(durationSec));
-          return fetch('/api/upload-overlay', { method: 'POST', body: formData });
+          const r = await fetch('/api/upload-overlay', { method: 'POST', body: formData });
+          return r.json();
         })();
-    const d = await r.json();
-    if (d.ok) {
-      setOverlayAssets((o) => [d.overlay, ...o]);
-    } else {
-      alert(`Erro: ${d.error}`);
+
+      if (d.ok) {
+        setOverlayAssets((o) => [d.overlay, ...o]);
+        setOverlayUploadProgress(100);
+        setOverlayUploadMsg('Overlay pronto na biblioteca.');
+      } else {
+        alert(`Erro: ${d.error}`);
+      }
+    } catch (err) {
+      alert(`Erro: ${err instanceof Error ? err.message : 'Falha ao subir overlay.'}`);
+    } finally {
+      setUploadingOverlay(false);
+      setTimeout(() => {
+        setOverlayUploadProgress(null);
+        setOverlayUploadMsg('');
+      }, 900);
+      if (overlayInputRef.current) overlayInputRef.current.value = '';
     }
-    if (overlayInputRef.current) overlayInputRef.current.value = '';
   }
 
   function addOverlayInstance(asset: OverlayAsset) {
@@ -6387,11 +6496,33 @@ return (
 
             <div data-right-panel-section="Overlay" style={{ marginTop: 12, scrollMarginTop: 78 }}>
               <div style={miniLabel}>Overlays / elementos livres</div>
-              <button onClick={() => overlayInputRef.current?.click()} style={dashedUpload}>
-                + Subir overlay ou elemento
+              <button
+                onClick={() => overlayInputRef.current?.click()}
+                style={{ ...dashedUpload, opacity: uploadingOverlay ? 0.72 : 1, cursor: uploadingOverlay ? 'wait' : 'pointer' }}
+                disabled={uploadingOverlay}
+              >
+                {uploadingOverlay ? `Enviando overlay ${overlayUploadProgress ?? 0}%` : '+ Subir overlay ou elemento'}
               </button>
+              {uploadingOverlay && (
+                <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                  <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,.12)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${overlayUploadProgress ?? 0}%`,
+                        height: '100%',
+                        borderRadius: 999,
+                        background: 'linear-gradient(90deg, #c45cff, #ff7a3d)',
+                        transition: 'width .18s ease',
+                      }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-2)', lineHeight: 1.35 }}>
+                    {overlayUploadMsg || 'Enviando overlay...'}
+                  </div>
+                </div>
+              )}
               <input ref={overlayInputRef} type="file"
-                accept="video/mp4,video/quicktime,video/webm,image/png,image/jpeg,image/webp,image/svg+xml"
+                accept="video/mp4,video/quicktime,video/webm,video/x-m4v,image/png,image/jpeg,image/webp,image/svg+xml"
                 onChange={uploadOverlay} style={{ display: 'none' }} />
 
               <div style={{ marginTop: 10, display: 'grid', gap: 4 }}>
