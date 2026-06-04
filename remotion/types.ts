@@ -206,6 +206,10 @@ export type BackgroundConfig = {
   audioSrc?: string;
   /** Segundo do áudio onde começar a tocar (refrão) */
   audioStartSec?: number;
+  /** Duração total do áudio normalizado, usada pelo editor para escolher trecho */
+  audioDurationSec?: number;
+  /** Nome original exibido no editor */
+  audioOriginalName?: string;
   /** Volume 0..1 */
   audioVolume?: number;
   /** Fade-in em segundos */

@@ -486,9 +486,15 @@ export default function Home() {
   const [audioFadeOut, setAudioFadeOut] = useState<number>(factoryBackground.audioFadeOutSec ?? 1);
   // Audio do BG ligado por padrao. Toggle vira mute.
   const [useVideoAudio, setUseVideoAudio] = useState<boolean>(factoryBackground.useVideoAudio ?? true);
-  const [audioDuration, setAudioDuration] = useState<number>(0);
+  const [audioDuration, setAudioDuration] = useState<number>(factoryBackground.audioDurationSec ?? 0);
+  const [audioOriginalName, setAudioOriginalName] = useState<string>(factoryBackground.audioOriginalName ?? '');
+  const [audioPreviewTime, setAudioPreviewTime] = useState<number>(factoryBackground.audioStartSec ?? 0);
+  const [audioStartTimecodeInput, setAudioStartTimecodeInput] = useState('00:00.0');
+  const [audioUploadProgress, setAudioUploadProgress] = useState<number | null>(null);
+  const [audioUploadMsg, setAudioUploadMsg] = useState('');
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
   // ─── LOGOS CUSTOMIZADOS POR PLATAFORMA ────────────────────
   const [customLogos, setCustomLogos] = useState<Record<string, string>>(factoryMotion.customLogos ?? {});
@@ -1349,6 +1355,10 @@ export default function Home() {
     setAudioVolume(bg.audioVolume ?? 0.8);
     setAudioFadeIn(bg.audioFadeInSec ?? 0.5);
     setAudioFadeOut(bg.audioFadeOutSec ?? 1);
+    setAudioDuration(bg.audioDurationSec ?? 0);
+    setAudioOriginalName(bg.audioOriginalName ?? '');
+    setAudioPreviewTime(bg.audioStartSec ?? 0);
+    setAudioStartTimecodeInput(formatTimecode(bg.audioStartSec ?? 0));
     setUseVideoAudio(bg.useVideoAudio ?? true);
     setPlatformLogoPack((m.platformLogoPack ?? 'round') as PlatformLogoPackId);
     setCustomLogos(m.customLogos ?? {});
@@ -1453,6 +1463,7 @@ export default function Home() {
       audioFadeIn,
       audioFadeOut,
       audioDuration,
+      audioOriginalName,
       useVideoAudio,
       customLogos,
       platformLogoSize,
@@ -1584,6 +1595,9 @@ export default function Home() {
     setAudioFadeIn(snapshot.audioFadeIn ?? 0.5);
     setAudioFadeOut(snapshot.audioFadeOut ?? 1);
     setAudioDuration(snapshot.audioDuration ?? 0);
+    setAudioOriginalName(snapshot.audioOriginalName ?? '');
+    setAudioPreviewTime(snapshot.audioStartSec ?? 0);
+    setAudioStartTimecodeInput(formatTimecode(snapshot.audioStartSec ?? 0));
     setUseVideoAudio(snapshot.useVideoAudio ?? true);
     setCustomLogos(cloneHistoryValue(snapshot.customLogos ?? {}));
     setPlatformLogoSize(snapshot.platformLogoSize ?? 58);
@@ -1782,6 +1796,8 @@ export default function Home() {
         videoSaturation: bgVideoSaturation,
         audioSrc: audioSrc || undefined,
         audioStartSec,
+        audioDurationSec: audioDuration || undefined,
+        audioOriginalName: audioOriginalName || undefined,
         audioVolume,
         audioFadeInSec: audioFadeIn,
         audioFadeOutSec: audioFadeOut,
@@ -1863,6 +1879,8 @@ export default function Home() {
       bgVideoSaturation,
       audioSrc,
       audioStartSec,
+      audioDuration,
+      audioOriginalName,
       audioVolume,
       audioFadeIn,
       audioFadeOut,
@@ -2174,6 +2192,48 @@ export default function Home() {
         play();
       }
     }, 120);
+  }
+
+  const audioStartMax = audioDuration > 0 ? Math.max(0, audioDuration - 0.1) : 0;
+
+  function clampAudioStart(value: number) {
+    if (!Number.isFinite(value)) return 0;
+    return Math.max(0, Math.min(audioStartMax, value));
+  }
+
+  function setAudioStartAndPreview(value: number, shouldSeek = true) {
+    const next = clampAudioStart(value);
+    setAudioStartSec(next);
+    setAudioPreviewTime(next);
+    setAudioStartTimecodeInput(formatTimecode(next));
+    if (shouldSeek && audioPreviewRef.current) {
+      audioPreviewRef.current.currentTime = next;
+    }
+  }
+
+  function seekAudioPreview(value: number) {
+    const max = Math.max(0, audioDuration || 0);
+    const next = Math.max(0, Math.min(max, Number.isFinite(value) ? value : 0));
+    setAudioPreviewTime(next);
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.currentTime = next;
+    }
+  }
+
+  function nudgeAudioStart(delta: number) {
+    setAudioStartAndPreview(audioStartSec + delta);
+  }
+
+  function useCurrentAudioPreviewTime() {
+    const current = audioPreviewRef.current?.currentTime ?? audioPreviewTime;
+    setAudioStartAndPreview(current, false);
+  }
+
+  function playAudioFromPreview() {
+    const audio = audioPreviewRef.current;
+    if (!audio) return;
+    audio.currentTime = audioPreviewTime;
+    audio.play().catch(() => {});
   }
 
   // ─── HANDLERS ────────────────────────────────────────────
@@ -2867,27 +2927,39 @@ export default function Home() {
     }
   }
 
-  function readVideoDuration(file: File): Promise<number> {
+  function readMediaDuration(file: File): Promise<number> {
     return new Promise((resolve) => {
-      if (!file.type.startsWith('video/')) {
+      const isVideo = file.type.startsWith('video/') || /\.(mp4|mov|m4v|webm|mpeg|mpg|mkv|avi|3gp|3gpp)$/i.test(file.name);
+      const isAudio = file.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac|aif|aiff)$/i.test(file.name);
+
+      if (!isVideo && !isAudio) {
         resolve(0);
         return;
       }
 
-      const videoUrl = URL.createObjectURL(file);
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.src = videoUrl;
-      video.onloadedmetadata = () => {
-        const duration = Number.isFinite(video.duration) ? video.duration : 0;
-        URL.revokeObjectURL(videoUrl);
+      const mediaUrl = URL.createObjectURL(file);
+      const media: HTMLMediaElement = isVideo
+        ? document.createElement('video')
+        : document.createElement('audio');
+      media.preload = 'metadata';
+      media.src = mediaUrl;
+      media.onloadedmetadata = () => {
+        const duration = Number.isFinite(media.duration) ? media.duration : 0;
+        URL.revokeObjectURL(mediaUrl);
         resolve(duration);
       };
-      video.onerror = () => {
-        URL.revokeObjectURL(videoUrl);
+      media.onerror = () => {
+        URL.revokeObjectURL(mediaUrl);
         resolve(0);
       };
     });
+  }
+
+  function readVideoDuration(file: File): Promise<number> {
+    if (!file.type.startsWith('video/') && !/\.(mp4|mov|m4v|webm|mpeg|mpg|mkv|avi|3gp|3gpp)$/i.test(file.name)) {
+      return Promise.resolve(0);
+    }
+    return readMediaDuration(file);
   }
 
   async function uploadFont(e: React.ChangeEvent<HTMLInputElement>) {
@@ -3136,40 +3208,147 @@ export default function Home() {
     ? selectedOverlay
     : null;
 
+  function uploadAudioChunkWithProgress(
+    chunk: Blob,
+    uploadUrl: string,
+    contentType: string,
+    onChunkProgress: (progress: number) => void
+  ) {
+    return new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', uploadUrl);
+      xhr.responseType = 'json';
+      xhr.setRequestHeader('Content-Type', contentType || 'application/octet-stream');
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total <= 0) return;
+        onChunkProgress(Math.min(1, event.loaded / event.total));
+      };
+
+      xhr.onload = () => {
+        const data = xhr.response || (() => {
+          try {
+            return JSON.parse(xhr.responseText || '{}');
+          } catch {
+            return null;
+          }
+        })();
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data);
+          return;
+        }
+
+        reject(new Error(data?.error || `Upload de áudio falhou (${xhr.status}).`));
+      };
+
+      xhr.onerror = () => reject(new Error('Falha de rede durante o upload do áudio.'));
+      xhr.onabort = () => reject(new Error('Upload de áudio cancelado.'));
+      xhr.send(chunk);
+    });
+  }
+
+  async function uploadAudioInChunks(file: File, durationSec: number) {
+    const chunkSize = 8 * 1024 * 1024;
+    const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
+    const uploadId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let finalData: any = null;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(file.size, start + chunkSize);
+      const chunk = file.slice(start, end);
+      const isLastChunk = chunkIndex === totalChunks - 1;
+      const params = new URLSearchParams({
+        chunked: '1',
+        uploadId,
+        chunkIndex: String(chunkIndex),
+        totalChunks: String(totalChunks),
+        totalSize: String(file.size),
+        filename: file.name,
+        ...(durationSec > 0 ? { durationSec: String(durationSec) } : {}),
+      });
+
+      setAudioUploadMsg(
+        isLastChunk
+          ? 'Enviando última parte. Depois vou extrair e normalizar o áudio...'
+          : `Enviando áudio/vídeo em partes (${chunkIndex + 1}/${totalChunks})...`
+      );
+
+      const data = await uploadAudioChunkWithProgress(
+        chunk,
+        `/api/upload-audio?${params.toString()}`,
+        file.type || 'application/octet-stream',
+        (chunkProgress) => {
+          const overall = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+          setAudioUploadProgress(Math.min(99, Math.round(overall)));
+        }
+      );
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Falha ao subir áudio.');
+      }
+
+      if (isLastChunk) {
+        setAudioUploadMsg('Upload completo. Preparando faixa de áudio na VPS...');
+      }
+
+      if (data.audioSrc) {
+        finalData = data;
+      }
+    }
+
+    return finalData || { ok: false, error: 'Upload terminou sem retornar o áudio processado.' };
+  }
+
   async function uploadAudio(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingAudio(true);
-    // Lê  do áudio
-    const audioUrl = URL.createObjectURL(file);
-    const tempAudio = document.createElement('audio');
-    tempAudio.preload = 'metadata';
-    tempAudio.src = audioUrl;
-    await new Promise<void>((resolve) => {
-      tempAudio.onloadedmetadata = () => resolve();
-      tempAudio.onerror = () => resolve();
-    });
-    const dur = tempAudio.duration || 0;
-    URL.revokeObjectURL(audioUrl);
-    const formData = new FormData();
-    formData.append('audio', file);
-    const r = await fetch('/api/upload-audio', { method: 'POST', body: formData });
-    const d = await r.json();
-    setUploadingAudio(false);
-    if (!d.ok) {
-      alert(`Erro: ${d.error}`);
-      return;
+    setAudioUploadProgress(0);
+    setAudioUploadMsg('Preparando arquivo...');
+
+    try {
+      const localDuration = await readMediaDuration(file);
+      const d = await uploadAudioInChunks(file, localDuration);
+
+      if (!d.ok || !d.audioSrc) {
+        throw new Error(d.error || 'Falha ao preparar áudio.');
+      }
+
+      const nextDuration = Number(d.durationSec || localDuration || 0);
+      setAudioSrc(d.audioSrc);
+      setAudioDuration(nextDuration);
+      setAudioOriginalName(d.originalName || file.name);
+      setAudioStartSec(0);
+      setAudioPreviewTime(0);
+      setAudioStartTimecodeInput(formatTimecode(0));
+      setUseVideoAudio(false);
+      setAudioUploadProgress(100);
+      setAudioUploadMsg(d.sourceKind === 'video' ? 'Áudio extraído do vídeo e pronto.' : 'Áudio pronto.');
+    } catch (err) {
+      alert(`Erro no upload/processamento do áudio: ${err instanceof Error ? err.message : 'Falha desconhecida.'}`);
+    } finally {
+      setUploadingAudio(false);
+      window.setTimeout(() => {
+        setAudioUploadProgress(null);
+        setAudioUploadMsg('');
+      }, 1200);
+      if (audioInputRef.current) audioInputRef.current.value = '';
     }
-    setAudioSrc(d.audioSrc);
-    setAudioDuration(dur);
-    setAudioStartSec(0);
-    if (audioInputRef.current) audioInputRef.current.value = '';
   }
 
   function clearAudio() {
     setAudioSrc('');
     setAudioDuration(0);
+    setAudioOriginalName('');
     setAudioStartSec(0);
+    setAudioPreviewTime(0);
+    setAudioStartTimecodeInput(formatTimecode(0));
+    if (bgVideo) setUseVideoAudio(true);
   }
 
   async function uploadPlatformLogo(platform: string, file: File) {
@@ -3286,6 +3465,10 @@ export default function Home() {
     setAudioVolume(bg.audioVolume ?? 0.8);
     setAudioFadeIn(bg.audioFadeInSec ?? 0.5);
     setAudioFadeOut(bg.audioFadeOutSec ?? 1);
+    setAudioDuration(bg.audioDurationSec ?? 0);
+    setAudioOriginalName(bg.audioOriginalName ?? '');
+    setAudioPreviewTime(bg.audioStartSec ?? 0);
+    setAudioStartTimecodeInput(formatTimecode(bg.audioStartSec ?? 0));
     setUseVideoAudio(bg.useVideoAudio ?? true);
   }
 
@@ -5050,7 +5233,13 @@ export default function Home() {
     if (typeof background.videoBlur === 'number') setBgVideoBlur(background.videoBlur);
     if (typeof background.videoSaturation === 'number') setBgVideoSaturation(background.videoSaturation);
     if (typeof background.audioSrc === 'string') setAudioSrc(background.audioSrc);
-    if (typeof background.audioStartSec === 'number') setAudioStartSec(background.audioStartSec);
+    if (typeof background.audioStartSec === 'number') {
+      setAudioStartSec(background.audioStartSec);
+      setAudioPreviewTime(background.audioStartSec);
+      setAudioStartTimecodeInput(formatTimecode(background.audioStartSec));
+    }
+    if (typeof background.audioDurationSec === 'number') setAudioDuration(background.audioDurationSec);
+    if (typeof background.audioOriginalName === 'string') setAudioOriginalName(background.audioOriginalName);
     if (typeof background.audioVolume === 'number') setAudioVolume(background.audioVolume);
     if (typeof background.audioFadeInSec === 'number') setAudioFadeIn(background.audioFadeInSec);
     if (typeof background.audioFadeOutSec === 'number') setAudioFadeOut(background.audioFadeOutSec);
@@ -6455,32 +6644,160 @@ return (
             <div style={{ marginTop: 12 }}>
               <div style={miniLabel}>Áudio</div>
               <button
+                type="button"
                 onClick={() => audioInputRef.current?.click()}
                 disabled={uploadingAudio}
                 style={dashedUpload}
               >
-                {uploadingAudio ? 'Enviando…' : audioSrc ? `✓ Áudio (${audioDuration.toFixed(1)}s)` : '+ Carregar MP3/WAV/M4A'}
+                {uploadingAudio
+                  ? audioUploadProgress !== null
+                    ? `Enviando… ${audioUploadProgress}%`
+                    : 'Processando…'
+                  : audioSrc
+                    ? `✓ Áudio pronto${audioDuration ? ` (${audioDuration.toFixed(1)}s)` : ''}`
+                    : '+ Carregar áudio ou extrair de vídeo'}
               </button>
               <input
                 ref={audioInputRef}
                 type="file"
-                accept="audio/mp3,audio/mpeg,audio/wav,audio/x-m4a,audio/mp4,audio/aac,audio/ogg"
+                accept="audio/*,video/mp4,video/quicktime,video/webm,.mp3,.wav,.m4a,.aac,.ogg,.flac,.aif,.aiff,.mp4,.mov,.m4v,.webm,.mpeg,.mpg,.mkv,.avi,.3gp,.3gpp"
                 onChange={uploadAudio}
                 style={{ display: 'none' }}
               />
+              {uploadingAudio && audioUploadProgress !== null && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${audioUploadProgress}%`,
+                        height: '100%',
+                        borderRadius: 999,
+                        background: 'linear-gradient(90deg, rgba(168,85,247,0.95), rgba(249,115,22,0.95))',
+                        transition: 'width 160ms ease',
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-3)' }}>
+                    {audioUploadMsg || 'Enviando arquivo em partes...'}
+                  </div>
+                </div>
+              )}
+              {!uploadingAudio && audioUploadMsg && (
+                <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                  {audioUploadMsg}
+                </div>
+              )}
               {audioSrc && (
                 <>
-                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                      {audioOriginalName || 'Áudio do projeto'}
+                      {audioDuration ? ` · ${formatTimecode(audioDuration)}` : ''}
+                    </div>
                     <button onClick={clearAudio} style={linkBtnDanger}>remover áudio</button>
                   </div>
-                  <SliderRow
-                    label="Início (refrão)"
-                    value={audioStartSec}
-                    min={0}
-                    step={0.1}
-                    onChange={setAudioStartSec}
-                    format={(v) => `${v.toFixed(1)}s`}
+
+                  <audio
+                    ref={audioPreviewRef}
+                    src={audioSrc}
+                    controls
+                    preload="metadata"
+                    onLoadedMetadata={(event) => {
+                      const duration = event.currentTarget.duration;
+                      if (Number.isFinite(duration) && duration > 0) setAudioDuration(duration);
+                      event.currentTarget.currentTime = Math.min(audioPreviewTime, Math.max(0, duration || audioPreviewTime));
+                    }}
+                    onTimeUpdate={(event) => {
+                      const current = event.currentTarget.currentTime;
+                      if (Number.isFinite(current)) setAudioPreviewTime(current);
+                    }}
+                    style={{
+                      width: '100%',
+                      marginTop: 8,
+                      minHeight: 36,
+                      borderRadius: 8,
+                      background: '#000',
+                    }}
                   />
+
+                  <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
+                      Início no motion: {formatTimecode(audioStartSec)}
+                    </div>
+                    <button type="button" onClick={useCurrentAudioPreviewTime} style={smallBtn}>
+                      Marcar início aqui
+                    </button>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 5 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Percorrer áudio</span>
+                      <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>
+                        {formatTimecode(audioPreviewTime)} / {formatTimecode(audioDuration)}
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(0.1, audioDuration)}
+                      step={0.05}
+                      value={Math.min(audioPreviewTime, Math.max(0, audioDuration || audioPreviewTime || 0))}
+                      onPointerDown={() => {
+                        audioPreviewRef.current?.pause();
+                      }}
+                      onChange={(event) => seekAudioPreview(parseFloat(event.target.value))}
+                      style={{ width: '100%', accentColor: '#f97316' }}
+                    />
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 5 }}>
+                      <span style={{ color: 'var(--text-3)' }}>Início do áudio</span>
+                      <span style={{ color: 'var(--text-1)', fontWeight: 800 }}>{formatTimecode(audioStartSec)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(0.1, audioStartMax)}
+                      step={0.05}
+                      value={audioStartSec}
+                      onChange={(event) => setAudioStartAndPreview(parseFloat(event.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 5 }}>
+                    {[-5, -1, 0, 1, 5].map((delta) => (
+                      <button
+                        key={delta}
+                        type="button"
+                        onClick={() => delta === 0 ? playAudioFromPreview() : nudgeAudioStart(delta)}
+                        style={smallBtn}
+                      >
+                        {delta === 0 ? 'Play daqui' : delta > 0 ? `+${delta}s` : `${delta}s`}
+                      </button>
+                    ))}
+                  </div>
+
+                  <label style={{ display: 'grid', gap: 5, marginTop: 8 }}>
+                    <span style={miniInputLabel}>Início exato</span>
+                    <input
+                      value={audioStartTimecodeInput}
+                      onChange={(event) => setAudioStartTimecodeInput(event.target.value)}
+                      onBlur={() => {
+                        const parsed = parseTimecode(audioStartTimecodeInput);
+                        setAudioStartAndPreview(parsed ?? audioStartSec);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        const parsed = parseTimecode(audioStartTimecodeInput);
+                        setAudioStartAndPreview(parsed ?? audioStartSec);
+                      }}
+                      placeholder="01:23.4"
+                      style={fieldInputStyle}
+                    />
+                  </label>
+
                   <SliderRow
                     label="Volume"
                     value={audioVolume}
