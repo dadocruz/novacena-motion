@@ -136,6 +136,100 @@ function hexToRgba(color: string, opacity: number) {
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 }
 
+function hexToHsl(color: string) {
+  const hex = color.trim().replace('#', '');
+  if (hex.length !== 6) return { h: 0, s: 0, l: 1 };
+
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const delta = max - min;
+    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+    if (max === r) h = (g - b) / delta + (g < b ? 6 : 0);
+    if (max === g) h = (b - r) / delta + 2;
+    if (max === b) h = (r - g) / delta + 4;
+    h *= 60;
+  }
+
+  return { h, s, l };
+}
+
+function alphaMediaTintFilter(color: string) {
+  const { h, s, l } = hexToHsl(color);
+  const invert = Math.max(0, Math.min(100, l * 95));
+  const saturation = Math.max(100, Math.round(650 + s * 2600));
+  const brightness = Math.max(55, Math.min(155, Math.round(68 + l * 70)));
+  return `brightness(0) saturate(100%) invert(${invert}%) sepia(95%) saturate(${saturation}%) hue-rotate(${Math.round(h - 45)}deg) brightness(${brightness}%)`;
+}
+
+function outlineFilter(overlay: OverlayItem) {
+  const outlineWidth = Math.max(0, overlay.outlineWidth ?? 0);
+  if (outlineWidth <= 0) return [];
+
+  const color = overlay.outlineColor ?? '#ffffff';
+  return [
+    `drop-shadow(${outlineWidth}px 0 0 ${color})`,
+    `drop-shadow(${-outlineWidth}px 0 0 ${color})`,
+    `drop-shadow(0 ${outlineWidth}px 0 ${color})`,
+    `drop-shadow(0 ${-outlineWidth}px 0 ${color})`,
+  ];
+}
+
+function coverMediaFilter(overlay: OverlayItem) {
+  const filters: string[] = [];
+  if (overlay.tintEnabled || overlay.gradientEnabled) {
+    filters.push(alphaMediaTintFilter(overlay.gradientEnabled ? (overlay.gradientFrom ?? overlay.tintColor ?? '#ffffff') : (overlay.tintColor ?? '#ffffff')));
+  }
+  filters.push(...outlineFilter(overlay));
+  return filters.join(' ') || undefined;
+}
+
+const CoverImage: React.FC<{ overlay: OverlayItem; style: React.CSSProperties }> = ({ overlay, style }) => {
+  const baseOpacity = typeof style.opacity === 'number' ? style.opacity : 1;
+
+  if (overlay.tintEnabled || overlay.gradientEnabled) {
+    const background = overlay.gradientEnabled
+      ? `linear-gradient(135deg, ${hexToRgba(overlay.gradientFrom ?? '#ffffff', 1)} 0%, ${hexToRgba(overlay.gradientTo ?? '#ff4f73', 1)} 100%)`
+      : hexToRgba(overlay.tintColor ?? '#ffffff', 1);
+
+    return (
+      <AbsoluteFill
+        style={{
+          ...style,
+          background,
+          opacity: baseOpacity * (overlay.gradientEnabled ? (overlay.gradientOpacity ?? 0.75) : (overlay.tintOpacity ?? 1)),
+          WebkitMaskImage: `url(${overlay.src})`,
+          maskImage: `url(${overlay.src})`,
+          WebkitMaskRepeat: 'no-repeat',
+          maskRepeat: 'no-repeat',
+          WebkitMaskPosition: 'center',
+          maskPosition: 'center',
+          WebkitMaskSize: 'cover',
+          maskSize: 'cover',
+          filter: outlineFilter(overlay).join(' ') || undefined,
+        }}
+      />
+    );
+  }
+
+  return (
+    <Img
+      src={overlay.src}
+      style={{
+        ...style,
+        filter: outlineFilter(overlay).join(' ') || undefined,
+      }}
+    />
+  );
+};
+
 function elementEntryStyle(frame: number, overlay: OverlayItem) {
   const duration = Math.max(1, overlay.entryDurationFrames ?? 18);
   const progress = interpolate(frame, [0, duration], [0, 1], {
@@ -333,7 +427,9 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          opacity: overlay.opacity,
+          opacity: overlay.type === 'video' && (overlay.tintEnabled || overlay.gradientEnabled)
+            ? (overlay.opacity ?? 1) * (overlay.gradientEnabled ? (overlay.gradientOpacity ?? 0.75) : (overlay.tintOpacity ?? 1))
+            : overlay.opacity,
           mixBlendMode: normalizeBlendMode(overlay.blendMode),
           pointerEvents: 'none',
           backfaceVisibility: 'hidden',
@@ -354,15 +450,15 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
                   sourceDurationInFrames={sourceDurationInFrames}
                   loopEnabled={overlay.loopEnabled === true}
                   loopMode={overlay.loopMode ?? 'normal'}
-                  style={commonStyle}
+                  style={{
+                    ...commonStyle,
+                    filter: coverMediaFilter(overlay),
+                  }}
                 />
               ) : overlay.layout === 'element' ? (
                 <ElementImage overlay={overlay} />
               ) : (
-                <Img
-                  src={overlay.src}
-                  style={commonStyle}
-                />
+                <CoverImage overlay={overlay} style={commonStyle} />
               )}
             </AbsoluteFill>
           </Sequence>

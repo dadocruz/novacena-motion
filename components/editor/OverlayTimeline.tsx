@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { OverlayPlacement } from '../../remotion/types';
-import { tinyNumInput, tinySelect, linkBtnDanger } from '../../app/editorStyles';
+import { tinyNumInput, tinySelect, linkBtnDanger, colorInputStyle } from '../../app/editorStyles';
 
 function clampNumber(value: number, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
@@ -20,6 +20,73 @@ function MiniControl({
       {label}
       {children}
     </label>
+  );
+}
+
+const overlaySwatches = ['#ffffff', '#000000', '#ff4f73', '#ffcc33', '#22d36f', '#7c5cff', '#ff7a3d', '#24c7ef'];
+
+function MiniButton({
+  active,
+  children,
+  onClick,
+}: {
+  active?: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        minHeight: 26,
+        padding: '0 8px',
+        borderRadius: 7,
+        border: active ? '1px solid var(--brand)' : '1px solid var(--border-1)',
+        background: active ? 'rgba(196,92,255,.22)' : 'rgba(255,255,255,.05)',
+        color: active ? '#fff' : 'var(--text-2)',
+        fontSize: 10,
+        fontWeight: 800,
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ColorSwatches({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+      <input
+        type="color"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        style={{ ...colorInputStyle, width: 36, height: 30, padding: 2 }}
+      />
+      {overlaySwatches.map((color) => (
+        <button
+          key={color}
+          type="button"
+          aria-label={`Usar cor ${color}`}
+          onClick={() => onChange(color)}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 999,
+            border: value.toLowerCase() === color ? '2px solid #fff' : '1px solid rgba(255,255,255,.18)',
+            background: color,
+            cursor: 'pointer',
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -57,26 +124,24 @@ export function OverlayTimeline({
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
             </span>
-            {ov.type === 'image' && (ov.layout ?? 'element') === 'element' ? (
-              <button
-                type="button"
-                onClick={() => onSelect?.(ov.id)}
-                style={{
-                  height: 26,
-                  padding: '0 8px',
-                  borderRadius: 7,
-                  border: selectedId === ov.id ? '1px solid var(--brand)' : '1px solid var(--border-1)',
-                  background: selectedId === ov.id ? 'var(--surface-active)' : 'var(--surface-1)',
-                  color: 'var(--text-1)',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                selecionar
-              </button>
-            ) : null}
+            <button
+              type="button"
+              onClick={() => onSelect?.(ov.id)}
+              style={{
+                height: 26,
+                padding: '0 8px',
+                borderRadius: 7,
+                border: selectedId === ov.id ? '1px solid var(--brand)' : '1px solid var(--border-1)',
+                background: selectedId === ov.id ? 'var(--surface-active)' : 'var(--surface-1)',
+                color: 'var(--text-1)',
+                fontSize: 10,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              editar
+            </button>
             <button onClick={() => onRemove(ov.id)} style={linkBtnDanger}>x</button>
           </div>
 
@@ -143,6 +208,114 @@ export function OverlayTimeline({
                 </select>
               )}
           </div>
+
+          {selectedId === ov.id && (
+            <div style={{
+              borderTop: '1px solid rgba(255,255,255,.08)',
+              paddingTop: 8,
+              display: 'grid',
+              gap: 8,
+            }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 800 }}>
+                Cor do overlay
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
+                <MiniButton
+                  active={!ov.tintEnabled && !ov.gradientEnabled}
+                  onClick={() => onUpdate(ov.id, { tintEnabled: false, gradientEnabled: false })}
+                >
+                  Original
+                </MiniButton>
+                <MiniButton
+                  active={Boolean(ov.tintEnabled) && !ov.gradientEnabled}
+                  onClick={() => onUpdate(ov.id, { tintEnabled: true, gradientEnabled: false, tintColor: ov.tintColor ?? '#ffffff', tintOpacity: ov.tintOpacity ?? 1 })}
+                >
+                  Cor
+                </MiniButton>
+                <MiniButton
+                  active={Boolean(ov.gradientEnabled)}
+                  onClick={() => onUpdate(ov.id, {
+                    tintEnabled: true,
+                    gradientEnabled: true,
+                    tintColor: ov.tintColor ?? ov.gradientFrom ?? '#ffffff',
+                    gradientFrom: ov.gradientFrom ?? '#ffffff',
+                    gradientTo: ov.gradientTo ?? '#ff4f73',
+                    gradientOpacity: ov.gradientOpacity ?? 0.75,
+                  })}
+                >
+                  Degradê
+                </MiniButton>
+              </div>
+
+              {(ov.tintEnabled || ov.gradientEnabled) && (
+                <>
+                  <ColorSwatches
+                    value={ov.gradientEnabled ? (ov.gradientFrom ?? '#ffffff') : (ov.tintColor ?? '#ffffff')}
+                    onChange={(color) => onUpdate(ov.id, ov.gradientEnabled
+                      ? { gradientFrom: color, tintColor: color, tintEnabled: true }
+                      : { tintColor: color, tintEnabled: true })}
+                  />
+                  {ov.gradientEnabled && (
+                    <ColorSwatches
+                      value={ov.gradientTo ?? '#ff4f73'}
+                      onChange={(color) => onUpdate(ov.id, { gradientTo: color, gradientEnabled: true, tintEnabled: true })}
+                    />
+                  )}
+                  <MiniControl label={ov.gradientEnabled ? 'força do degradê' : 'força da cor'}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={ov.gradientEnabled ? (ov.gradientOpacity ?? 0.75) : (ov.tintOpacity ?? 1)}
+                      onChange={(event) => {
+                        const value = parseFloat(event.target.value);
+                        onUpdate(ov.id, ov.gradientEnabled ? { gradientOpacity: value } : { tintOpacity: value });
+                      }}
+                      style={{ width: '100%' }}
+                    />
+                  </MiniControl>
+                </>
+              )}
+
+              <div style={{ fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 800 }}>
+                Contorno
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <MiniButton
+                  active={(ov.outlineWidth ?? 0) <= 0}
+                  onClick={() => onUpdate(ov.id, { outlineWidth: 0 })}
+                >
+                  Nenhum
+                </MiniButton>
+                <MiniButton
+                  active={(ov.outlineWidth ?? 0) > 0}
+                  onClick={() => onUpdate(ov.id, { outlineWidth: ov.outlineWidth && ov.outlineWidth > 0 ? ov.outlineWidth : 4, outlineColor: ov.outlineColor ?? '#ffffff' })}
+                >
+                  Externo
+                </MiniButton>
+              </div>
+              {(ov.outlineWidth ?? 0) > 0 && (
+                <>
+                  <ColorSwatches
+                    value={ov.outlineColor ?? '#ffffff'}
+                    onChange={(color) => onUpdate(ov.id, { outlineColor: color, outlineWidth: ov.outlineWidth && ov.outlineWidth > 0 ? ov.outlineWidth : 4 })}
+                  />
+                  <MiniControl label={`espessura · ${Math.round(ov.outlineWidth ?? 0)}px`}>
+                    <input
+                      type="range"
+                      min={0}
+                      max={32}
+                      step={1}
+                      value={ov.outlineWidth ?? 0}
+                      onChange={(event) => onUpdate(ov.id, { outlineWidth: parseFloat(event.target.value) })}
+                      style={{ width: '100%' }}
+                    />
+                  </MiniControl>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>
