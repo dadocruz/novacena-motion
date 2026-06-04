@@ -1233,6 +1233,9 @@ export default function Home() {
           // Fonte padrão Akhand Light (headline "INSCREVA-SE" + @canal)
           setFontHeadline('premium-akhand-light');
           setFontDate('premium-akhand-light');
+          // "INSCREVA-SE" em vermelho YouTube (StyledText pinta a cor do estilo)
+          setStyleHeadline((s) => ({ ...s, color: '#FF1212' }));
+          setStyleDate((s) => ({ ...s, color: '#ffffff' }));
         }
         if (nextId === 'youtube_views') {
           // Número em Akhand Black; prefixo/métrica/canal em Bebas Neue
@@ -1240,6 +1243,10 @@ export default function Home() {
           setFontDate('premium-bebas-neue');
           setFontCta1('premium-bebas-neue');
           setFontCta('premium-bebas-neue');
+          // "ULTRAPASSAMOS" (date) vermelho; número e métrica brancos
+          setStyleDate((s) => ({ ...s, color: '#FF1212' }));
+          setStyleHeadline((s) => ({ ...s, color: '#ffffff' }));
+          setStyleCta1((s) => ({ ...s, color: '#ffffff' }));
         }
       }
     }

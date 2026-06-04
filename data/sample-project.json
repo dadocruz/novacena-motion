@@ -429,6 +429,8 @@
       "motion": {
         "fontHeadline": "premium-akhand-light",
         "fontDate": "premium-akhand-light",
+        "styleHeadline": { "color": "#FF1212" },
+        "styleDate": { "color": "#ffffff" },
         "transitionHeadline": "mask_reveal",
         "transitionDate": "scale_pop",
         "particlesEnabled": true,
