@@ -5,7 +5,7 @@ import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { existsSync } from 'fs';
-import { mkdir, unlink } from 'fs/promises';
+import { mkdir, unlink, stat } from 'fs/promises';
 import { addOverlay, deleteOverlay, listOverlays } from '../../../lib/storage';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
 
@@ -75,16 +75,19 @@ async function prepareVideoOverlay(dir: string, filename: string) {
   const outputName = filename.replace(/\.(mov|m4v)$/i, '-alpha.webm');
   const outputPath = path.join(dir, outputName);
 
+  const sourceDuration = await probeDuration(inputPath);
+
   // Alpha em .mov costuma ser ProRes 4444 (yuva444p12le), que o Chrome NÃO
   // decodifica. Transcodamos para WebM VP9 com alpha (yuva420p). A flag
   // -metadata alpha_mode=1 é OBRIGATÓRIA: sem ela o Chrome trata o vídeo como
-  // opaco (ignora a transparência). -deadline realtime + row-mt deixa rápido
-  // (~30s p/ 60s 1080×1920) pra não estourar o timeout do upload.
+  // opaco. Downscale p/ 720w + 24fps + realtime deixa o encode leve o
+  // suficiente pra COMPLETAR dentro do tempo do request num VPS fraco — antes
+  // truncava (gerava só ~2.5s, dando "congelado").
   await runFfmpeg([
     '-y',
     '-i', inputPath,
     '-an',
-    '-vf', 'format=yuva420p',
+    '-vf', "format=yuva420p,scale='min(720,iw)':-2,fps=24",
     '-c:v', 'libvpx-vp9',
     '-pix_fmt', 'yuva420p',
     '-metadata:s:v:0', 'alpha_mode=1',
@@ -93,13 +96,24 @@ async function prepareVideoOverlay(dir: string, filename: string) {
     '-cpu-used', '8',
     '-row-mt', '1',
     '-b:v', '0',
-    '-crf', '30',
+    '-crf', '32',
     outputPath,
   ]);
 
-  // Se o webm não foi gerado (falha de encode), mantém o original pra não
-  // quebrar o upload — mas o ideal é o webm.
-  if (!existsSync(outputPath)) return filename;
+  if (!existsSync(outputPath)) {
+    throw new Error('Falha ao converter o overlay alpha para WebM. Tente um arquivo menor/mais curto.');
+  }
+
+  // VALIDAÇÃO: se o webm saiu muito mais curto que a fonte, o encode foi
+  // cortado (timeout). Não serve um overlay truncado/congelado — falha avisando.
+  const outDuration = await probeDuration(outputPath);
+  if (sourceDuration > 1 && outDuration > 0 && outDuration < sourceDuration * 0.9) {
+    await unlink(outputPath).catch(() => {});
+    throw new Error(
+      `O overlay alpha foi convertido só parcialmente (${outDuration.toFixed(1)}s de ${sourceDuration.toFixed(1)}s) — o servidor não terminou a tempo. ` +
+      `Exporte o overlay mais leve (ex: 720p ou WebM) e tente de novo.`
+    );
+  }
 
   await unlink(inputPath).catch(() => {});
   return outputName;
@@ -147,6 +161,25 @@ export async function POST(req: NextRequest) {
         Readable.fromWeb(req.body as any),
         createWriteStream(path.join(dir, filename))
       );
+
+      // Upload incompleto? (arquivo pesado cortado pela rede/proxy). Sem isso,
+      // o ffmpeg converte fielmente os bytes parciais e gera um overlay
+      // truncado que "congela". Falha avisando em vez de servir lixo.
+      if (contentLength > 0) {
+        const savedSize = (await stat(path.join(dir, filename)).catch(() => null))?.size ?? 0;
+        if (savedSize < contentLength * 0.98) {
+          await unlink(path.join(dir, filename)).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `Upload incompleto: recebido ${(savedSize / 1024 / 1024).toFixed(1)} MB de ${(contentLength / 1024 / 1024).toFixed(1)} MB. ` +
+                `O arquivo é pesado e a conexão caiu no meio. Tente de novo ou exporte o overlay mais leve (720p/WebM).`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const storedFilename = await prepareVideoOverlay(dir, filename);
       const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
 
