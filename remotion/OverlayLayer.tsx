@@ -394,6 +394,56 @@ const FrameControlledVideo: React.FC<{
   );
 };
 
+// Vídeo overlay com tint/degradê. Sem gradiente => 1 cópia (leve).
+// Com gradiente => 2 cópias recoloridas (from/to) mascaradas por linear-gradients
+// opostos: gera um degradê REAL que respeita o alpha do vídeo, sem ficar chapado.
+const CoverVideoTinted: React.FC<{
+  overlay: OverlayItem;
+  sourceDurationInFrames: number;
+  baseStyle: React.CSSProperties;
+}> = ({ overlay, sourceDurationInFrames, baseStyle }) => {
+  const common = {
+    src: overlay.src,
+    sourceDurationInFrames,
+    loopEnabled: overlay.loopEnabled === true,
+    loopMode: overlay.loopMode ?? 'normal',
+  } as const;
+
+  if (!overlay.gradientEnabled) {
+    return (
+      <FrameControlledVideo
+        {...common}
+        style={{ ...baseStyle, filter: coverMediaFilter(overlay) }}
+      />
+    );
+  }
+
+  // opacity e mixBlendMode vão no wrapper para o degradê compor como uma unidade
+  // (e não dobrar a opacidade na zona de transição das duas cópias).
+  const { opacity, mixBlendMode, ...mediaStyle } = baseStyle;
+  const from = overlay.gradientFrom ?? '#1ed760';
+  const to = overlay.gradientTo ?? '#8b5cf6';
+  const maskFrom = 'linear-gradient(135deg, #000 0%, #000 30%, rgba(0,0,0,0) 78%)';
+  const maskTo = 'linear-gradient(135deg, rgba(0,0,0,0) 22%, #000 70%, #000 100%)';
+  const outline = outlineFilter(overlay).join(' ');
+
+  const copyStyle = (color: string, mask: string, withOutline: boolean): React.CSSProperties => ({
+    ...mediaStyle,
+    position: 'absolute',
+    inset: 0,
+    filter: [alphaMediaTintFilter(color), withOutline ? outline : ''].filter(Boolean).join(' ') || undefined,
+    WebkitMaskImage: mask,
+    maskImage: mask,
+  });
+
+  return (
+    <AbsoluteFill style={{ opacity, mixBlendMode }}>
+      <FrameControlledVideo {...common} style={copyStyle(from, maskFrom, false)} />
+      <FrameControlledVideo {...common} style={copyStyle(to, maskTo, Boolean(outline))} />
+    </AbsoluteFill>
+  );
+};
+
 export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
   const { fps, durationInFrames } = useVideoConfig();
 
@@ -437,23 +487,28 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           willChange: overlay.previewQuality === 'light' ? 'opacity' : undefined,
         };
 
+        // Posição/escala para vídeo e cover image (o ElementImage já trata a sua).
+        const px = overlay.x ?? 0;
+        const py = overlay.y ?? 0;
+        const pscale = overlay.scale ?? 1;
+        const protate = overlay.rotate ?? 0;
+        const coverTransform =
+          px === 0 && py === 0 && pscale === 1 && protate === 0
+            ? undefined
+            : `translate(${px}px, ${py}px) rotate(${protate}deg) scale(${pscale})`;
+
         return (
           <Sequence
             key={`${overlay.src}-${index}`}
             from={startFrame}
             durationInFrames={sequenceDuration}
           >
-            <AbsoluteFill>
+            <AbsoluteFill style={overlay.layout === 'element' ? undefined : { transform: coverTransform }}>
               {overlay.type === 'video' ? (
-                <FrameControlledVideo
-                  src={overlay.src}
+                <CoverVideoTinted
+                  overlay={overlay}
                   sourceDurationInFrames={sourceDurationInFrames}
-                  loopEnabled={overlay.loopEnabled === true}
-                  loopMode={overlay.loopMode ?? 'normal'}
-                  style={{
-                    ...commonStyle,
-                    filter: coverMediaFilter(overlay),
-                  }}
+                  baseStyle={commonStyle}
                 />
               ) : overlay.layout === 'element' ? (
                 <ElementImage overlay={overlay} />

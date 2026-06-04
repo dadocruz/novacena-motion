@@ -314,6 +314,27 @@ export function OverlayTimeline({
                   </MiniControl>
                 </>
               )}
+
+              <div style={{ fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 800 }}>
+                Posição
+              </div>
+              <MiniControl label={`X · ${Math.round(ov.x ?? 0)}px`}>
+                <input type="range" min={-800} max={800} step={5} value={ov.x ?? 0}
+                  onChange={(e) => onUpdate(ov.id, { x: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+              </MiniControl>
+              <MiniControl label={`Y · ${Math.round(ov.y ?? 0)}px`}>
+                <input type="range" min={-1200} max={1200} step={5} value={ov.y ?? 0}
+                  onChange={(e) => onUpdate(ov.id, { y: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+              </MiniControl>
+              <MiniControl label={`Escala · ${(ov.scale ?? 1).toFixed(2)}×`}>
+                <input type="range" min={0.2} max={3} step={0.05} value={ov.scale ?? 1}
+                  onChange={(e) => onUpdate(ov.id, { scale: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+              </MiniControl>
+              {(Math.round(ov.x ?? 0) !== 0 || Math.round(ov.y ?? 0) !== 0 || (ov.scale ?? 1) !== 1) && (
+                <MiniButton onClick={() => onUpdate(ov.id, { x: 0, y: 0, scale: 1 })}>
+                  Resetar posição
+                </MiniButton>
+              )}
             </div>
           )}
         </div>
