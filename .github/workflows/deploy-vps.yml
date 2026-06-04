@@ -56,6 +56,11 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           envs: IMAGE,SERVICE
+          # Conexão SSH a partir do runner às vezes demora pra estabelecer —
+          # timeout maior evita o "dial tcp i/o timeout" intermitente que
+          # fazia o deploy falhar com o build OK.
+          timeout: 90s
+          command_timeout: 15m
           script: |
             set -e
             if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
