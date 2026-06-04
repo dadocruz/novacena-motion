@@ -120,9 +120,11 @@ export const CinematicBackground: React.FC<Props> = ({
   background,
 }) => {
   const frame = useCurrentFrame();
+  const isRendering = getRemotionEnvironment().isRendering;
 
   // Background config (com defaults)
   const bg = background ?? {};
+  const lightPreview = !isRendering && bg.previewQuality === 'light';
   const videoSrc = bg.videoSrc;
   const videoStartFrame = bg.videoStartFrame ?? 0;
   const videoOpacity = bg.videoOpacity ?? 1;
@@ -169,6 +171,11 @@ export const CinematicBackground: React.FC<Props> = ({
     0
   );
   const bgZoom = kbZoom + accentBoost * 0.02;
+  const previewZoom = lightPreview ? 1.08 : bgZoom;
+  const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
+  const previewVideoFilter = lightPreview
+    ? `saturate(${videoSaturation}) brightness(0.92)`
+    : `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
 
   // Light leak diagonal varrendo (loop infinito)
   const leakPhase = (frame % 200) / 200;
@@ -199,7 +206,7 @@ export const CinematicBackground: React.FC<Props> = ({
               height: '100%',
               objectFit: 'cover',
               filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
-              transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+              transform: `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px)`,
             }}
           />
         </AbsoluteFill>
@@ -236,9 +243,10 @@ export const CinematicBackground: React.FC<Props> = ({
                 // Blur capado no preview: custo de GPU cresce com o raio² e
                 // blur grande num vídeo 1080×1920 a 30fps trava o editor.
                 // O render usa o blur cheio (branch OffthreadVideo acima).
-                filter: `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`,
-                transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
-                willChange: 'transform',
+                filter: previewVideoFilter,
+                transform: `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px) translateZ(0)`,
+                backfaceVisibility: 'hidden',
+                willChange: lightPreview ? 'opacity' : 'transform',
               }}
             />
           )}
@@ -288,19 +296,21 @@ export const CinematicBackground: React.FC<Props> = ({
       />
 
       {/* Camada 4: Light leak diagonal (varre em loop) */}
-      <AbsoluteFill
-        style={{
-          background:
-            'linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.10) 47%, rgba(180, 120, 255, 0.08) 53%, transparent 70%)',
-          transform: `translateX(${leakX}px) rotate(20deg)`,
-          filter: 'blur(28px)',
-          opacity: 0.4 * intensity,
-          mixBlendMode: 'screen',
-        }}
-      />
+      {!lightPreview ? (
+        <AbsoluteFill
+          style={{
+            background:
+              'linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.10) 47%, rgba(180, 120, 255, 0.08) 53%, transparent 70%)',
+            transform: `translateX(${leakX}px) rotate(20deg)`,
+            filter: 'blur(28px)',
+            opacity: 0.4 * intensity,
+            mixBlendMode: 'screen',
+          }}
+        />
+      ) : null}
 
       {/* Camada 5: Burn de hit (pico de luz nos accents) */}
-      {burnOpacity > 0.02 ? (
+      {!lightPreview && burnOpacity > 0.02 ? (
         <AbsoluteFill
           style={{
             background:
@@ -313,29 +323,31 @@ export const CinematicBackground: React.FC<Props> = ({
       ) : null}
 
       {/* Camada 6: Atmospheric dust (trás dos bokeh) */}
-      <DustLayer intensity={intensity} />
+      {!lightPreview ? <DustLayer intensity={intensity} /> : null}
 
       {/* Camada 7: Bokeh principal */}
-      <BokehLayer intensity={intensity} />
+      {!lightPreview ? <BokehLayer intensity={intensity} /> : null}
 
       {/* Camada 8: Film grain animado */}
-      <AbsoluteFill
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(255,255,255,0.18) 0 0.8px, transparent 1.4px)',
-          backgroundSize: '38px 38px',
-          backgroundPosition: `${frame * 0.28}px ${frame * -0.22}px`,
-          opacity: 0.10,
-          mixBlendMode: 'screen',
-        }}
-      />
+      {!lightPreview ? (
+        <AbsoluteFill
+          style={{
+            backgroundImage:
+              'radial-gradient(circle, rgba(255,255,255,0.18) 0 0.8px, transparent 1.4px)',
+            backgroundSize: '38px 38px',
+            backgroundPosition: `${frame * 0.28}px ${frame * -0.22}px`,
+            opacity: 0.10,
+            mixBlendMode: 'screen',
+          }}
+        />
+      ) : null}
 
       {/* Camada 9: Sheen overlay sutil (acabamento) */}
       <AbsoluteFill
         style={{
           background:
             'linear-gradient(118deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)',
-          opacity: 0.7,
+          opacity: lightPreview ? 0.25 : 0.7,
           mixBlendMode: 'overlay',
         }}
       />

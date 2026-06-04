@@ -1991,11 +1991,38 @@ export default function Home() {
   ]);
 
   const liveProject = React.useMemo(() => {
+    const motionForPreview = motionWithStyles as MotionConfig & {
+      background?: NonNullable<MotionConfig['background']> & { previewQuality?: 'full' | 'light' };
+      overlays?: OverlayPlacement[];
+    };
+    const hasVideoBackground = Boolean(
+      motionForPreview.background?.videoSrc &&
+      motionForPreview.background.mediaType !== 'image'
+    );
+    const hasVideoOverlay = (motionForPreview.overlays ?? []).some((overlay) => {
+      const src = overlay.src || '';
+      return overlay.type === 'video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(src);
+    });
+    const hasLongOverlay = (motionForPreview.overlays ?? []).some((overlay) => {
+      return overlay.type === 'video' && Math.max(overlay.durationSec ?? 0, overlay.sourceDurationSec ?? 0) >= 20;
+    });
+    const useLightPreview = hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40);
+    const previewOverlays = useLightPreview
+      ? (motionForPreview.overlays ?? []).map((overlay) => (
+          overlay.type === 'video' ? { ...overlay, previewQuality: 'light' as const } : overlay
+        ))
+      : motionForPreview.overlays;
+
     return {
       ...project,
       durationSeconds,
       motion: {
         ...motionWithStyles,
+        background: {
+          ...motionForPreview.background,
+          previewQuality: useLightPreview ? ('light' as const) : ('full' as const),
+        },
+        overlays: previewOverlays,
         // Studio Player SEMPRE em previewMode=true (textos não somem durante transição).
         // Render REAL seta previewMode=false explicitamente em /api/render.
         previewMode: true,

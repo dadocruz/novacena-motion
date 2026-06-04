@@ -47,6 +47,7 @@ export type OverlayItem = {
   tintEnabled?: boolean;
   tintColor?: string;
   tintOpacity?: number;
+  previewQuality?: 'full' | 'light';
 };
 
 type Props = {
@@ -120,6 +121,7 @@ function normalizeOverlay(item: string | OverlayItem): OverlayItem {
     tintEnabled: item.tintEnabled ?? false,
     tintColor: item.tintColor ?? '#ffffff',
     tintOpacity: item.tintOpacity ?? 1,
+    previewQuality: item.previewQuality ?? 'full',
   };
 }
 
@@ -268,7 +270,7 @@ const FrameControlledVideo: React.FC<{
   // força um seek por frame e TRAVA o editor. Aqui o vídeo toca em tempo real;
   // o pingpong vira loop normal só no preview (o render faz o pingpong exato).
   if (!getRemotionEnvironment().isRendering) {
-    const nativeVideo = <Video src={src} muted style={style} />;
+    const nativeVideo = <Video src={src} muted pauseWhenBuffering style={style} />;
     return loopEnabled ? (
       <Loop durationInFrames={Math.max(2, sourceDurationInFrames)}>{nativeVideo}</Loop>
     ) : (
@@ -334,6 +336,9 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           opacity: overlay.opacity,
           mixBlendMode: normalizeBlendMode(overlay.blendMode),
           pointerEvents: 'none',
+          backfaceVisibility: 'hidden',
+          transform: 'translateZ(0)',
+          willChange: overlay.previewQuality === 'light' ? 'opacity' : undefined,
         };
 
         return (

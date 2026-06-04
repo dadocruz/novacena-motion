@@ -170,6 +170,8 @@ export type OverlayPlacement = {
   tintOpacity?: number;
   /** label livre pra UI */
   label?: string;
+  /** Reduz custo de GPU apenas no Studio Player. Ignorado no render final. */
+  previewQuality?: 'full' | 'light';
 };
 
 /**
@@ -212,6 +214,8 @@ export type BackgroundConfig = {
   audioFadeOutSec?: number;
   /** Default true (audio do video BG ligado). Setar false = mute. Ignorado se audioSrc presente. */
   useVideoAudio?: boolean;
+  /** Reduz efeitos caros apenas no Studio Player. Ignorado no render final. */
+  previewQuality?: 'full' | 'light';
 };
 
 /**
