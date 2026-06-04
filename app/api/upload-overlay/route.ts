@@ -10,7 +10,11 @@ import { addOverlay, deleteOverlay, listOverlays } from '../../../lib/storage';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+// force-dynamic faz o Next STREAMAR o body (sem bufferizar). Sem isso o
+// upload de vídeo era cortado em ~10MB — mesma config do route do BG que
+// aceita arquivos grandes.
+export const dynamic = 'force-dynamic';
+export const maxDuration = 900;
 
 const MAX_SIZE = 500 * 1024 * 1024;
 const MAX_SIZE_LABEL = '500 MB';
