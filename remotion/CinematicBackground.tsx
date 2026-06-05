@@ -232,8 +232,8 @@ export const CinematicBackground: React.FC<Props> = ({
             <Video
               src={videoSrc}
               startFrom={videoStartFrame}
-              muted={lightPreview ? true : !useVideoAudio}
-              volume={lightPreview ? 0 : useVideoAudio ? (f) => calcVolume(f) : 0}
+              muted={!useVideoAudio}
+              volume={useVideoAudio ? (f) => calcVolume(f) : 0}
               pauseWhenBuffering={false}
               style={{
                 width: '100%',

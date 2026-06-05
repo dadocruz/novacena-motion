@@ -87,17 +87,19 @@ async function probeVideo(filepath: string) {
   return {
     durationSec: Number.parseFloat(format.duration || videoStream?.duration || audioStream?.duration || '0') || 0,
     hasVideo: Boolean(videoStream),
+    hasAudio: Boolean(audioStream),
   };
 }
 
-async function validateTrimmedOutput(outputPath: string, expectedDuration: number) {
+async function validateTrimmedOutput(outputPath: string, expectedDuration: number, expectedAudio: boolean) {
   const outputStat = await stat(outputPath);
   const outputProbe = await probeVideo(outputPath).catch(() => null);
   const outputDuration = Number(outputProbe?.durationSec || 0);
   const durationOk = outputDuration >= Math.max(0.5, expectedDuration * 0.75);
-  if (outputStat.size < 128 * 1024 || !outputProbe?.hasVideo || !durationOk) {
+  const audioOk = !expectedAudio || Boolean(outputProbe?.hasAudio);
+  if (outputStat.size < 128 * 1024 || !outputProbe?.hasVideo || !durationOk || !audioOk) {
     throw new Error(
-      `Corte gerou arquivo inválido (${(outputStat.size / 1024 / 1024).toFixed(2)} MB, ${outputDuration.toFixed(1)}s).`
+      `Corte gerou arquivo inválido (${(outputStat.size / 1024 / 1024).toFixed(2)} MB, ${outputDuration.toFixed(1)}s${expectedAudio && !outputProbe?.hasAudio ? ', sem áudio' : ''}).`
     );
   }
   return { outputStat, outputDuration };
@@ -167,6 +169,7 @@ export async function POST(req: NextRequest) {
     const { filename, filePath } = sourcePathToFile(parsed.sourcePath);
 
     await stat(filePath);
+    const sourceProbe = await probeVideo(filePath);
     const videosDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ...VIDEO_PARTS);
     await mkdir(videosDir, { recursive: true });
 
@@ -186,12 +189,12 @@ export async function POST(req: NextRequest) {
     let validation: Awaited<ReturnType<typeof validateTrimmedOutput>>;
     try {
       await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, false));
-      validation = await validateTrimmedOutput(outputPath, parsed.durationSec);
+      validation = await validateTrimmedOutput(outputPath, parsed.durationSec, sourceProbe.hasAudio);
     } catch (fastError) {
       await unlink(outputPath).catch(() => {});
       try {
         await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, true));
-        validation = await validateTrimmedOutput(outputPath, parsed.durationSec);
+        validation = await validateTrimmedOutput(outputPath, parsed.durationSec, sourceProbe.hasAudio);
       } catch (accurateError) {
         await unlink(outputPath).catch(() => {});
         const firstMessage = fastError instanceof Error ? fastError.message : String(fastError);
@@ -222,6 +225,7 @@ export async function POST(req: NextRequest) {
       width,
       height,
       size: validation.outputStat.size,
+      hasAudio: sourceProbe.hasAudio,
       deletedSource: parsed.deleteSource,
     });
   } catch (error) {
