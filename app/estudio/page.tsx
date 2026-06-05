@@ -4172,6 +4172,7 @@ export default function Home() {
     options?: {
       sectionOverride?: string;
       textPanelTab?: 'fontes' | 'entrada' | 'cor' | 'layout';
+      keepTimelineOpen?: boolean;
     }
   ) {
     // Timeline é um painel flutuante (não uma seção do painel direito):
@@ -4181,7 +4182,9 @@ export default function Home() {
       setShowTimeline((open) => !open);
       return;
     }
-    setShowTimeline(false);
+    if (!options?.keepTimelineOpen) {
+      setShowTimeline(false);
+    }
     setActiveStudioTool(tool);
 
     if (tool === 'text') {
@@ -4644,29 +4647,29 @@ export default function Home() {
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
       setActiveTextRole(layer.role);
-      selectStudioTool('text', { textPanelTab: 'entrada' });
+      selectStudioTool('text', { textPanelTab: 'entrada', keepTimelineOpen: true });
       return;
     }
 
     setEditingPreviewTextRole(null);
 
     if (layer.kind === 'phone') {
-      selectStudioTool('motion', { sectionOverride: 'Celular' });
+      selectStudioTool('motion', { sectionOverride: 'Celular', keepTimelineOpen: true });
       return;
     }
 
     if (layer.kind === 'logos') {
-      selectStudioTool('logos');
+      selectStudioTool('logos', { keepTimelineOpen: true });
       return;
     }
 
     if (layer.kind === 'element' && layer.overlayId) {
       setSelectedOverlayId(layer.overlayId);
-      selectStudioTool('overlay');
+      selectStudioTool('overlay', { keepTimelineOpen: true });
       return;
     }
 
-    selectStudioTool('cover');
+    selectStudioTool('cover', { keepTimelineOpen: true });
   }
 
   function getPreviewLayerOffset(layer: PreviewLayerHotspot) {
