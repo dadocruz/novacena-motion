@@ -2089,20 +2089,23 @@ export default function Home() {
   ].join('|');
 
   // Pausa o player quando o usuário clica/arrasta a timeline depois de dar play.
-  // O Remotion só dispara 'seeked' em scrub manual ou seekTo imperativo —
-  // nunca no playback normal nem no loop. Seeks que nós disparamos são
-  // marcados em programmaticSeekRef e ignorados aqui.
+  // O Remotion tenta retomar automaticamente se o seek acontece com o player
+  // tocando; por isso pausamos também no próximo frame para limpar esse resume.
   React.useEffect(() => {
     const player = playerRef.current;
     if (!player?.addEventListener) return;
+    const pauseAfterUserSeek = () => {
+      try { player.pause?.(); } catch { /* noop */ }
+      window.requestAnimationFrame(() => {
+        try { player.pause?.(); } catch { /* noop */ }
+      });
+    };
     const onSeeked = () => {
       if (programmaticSeekRef.current) {
         programmaticSeekRef.current = false;
         return;
       }
-      // Durante o preview-loop de transição mantemos a reprodução em loop.
-      if (editPreviewLoop && activeStudioTool !== 'overlay' && !selectedOverlayId) return;
-      try { player.pause?.(); } catch { /* noop */ }
+      pauseAfterUserSeek();
     };
     player.addEventListener('seeked', onSeeked);
     return () => {
@@ -2110,7 +2113,7 @@ export default function Home() {
     };
     // isClientReady garante que o efeito re-rode quando o <Player> finalmente
     // monta (antes disso playerRef.current é null e o listener não anexa).
-  }, [playerRemountKey, editPreviewLoop, activeStudioTool, selectedOverlayId, isClientReady]);
+  }, [playerRemountKey, isClientReady]);
 
   const Component = componentByTemplate[template];
 
@@ -4508,9 +4511,13 @@ export default function Home() {
   const seekTimeline = React.useCallback((sec: number) => {
     const frame = Math.max(0, Math.round(sec * 30));
     setTimelineSec(sec);
+    const player = playerRef.current;
     try {
-      programmaticSeekRef.current = true;
-      playerRef.current?.seekTo?.(frame);
+      player?.seekTo?.(frame);
+      player?.pause?.();
+      window.requestAnimationFrame(() => {
+        try { player?.pause?.(); } catch { /* noop */ }
+      });
     } catch {
       /* noop */
     }
