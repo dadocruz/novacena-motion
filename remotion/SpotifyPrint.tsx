@@ -2,8 +2,6 @@ import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
-  scaleInBack,
-  previewSafeAnim,
   getTextTransition,
   type TextTransitionId,
 } from './motionEngine';
@@ -32,61 +30,11 @@ function fittedFontSize(text: string, maxWidth: number, preferred: number, min: 
   return Math.max(min, Math.min(preferred, maxWidth / (clean.length * ratio)));
 }
 
-const SpotifyWordmark: React.FC<{ delay: number; compact?: boolean }> = ({ delay, compact = false }) => {
-  const frame = useCurrentFrame();
-  const anim = scaleInBack(frame, delay, 16);
-  const green = '#1ED760';
-
-  return (
-    <div
-      style={{
-        ...anim,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: compact ? 10 : 14,
-        color: green,
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        fontWeight: 900,
-        fontSize: compact ? 34 : 48,
-        lineHeight: 1,
-      }}
-    >
-      <div
-        style={{
-          width: compact ? 44 : 62,
-          height: compact ? 44 : 62,
-          borderRadius: '50%',
-          background: green,
-          position: 'relative',
-          boxShadow: '0 0 28px rgba(30, 215, 96, 0.26)',
-          flex: '0 0 auto',
-        }}
-      >
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: compact ? 10 + i * 1.5 : 14 + i * 2,
-              top: compact ? 13 + i * 7 : 18 + i * 9,
-              width: compact ? 25 - i * 3 : 35 - i * 4,
-              height: compact ? 8 : 10,
-              borderTop: `${compact ? 3 : 4}px solid #050706`,
-              borderRadius: '50%',
-              transform: 'rotate(8deg)',
-            }}
-          />
-        ))}
-      </div>
-      <span>Spotify</span>
-    </div>
-  );
-};
-
 /**
- * Template SpotifyPrint: o "coverImage" enviado pelo usuário é tratado como
- * um screenshot do Spotify e é renderizado DENTRO de um iPhone com motion.
- * Texto típico: ULTRAPASSAMOS / 10.000 MIL / OUVINTES MENSAIS.
+ * Template SpotifyPrint (Ouvintes Mensais) — CLEAN. BG + seu overlay alpha
+ * + TEXTOS EDITÁVEIS (prefixo / número / métrica, todos arrastáveis) + o print
+ * do Spotify dentro do CELULAR (conteúdo por projeto). Sem decorações chapadas:
+ * o wordmark e o selo "A MARCA DE" saíram — venha pelo seu overlay do After.
  */
 export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
@@ -101,8 +49,6 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const logoIn = props.motion?.logosInFrame ?? LOGO_IN;
   const accents = [numberIn, MID_HIT, FINAL_HIT];
 
-  const previewMode = props.motion?.previewMode === true;
-  const badgeAnim = previewSafeAnim(scaleInBack(frame, BADGE_IN, 14), previewMode);
   const txPrefix = (props.motion?.transitionDate ?? 'mask_reveal') as TextTransitionId;
   const txNumber = (props.motion?.transitionHeadline ?? 'scale_pop') as TextTransitionId;
   const txLabel = (props.motion?.transitionCta1 ?? props.motion?.transitionCta ?? 'mask_reveal') as TextTransitionId;
@@ -233,34 +179,6 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             preserveFontShape={false}
             previewMode={false}
           />
-        </div>
-
-        <div
-          style={{
-            position: 'absolute',
-            top: isStory ? topSafe + 270 : topSafe + 164,
-            left: '50%',
-            width: isStory ? 310 : 220,
-            height: isStory ? 44 : 32,
-            marginLeft: isStory ? -155 : -110,
-            display: 'grid',
-            placeItems: 'center',
-            background: '#57ff1f',
-            color: '#050706',
-            fontFamily: ff(labelFont.family),
-            fontSize: isStory ? 34 : 24,
-            fontWeight: 900,
-            fontStyle: 'italic',
-            lineHeight: 1,
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
-            transform: `${badgeAnim.transform ?? ''} rotate(-1deg)`,
-            opacity: badgeAnim.opacity,
-            zIndex: 6,
-            boxShadow: '0 12px 26px rgba(0,0,0,0.20)',
-          }}
-        >
-          A MARCA DE
         </div>
 
         {/* NÚMERO GIGANTE */}
