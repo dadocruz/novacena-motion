@@ -131,6 +131,8 @@ import {
   ArtistModal,
   GalleryView,
   OverlayTimeline,
+  TimelinePanel,
+  type TimelineTrack,
   TextColorEditor,
   TextLayoutEditor,
   NumberBox,
@@ -288,6 +290,8 @@ export default function Home() {
   const [isClientReady, setIsClientReady] = useState(false);
   const [saasUser, setSaasUser] = useState<SaasUserSummary | null>(null);
   const [activeStudioTool, setActiveStudioTool] = useState<StudioToolId>('cover');
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [timelineSec, setTimelineSec] = useState(0);
   const [activeTextRole, setActiveTextRole] = useState<FontRole>('headline');
   // ─── ARTISTA ──────────────────────────────────────────────
   const [artists, setArtists] = useState<ArtistRecord[]>([]);
@@ -4017,6 +4021,14 @@ export default function Home() {
   }
 
   function selectStudioTool(tool: StudioToolId) {
+    // Timeline é um painel flutuante (não uma seção do painel direito):
+    // alterna ao clicar e não dispara o scroll de seção.
+    if (tool === 'timeline') {
+      setActiveStudioTool('timeline');
+      setShowTimeline((open) => !open);
+      return;
+    }
+    setShowTimeline(false);
     setActiveStudioTool(tool);
 
     window.setTimeout(() => {
@@ -4353,6 +4365,94 @@ export default function Home() {
       ...elementHotspots,
     ];
   }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
+
+  // ── TIMELINE: playhead sincronizado com o player (só roda com o painel aberto)
+  React.useEffect(() => {
+    if (!showTimeline) return;
+    let raf = 0;
+    const tick = () => {
+      const p = playerRef.current as any;
+      const f = typeof p?.getCurrentFrame === 'function' ? p.getCurrentFrame() : 0;
+      const s = f / 30;
+      setTimelineSec((prev) => (Math.abs(prev - s) >= 0.04 ? s : prev));
+      raf = window.requestAnimationFrame(tick);
+    };
+    raf = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(raf);
+  }, [showTimeline]);
+
+  const seekTimeline = React.useCallback((sec: number) => {
+    const frame = Math.max(0, Math.round(sec * 30));
+    setTimelineSec(sec);
+    try {
+      programmaticSeekRef.current = true;
+      playerRef.current?.seekTo?.(frame);
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  // Faixas da timeline: textos (entram no tempo X), logos e overlays (start +
+  // duração arrastável). Reaproveita previewLayerHotspots p/ saber as layers do
+  // template atual. Atualiza tudo AO VIVO via inputProps (sem resetar o player).
+  const timelineTracks = React.useMemo<TimelineTrack[]>(() => {
+    const dur = durationSeconds;
+    const tracks: TimelineTrack[] = [];
+
+    for (const layer of previewLayerHotspots) {
+      if (layer.kind === 'text' && layer.role) {
+        const role = (layer.role === 'cta' ? 'cta1' : layer.role) as TextPreviewRole;
+        const f = effectiveTextInFrames[role] ?? 0;
+        tracks.push({
+          id: layer.id,
+          label: layer.label,
+          color: '#c084fc',
+          startSec: f / 30,
+          endSec: null,
+          resizable: false,
+          onChangeStart: (sec) => {
+            const fr = Math.max(0, Math.round(sec * 30));
+            setTextInFrames((prev) => ({ ...prev, [role]: fr }));
+            if (template === 'available_now') {
+              if (role === 'cta1') setCta1InFrame(fr);
+              if (role === 'cta2') setCta2InFrame(fr);
+            }
+          },
+          onSelect: () => setActiveTextRole(layer.role as FontRole),
+        });
+      } else if (layer.kind === 'logos') {
+        tracks.push({
+          id: layer.id,
+          label: layer.label,
+          color: '#fbbf24',
+          startSec: (logosInFrame ?? 0) / 30,
+          endSec: null,
+          resizable: false,
+          onChangeStart: (sec) => setLogosInFrame(Math.max(0, Math.round(sec * 30))),
+        });
+      }
+    }
+
+    (overlays ?? []).forEach((ov, i) => {
+      const start = Math.max(0, ov.startSec ?? 0);
+      const ovDur = ov.durationSec && ov.durationSec > 0 ? ov.durationSec : Math.max(0.2, dur - start);
+      tracks.push({
+        id: `ov-${ov.id}`,
+        label: ov.label ? `▦ ${ov.label}` : `Overlay ${i + 1}`,
+        color: '#22d3ee',
+        startSec: start,
+        endSec: Math.min(dur, start + ovDur),
+        resizable: true,
+        onChangeStart: (sec) => updateOverlay(ov.id, { startSec: Math.max(0, Math.round(sec * 10) / 10) }),
+        onChangeEnd: (sec) =>
+          updateOverlay(ov.id, { durationSec: Math.max(0.2, Math.round((sec - (ov.startSec ?? 0)) * 10) / 10) }),
+        onSelect: () => setSelectedOverlayId(ov.id),
+      });
+    });
+
+    return tracks;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewLayerHotspots, effectiveTextInFrames, overlays, logosInFrame, durationSeconds, template]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
@@ -8254,6 +8354,16 @@ return (
           );
         })}
       </div>
+
+      {showTimeline && (
+        <TimelinePanel
+          durationSec={durationSeconds}
+          currentSec={timelineSec}
+          tracks={timelineTracks}
+          onSeek={seekTimeline}
+          onClose={() => setShowTimeline(false)}
+        />
+      )}
 
 </main>
   );

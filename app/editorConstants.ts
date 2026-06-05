@@ -295,6 +295,7 @@ export type StudioToolId =
   | 'motion'
   | 'logos'
   | 'overlay'
+  | 'timeline'
   | 'render';
 
 export function scrollToStudioSection(section?: string) {
