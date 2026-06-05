@@ -13,6 +13,7 @@ export interface TimelineTrack {
   onChangeStart: (sec: number) => void;
   onChangeEnd?: (sec: number) => void;
   onSelect?: () => void;
+  selected?: boolean;
 }
 
 interface TimelinePanelProps {
@@ -26,6 +27,8 @@ interface TimelinePanelProps {
 const LABEL_W = 108;
 const ROW_H = 20;
 const PAD_X = 14;
+const BASE_TIME_W = 760;
+const BASE_PX_PER_SEC = 12;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 type DragState =
@@ -40,9 +43,15 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   onSeek,
   onClose,
 }) => {
+  const panelRef = React.useRef<HTMLDivElement | null>(null);
   const areaRef = React.useRef<HTMLDivElement | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const dragRef = React.useRef<DragState | null>(null);
+  const [zoomStep, setZoomStep] = React.useState(0);
   const dur = Math.max(0.1, durationSec);
+  const zoomScale = Math.pow(1.32, zoomStep);
+  const timeAreaWidth = Math.max(BASE_TIME_W, Math.round(dur * BASE_PX_PER_SEC * zoomScale));
+  const innerWidth = LABEL_W + timeAreaWidth;
 
   const secAtClientX = React.useCallback(
     (clientX: number) => {
@@ -87,22 +96,58 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
     };
   }, [secAtClientX, onSeek, dur]);
 
+  React.useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (target?.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (event.key !== '1' && event.key !== '2') return;
+      event.preventDefault();
+      setZoomStep((current) => {
+        if (event.key === '2') return Math.min(9, current + 1);
+        return Math.max(0, current - 1);
+      });
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const startScrub = (clientX: number) => {
     dragRef.current = { mode: 'seek' };
     onSeek(round1(secAtClientX(clientX)));
   };
 
   const frac = Math.max(0, Math.min(1, currentSec / dur));
-  const tickStep = dur <= 10 ? 1 : dur <= 20 ? 2 : dur <= 40 ? 5 : 10;
+  const tickStep = zoomScale >= 3 || dur <= 10 ? 1 : zoomScale >= 1.6 || dur <= 20 ? 2 : dur <= 40 ? 5 : 10;
   const ticks: number[] = [];
   for (let t = 0; t <= dur + 0.001; t += tickStep) ticks.push(Math.round(t));
 
   // posição do playhead relativa ao container (label + área), descontando os paddings
-  const playheadLeft = `calc(${PAD_X + LABEL_W}px + (100% - ${PAD_X * 2 + LABEL_W}px) * ${frac})`;
+  const playheadLeft = LABEL_W + timeAreaWidth * frac;
+  const displayedTracks = React.useMemo(
+    () =>
+      tracks
+        .map((track, index) => ({ track, index }))
+        .sort((a, b) => {
+          const byTime = b.track.startSec - a.track.startSec;
+          if (Math.abs(byTime) > 0.001) return byTime;
+          return b.index - a.index;
+        }),
+    [tracks]
+  );
 
   return (
     <div
+      ref={panelRef}
       data-novacena-timeline="true"
+      tabIndex={0}
+      onPointerDown={(event) => {
+        event.currentTarget.focus({ preventScroll: true });
+      }}
       style={{
         position: 'fixed',
         left: '50%',
@@ -154,165 +199,193 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         </button>
       </div>
 
-      <div style={{ position: 'relative', padding: `4px ${PAD_X}px 8px`, overflowY: 'auto', maxHeight: '34vh' }}>
-        {/* Régua = barra de scrub (clica/arrasta = move o vídeo, igual ao player) */}
-        <div style={{ display: 'flex', alignItems: 'center', height: 18 }}>
-          <div style={{ width: LABEL_W, flex: '0 0 auto' }} />
-          <div
-            ref={areaRef}
-            onPointerDown={(e) => startScrub(e.clientX)}
-            style={{ position: 'relative', flex: 1, height: 18, cursor: 'col-resize' }}
-          >
-            {ticks.map((t) => (
-              <div
-                key={t}
-                style={{
-                  position: 'absolute',
-                  left: `${(t / dur) * 100}%`,
-                  transform: 'translateX(-50%)',
-                  fontSize: 8.5,
-                  color: 'rgba(255,255,255,0.4)',
-                  fontWeight: 700,
-                  pointerEvents: 'none',
-                }}
-              >
-                {t}s
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Faixas */}
-        {tracks.length === 0 ? (
-          <div style={{ padding: '12px 4px', fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
-            Nenhuma layer com tempo ajustável neste template.
-          </div>
-        ) : (
-          tracks.map((track) => {
-            const start = Math.max(0, Math.min(dur, track.startSec));
-            const end = track.endSec === null ? dur : Math.max(start, Math.min(dur, track.endSec));
-            const leftPct = (start / dur) * 100;
-            const widthPct = Math.max(2, ((end - start) / dur) * 100);
-            const span = track.endSec === null ? null : end - start;
-
-            return (
-              <div key={track.id} style={{ display: 'flex', alignItems: 'center', height: ROW_H }}>
-                <button
-                  type="button"
-                  onClick={track.onSelect}
-                  title={track.label}
-                  style={{
-                    width: LABEL_W,
-                    flex: '0 0 auto',
-                    textAlign: 'left',
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'rgba(255,255,255,0.82)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    paddingRight: 6,
-                    cursor: track.onSelect ? 'pointer' : 'default',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  <span style={{ color: track.color, marginRight: 5 }}>●</span>
-                  {track.label}
-                </button>
-
+      <div ref={scrollRef} style={{ position: 'relative', padding: `4px ${PAD_X}px 8px`, overflow: 'auto', maxHeight: '34vh' }}>
+        <div style={{ position: 'relative', width: innerWidth }}>
+          {/* Régua = barra de scrub (clica/arrasta = move o vídeo, igual ao player) */}
+          <div style={{ display: 'flex', alignItems: 'center', height: 18 }}>
+            <div
+              style={{
+                width: LABEL_W,
+                flex: '0 0 auto',
+                position: 'sticky',
+                left: 0,
+                zIndex: 8,
+                background: 'rgba(12,12,16,0.98)',
+              }}
+            />
+            <div
+              ref={areaRef}
+              onPointerDown={(e) => startScrub(e.clientX)}
+              style={{ position: 'relative', width: timeAreaWidth, flex: '0 0 auto', height: 18, cursor: 'col-resize' }}
+            >
+              {ticks.map((t) => (
                 <div
-                  onPointerDown={(e) => {
-                    if (e.target !== e.currentTarget) return;
-                    startScrub(e.clientX);
-                  }}
+                  key={t}
                   style={{
-                    position: 'relative',
-                    flex: 1,
-                    height: ROW_H - 6,
-                    borderRadius: 5,
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
+                    position: 'absolute',
+                    left: `${(t / dur) * 100}%`,
+                    transform: 'translateX(-50%)',
+                    fontSize: 8.5,
+                    color: 'rgba(255,255,255,0.4)',
+                    fontWeight: 700,
+                    pointerEvents: 'none',
                   }}
                 >
-                  <div
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      track.onSelect?.();
-                      dragRef.current = {
-                        mode: 'move',
-                        track,
-                        grabSec: secAtClientX(e.clientX),
-                        startStart: start,
-                        span,
-                      };
-                    }}
+                  {t}s
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Faixas */}
+          {tracks.length === 0 ? (
+            <div style={{ padding: '12px 4px', fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+              Nenhuma layer com tempo ajustável neste template.
+            </div>
+          ) : (
+            displayedTracks.map(({ track }) => {
+              const start = Math.max(0, Math.min(dur, track.startSec));
+              const end = track.endSec === null ? dur : Math.max(start, Math.min(dur, track.endSec));
+              const leftPct = (start / dur) * 100;
+              const widthPct = Math.max(2, ((end - start) / dur) * 100);
+              const span = track.endSec === null ? null : end - start;
+              const selected = Boolean(track.selected);
+
+              return (
+                <div
+                  key={track.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: ROW_H,
+                    borderRadius: 7,
+                    background: selected ? `linear-gradient(90deg, ${track.color}3d, rgba(255,255,255,0.06) 42%, transparent)` : 'transparent',
+                    boxShadow: selected ? `inset 3px 0 0 ${track.color}` : undefined,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={track.onSelect}
+                    title={track.label}
                     style={{
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      left: `${leftPct}%`,
-                      width: `${widthPct}%`,
-                      borderRadius: 4,
-                      background: `linear-gradient(180deg, ${track.color}, ${track.color}cc)`,
-                      cursor: 'grab',
-                      display: 'flex',
-                      alignItems: 'center',
-                      overflow: 'hidden',
+                      width: LABEL_W,
+                      flex: '0 0 auto',
+                      position: 'sticky',
+                      left: 0,
+                      zIndex: 8,
+                      textAlign: 'left',
+                      border: selected ? `1px solid ${track.color}80` : '1px solid transparent',
+                      borderRadius: 7,
+                      background: selected ? 'rgba(255,255,255,0.10)' : 'transparent',
+                      color: selected ? '#fff' : 'rgba(255,255,255,0.82)',
+                      fontSize: 10,
+                      fontWeight: selected ? 900 : 700,
+                      paddingRight: 6,
+                      cursor: track.onSelect ? 'pointer' : 'default',
                       whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
-                    <span
+                    <span style={{ color: track.color, marginRight: 5 }}>●</span>
+                    {track.label}
+                  </button>
+
+                  <div
+                    onPointerDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      startScrub(e.clientX);
+                    }}
+                    style={{
+                      position: 'relative',
+                      width: timeAreaWidth,
+                      flex: '0 0 auto',
+                      height: ROW_H - 6,
+                      borderRadius: 5,
+                      background: selected ? `${track.color}16` : 'rgba(255,255,255,0.05)',
+                      border: selected ? `1px solid ${track.color}90` : '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <div
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        track.onSelect?.();
+                        dragRef.current = {
+                          mode: 'move',
+                          track,
+                          grabSec: secAtClientX(e.clientX),
+                          startStart: start,
+                          span,
+                        };
+                      }}
                       style={{
-                        fontSize: 8.5,
-                        fontWeight: 800,
-                        color: 'rgba(0,0,0,0.72)',
-                        padding: '0 4px',
-                        pointerEvents: 'none',
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        left: `${leftPct}%`,
+                        width: `${widthPct}%`,
+                        borderRadius: 4,
+                        background: `linear-gradient(180deg, ${track.color}, ${track.color}cc)`,
+                        boxShadow: selected ? `0 0 0 2px rgba(255,255,255,0.9), 0 0 14px ${track.color}aa` : undefined,
+                        cursor: 'grab',
+                        display: 'flex',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      {round1(start)}s
-                    </span>
-                    {track.resizable && track.onChangeEnd && (
-                      <div
-                        onPointerDown={(e) => {
-                          e.stopPropagation();
-                          dragRef.current = { mode: 'resize', track, startStart: start };
-                        }}
+                      <span
                         style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: 0,
-                          bottom: 0,
-                          width: 11,
-                          cursor: 'ew-resize',
-                          borderRadius: '0 4px 4px 0',
-                          background: 'rgba(0,0,0,0.24)',
+                          fontSize: 8.5,
+                          fontWeight: 800,
+                          color: 'rgba(0,0,0,0.72)',
+                          padding: '0 4px',
+                          pointerEvents: 'none',
                         }}
-                        title="Arraste para mudar a duração"
-                      />
-                    )}
+                      >
+                        {round1(start)}s
+                      </span>
+                      {track.resizable && track.onChangeEnd && (
+                        <div
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            dragRef.current = { mode: 'resize', track, startStart: start };
+                          }}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            bottom: 0,
+                            width: 11,
+                            cursor: 'ew-resize',
+                            borderRadius: '0 4px 4px 0',
+                            background: selected ? 'rgba(255,255,255,0.36)' : 'rgba(0,0,0,0.24)',
+                          }}
+                          title="Arraste para mudar a duração"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
 
-        {/* Playhead — atravessa régua + faixas */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 4,
-            bottom: 8,
-            left: playheadLeft,
-            width: 2,
-            background: '#ffffff',
-            boxShadow: '0 0 7px rgba(255,255,255,0.75)',
-            pointerEvents: 'none',
-            zIndex: 5,
-          }}
-        />
+          {/* Playhead — atravessa régua + faixas */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 4,
+              bottom: 8,
+              left: playheadLeft,
+              width: 2,
+              background: '#ffffff',
+              boxShadow: '0 0 7px rgba(255,255,255,0.75)',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          />
+        </div>
       </div>
     </div>
   );

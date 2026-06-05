@@ -4636,6 +4636,7 @@ export default function Home() {
           startSec: f / 30,
           endSec: null,
           resizable: false,
+          selected: activeStudioTool === 'text' && activeTextRole === layer.role,
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
             setTextInFrames((prev) => ({ ...prev, [role]: fr }));
@@ -4654,6 +4655,7 @@ export default function Home() {
           startSec: coverInFrame / 30,
           endSec: null,
           resizable: false,
+          selected: activeStudioTool === 'cover',
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
             setCoverInFrame(fr);
@@ -4668,6 +4670,7 @@ export default function Home() {
           startSec: phoneInFrame / 30,
           endSec: null,
           resizable: false,
+          selected: activeStudioTool === 'motion',
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
             setPhoneInFrame(fr);
@@ -4682,6 +4685,7 @@ export default function Home() {
           startSec: (logosInFrame ?? 0) / 30,
           endSec: null,
           resizable: false,
+          selected: activeStudioTool === 'logos',
           onChangeStart: (sec) => setLogosInFrame(Math.max(0, Math.round(sec * 30))),
           onSelect: () => selectPreviewLayer(layer),
         });
@@ -4698,16 +4702,32 @@ export default function Home() {
         startSec: start,
         endSec: Math.min(dur, start + ovDur),
         resizable: true,
+        selected: selectedOverlayId === ov.id,
         onChangeStart: (sec) => updateOverlay(ov.id, { startSec: Math.max(0, Math.round(sec * 10) / 10) }),
         onChangeEnd: (sec) =>
           updateOverlay(ov.id, { durationSec: Math.max(0.2, Math.round((sec - (ov.startSec ?? 0)) * 10) / 10) }),
-        onSelect: () => setSelectedOverlayId(ov.id),
+        onSelect: () => {
+          setSelectedOverlayId(ov.id);
+          selectStudioTool('overlay', { keepTimelineOpen: true });
+        },
       });
     });
 
     return tracks;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewLayerHotspots, effectiveTextInFrames, overlays, logosInFrame, coverInFrame, phoneInFrame, durationSeconds, template]);
+  }, [
+    previewLayerHotspots,
+    effectiveTextInFrames,
+    overlays,
+    logosInFrame,
+    coverInFrame,
+    phoneInFrame,
+    durationSeconds,
+    template,
+    activeStudioTool,
+    activeTextRole,
+    selectedOverlayId,
+  ]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
