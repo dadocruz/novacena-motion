@@ -163,6 +163,17 @@ const SAAS_EXPORT_MODE =
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
+const PHONE_TRANSITION_IN_FRAME = 98;
+
+function defaultCoverInFrameForTemplate(templateId: TemplateId) {
+  if (templateId === 'watch_youtube') return 50;
+  if (templateId === 'milestone') return 40;
+  return COVER_TRANSITION_IN_FRAME;
+}
+
+function defaultPhoneInFrameForTemplate(templateId: TemplateId) {
+  return templateId === 'spotify_print' ? PHONE_TRANSITION_IN_FRAME : 0;
+}
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -399,6 +410,7 @@ export default function Home() {
   const [coverY, setCoverY] = useState<number>(factoryMotion.coverY ?? 0);
   const [coverX, setCoverX] = useState<number>(factoryMotion.coverX ?? 0);
   const [coverMotion, setCoverMotion] = useState<CoverMotionId>(factoryMotion.coverMotion ?? 'zoom_bounce');
+  const [coverInFrame, setCoverInFrame] = useState<number>(factoryMotion.coverInFrame ?? defaultCoverInFrameForTemplate('available_now'));
   // ─── Controles do Celular (template spotify_print) ──────
   const [phoneSize, setPhoneSize] = useState<number>(520);
   const [phoneX, setPhoneX] = useState<number>(0);
@@ -412,6 +424,7 @@ export default function Home() {
   const [phoneSpinTurns, setPhoneSpinTurns] = useState<number>(0);
   const [phoneWiggle, setPhoneWiggle] = useState<number>(0.7);
   const [phoneDynamicIsland, setPhoneDynamicIsland] = useState<boolean>(true);
+  const [phoneInFrame, setPhoneInFrame] = useState<number>(factoryMotion.phoneInFrame ?? defaultPhoneInFrameForTemplate('available_now'));
   const [spinTurns, setSpinTurns] = useState<number>(factoryMotion.spinTurns ?? 2);
   const [wiggleIntensity, setWiggleIntensity] = useState<number>(factoryMotion.wiggleIntensity ?? 1);
   const [wiggleH, setWiggleH] = useState<number>(factoryMotion.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
@@ -1319,6 +1332,8 @@ export default function Home() {
     setCoverY(m.coverY ?? 10.7);
     setCoverX(m.coverX ?? -11.2);
     setCoverMotion(normalizeCoverMotionId(m.coverMotion ?? 'zoom_bounce'));
+    setCoverInFrame(m.coverInFrame ?? defaultCoverInFrameForTemplate('watch_youtube'));
+    setPhoneInFrame(m.phoneInFrame ?? defaultPhoneInFrameForTemplate('watch_youtube'));
     setSpinTurns(m.spinTurns ?? 2);
     setWiggleIntensity(m.wiggleIntensity ?? 1);
     setWiggleH(m.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
@@ -1428,6 +1443,7 @@ export default function Home() {
       coverY,
       coverX,
       coverMotion,
+      coverInFrame,
       phoneSize,
       phoneX,
       phoneY,
@@ -1436,6 +1452,7 @@ export default function Home() {
       phoneSpinTurns,
       phoneWiggle,
       phoneDynamicIsland,
+      phoneInFrame,
       spinTurns,
       wiggleIntensity,
       wiggleH,
@@ -1531,10 +1548,12 @@ export default function Home() {
     currentEditorSnapshotRef.current = cloneHistoryValue(snapshot);
     lastHistorySerializedRef.current = serializeEditorSnapshot(snapshot);
 
+    const snapshotTemplate = (snapshot.template ?? 'available_now') as TemplateId;
+
     setEditPreviewLoop(null);
     setActiveStudioTool((snapshot.activeStudioTool ?? 'cover') as StudioToolId);
     setActiveTextRole((snapshot.activeTextRole ?? 'headline') as FontRole);
-    setTemplate((snapshot.template ?? 'available_now') as TemplateId);
+    setTemplate(snapshotTemplate);
     setLayoutPreset(typeof snapshot.layoutPreset === 'string' ? snapshot.layoutPreset : '');
     setTarget((snapshot.target ?? 'story') as RenderTarget);
     setShowSafeArea(Boolean(snapshot.showSafeArea));
@@ -1560,6 +1579,7 @@ export default function Home() {
     setCoverY(snapshot.coverY ?? 0);
     setCoverX(snapshot.coverX ?? 0);
     setCoverMotion(normalizeCoverMotionId(snapshot.coverMotion));
+    setCoverInFrame(snapshot.coverInFrame ?? defaultCoverInFrameForTemplate(snapshotTemplate));
     setPhoneSize(snapshot.phoneSize ?? 520);
     setPhoneX(snapshot.phoneX ?? 0);
     setPhoneY(snapshot.phoneY ?? 0);
@@ -1568,6 +1588,7 @@ export default function Home() {
     setPhoneSpinTurns(snapshot.phoneSpinTurns ?? 0);
     setPhoneWiggle(snapshot.phoneWiggle ?? 0.7);
     setPhoneDynamicIsland(snapshot.phoneDynamicIsland ?? true);
+    setPhoneInFrame(snapshot.phoneInFrame ?? defaultPhoneInFrameForTemplate(snapshotTemplate));
     setSpinTurns(snapshot.spinTurns ?? 2);
     setWiggleIntensity(snapshot.wiggleIntensity ?? 1);
     setWiggleH(snapshot.wiggleH ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
@@ -4146,7 +4167,13 @@ export default function Home() {
     link.remove();
   }
 
-  function selectStudioTool(tool: StudioToolId) {
+  function selectStudioTool(
+    tool: StudioToolId,
+    options?: {
+      sectionOverride?: string;
+      textPanelTab?: 'fontes' | 'entrada' | 'cor' | 'layout';
+    }
+  ) {
     // Timeline é um painel flutuante (não uma seção do painel direito):
     // alterna ao clicar e não dispara o scroll de seção.
     if (tool === 'timeline') {
@@ -4157,16 +4184,22 @@ export default function Home() {
     setShowTimeline(false);
     setActiveStudioTool(tool);
 
+    if (tool === 'text') {
+      setTextPanelTab(options?.textPanelTab ?? 'entrada');
+    }
+
     window.setTimeout(() => {
       const rightPanel = document.querySelector('[data-novacena-right-panel="true"]') as HTMLElement | null;
 
       // Mapeia tool -> section title via STUDIO_TOOL_DOCK e acha a seção real
       // pelo data-right-panel-section (que se move junto com a ordem drag/drop).
       const dockEntry = STUDIO_TOOL_DOCK.find((entry) => entry.id === tool);
-      const sectionTitle = dockEntry?.section;
+      const sectionTitle = options?.sectionOverride ?? dockEntry?.section;
       const scopedQuery = (selector: string) => rightPanel?.querySelector(selector) as HTMLElement | null;
       const target = tool === 'text'
-        ? scopedQuery('[data-text-panel-anchor="fontes"]')
+        ? scopedQuery(`[data-text-panel-anchor="${options?.textPanelTab ?? 'entrada'}"]`)
+        : options?.sectionOverride
+          ? scopedQuery(`[data-right-panel-section="${options.sectionOverride}"]`)
         : tool === 'motion'
           ? scopedQuery('[data-text-panel-anchor="transition"]')
         : sectionTitle
@@ -4549,7 +4582,29 @@ export default function Home() {
               if (role === 'cta2') setCta2InFrame(fr);
             }
           },
-          onSelect: () => setActiveTextRole(layer.role as FontRole),
+          onSelect: () => selectPreviewLayer(layer),
+        });
+      } else if (layer.kind === 'cover') {
+        tracks.push({
+          id: layer.id,
+          label: layer.label,
+          color: '#38bdf8',
+          startSec: 0,
+          endSec: null,
+          resizable: false,
+          onChangeStart: () => undefined,
+          onSelect: () => selectPreviewLayer(layer),
+        });
+      } else if (layer.kind === 'phone') {
+        tracks.push({
+          id: layer.id,
+          label: layer.label,
+          color: '#f59e0b',
+          startSec: 0,
+          endSec: null,
+          resizable: false,
+          onChangeStart: () => undefined,
+          onSelect: () => selectPreviewLayer(layer),
         });
       } else if (layer.kind === 'logos') {
         tracks.push({
@@ -4560,6 +4615,7 @@ export default function Home() {
           endSec: null,
           resizable: false,
           onChangeStart: (sec) => setLogosInFrame(Math.max(0, Math.round(sec * 30))),
+          onSelect: () => selectPreviewLayer(layer),
         });
       }
     }
@@ -4588,15 +4644,14 @@ export default function Home() {
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
       setActiveTextRole(layer.role);
-      selectStudioTool('text');
+      selectStudioTool('text', { textPanelTab: 'entrada' });
       return;
     }
 
     setEditingPreviewTextRole(null);
 
     if (layer.kind === 'phone') {
-      selectStudioTool('motion');
-      window.setTimeout(() => scrollToStudioSection('Celular'), 90);
+      selectStudioTool('motion', { sectionOverride: 'Celular' });
       return;
     }
 
