@@ -1,4 +1,5 @@
 import React from 'react';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 
 export interface TimelineTrack {
   id: string;
@@ -29,6 +30,8 @@ const ROW_H = 20;
 const PAD_X = 14;
 const BASE_TIME_W = 760;
 const BASE_PX_PER_SEC = 12;
+const MIN_ZOOM_STEP = 0;
+const MAX_ZOOM_STEP = 9;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 type DragState =
@@ -53,6 +56,17 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const zoomScale = Math.pow(1.32, zoomStep);
   const timeAreaWidth = Math.max(BASE_TIME_W, Math.round(dur * BASE_PX_PER_SEC * zoomScale));
   const innerWidth = LABEL_W + timeAreaWidth;
+  const canZoomOut = zoomStep > MIN_ZOOM_STEP;
+  const canZoomIn = zoomStep < MAX_ZOOM_STEP;
+
+  const changeZoom = React.useCallback((direction: 'in' | 'out') => {
+    timelineKeyboardActiveRef.current = true;
+    panelRef.current?.focus({ preventScroll: true });
+    setZoomStep((current) => {
+      if (direction === 'in') return Math.min(MAX_ZOOM_STEP, current + 1);
+      return Math.max(MIN_ZOOM_STEP, current - 1);
+    });
+  }, []);
 
   const secAtClientX = React.useCallback(
     (clientX: number) => {
@@ -123,10 +137,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
       event.preventDefault();
       event.stopPropagation();
-      setZoomStep((current) => {
-        if (pressedZoomIn) return Math.min(9, current + 1);
-        return Math.max(0, current - 1);
-      });
+      changeZoom(pressedZoomIn ? 'in' : 'out');
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -141,7 +152,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('pointerdown', onPointerDown, true);
     };
-  }, []);
+  }, [changeZoom]);
 
   const startScrub = (clientX: number) => {
     dragRef.current = { mode: 'seek' };
@@ -208,24 +219,91 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1.3, color: 'rgba(255,255,255,0.82)' }}>
           LINHA DO TEMPO · {round1(dur)}s · {round1(currentSec)}s
         </span>
-        <button
-          type="button"
-          onClick={onClose}
+        <div
           style={{
-            border: '1px solid rgba(255,255,255,0.12)',
-            background: 'rgba(255,255,255,0.05)',
-            color: 'rgba(255,255,255,0.8)',
-            borderRadius: 7,
-            width: 22,
-            height: 22,
-            cursor: 'pointer',
-            fontSize: 12,
-            lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            flex: '0 0 auto',
           }}
-          aria-label="Fechar linha do tempo"
         >
-          ✕
-        </button>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: 3,
+              borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.10)',
+              background: 'rgba(255,255,255,0.045)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => changeZoom('out')}
+              disabled={!canZoomOut}
+              title="Diminuir zoom da timeline"
+              aria-label="Diminuir zoom da timeline"
+              aria-keyshortcuts="1"
+              style={{
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: canZoomOut ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.025)',
+                color: canZoomOut ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.28)',
+                borderRadius: 7,
+                width: 28,
+                height: 24,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: canZoomOut ? 'pointer' : 'not-allowed',
+              }}
+            >
+              <ZoomOut size={15} strokeWidth={2.4} />
+            </button>
+            <button
+              type="button"
+              onClick={() => changeZoom('in')}
+              disabled={!canZoomIn}
+              title="Aumentar zoom da timeline"
+              aria-label="Aumentar zoom da timeline"
+              aria-keyshortcuts="2"
+              style={{
+                border: '1px solid rgba(255,255,255,0.15)',
+                background: canZoomIn
+                  ? 'linear-gradient(135deg, rgba(190,80,255,0.34), rgba(255,123,58,0.28))'
+                  : 'rgba(255,255,255,0.025)',
+                color: canZoomIn ? '#fff' : 'rgba(255,255,255,0.28)',
+                borderRadius: 7,
+                width: 28,
+                height: 24,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: canZoomIn ? 'pointer' : 'not-allowed',
+              }}
+            >
+              <ZoomIn size={15} strokeWidth={2.4} />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: '1px solid rgba(255,255,255,0.12)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'rgba(255,255,255,0.8)',
+              borderRadius: 7,
+              width: 22,
+              height: 22,
+              cursor: 'pointer',
+              fontSize: 12,
+              lineHeight: 1,
+            }}
+            aria-label="Fechar linha do tempo"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div ref={scrollRef} style={{ position: 'relative', padding: `4px ${PAD_X}px 8px`, overflow: 'auto', maxHeight: '34vh' }}>
