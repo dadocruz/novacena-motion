@@ -234,21 +234,19 @@ export const CinematicBackground: React.FC<Props> = ({
             <Video
               src={videoSrc}
               startFrom={videoStartFrame}
-              muted={!useVideoAudio}
-              volume={useVideoAudio ? (f) => calcVolume(f) : 0}
-              pauseWhenBuffering={!lightPreview}
+              muted={lightPreview ? true : !useVideoAudio}
+              volume={lightPreview ? 0 : useVideoAudio ? (f) => calcVolume(f) : 0}
+              pauseWhenBuffering={false}
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                // Blur capado no preview: custo de GPU cresce com o raio² e
-                // blur grande num vídeo 1080×1920 a 30fps trava o editor.
-                // O render usa o blur cheio (branch OffthreadVideo acima).
-                filter: previewVideoFilter,
-                transform: `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px) translateZ(0)`,
+                filter: lightPreview ? 'none' : previewVideoFilter,
+                transform: lightPreview
+                  ? 'none'
+                  : `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px) translateZ(0)`,
                 backfaceVisibility: 'hidden',
-                willChange: lightPreview ? 'auto' : 'transform',
-                contain: lightPreview ? 'layout paint size' : undefined,
+                willChange: 'auto',
               }}
             />
           )}
