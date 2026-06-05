@@ -192,11 +192,15 @@ export type BackgroundConfig = {
     size: number;
     type: string;
     durationSec?: number;
+    width?: number;
+    height?: number;
     lastModified?: number;
     trimStartSec?: number;
     trimDurationSec?: number;
     serverPreviewSrc?: string;
     renderReadySrc?: string;
+    previewMode?: string;
+    requiresOptimization?: boolean;
   };
   videoOpacity?: number;
   bgColor?: string;

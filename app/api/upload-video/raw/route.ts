@@ -15,6 +15,7 @@ const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public',
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
 const PREVIEW_REQUIRED_SIZE = 100 * 1024 * 1024;
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
+const VERTICAL_PREVIEW_REQUIRED_SECONDS = 45;
 const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mpg', '.mkv', '.avi', '.3gp', '.3gpp'];
 const FFPROBE_BIN = existsSync('/usr/local/bin/ffprobe')
   ? '/usr/local/bin/ffprobe'
@@ -228,10 +229,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'O arquivo enviado não tem vídeo.' }, { status: 400 });
     }
 
-    const previewIsRequired =
+    const durationSec = Number(probe.durationSec || 0);
+    const isVerticalVideo = Number(probe.height || 0) > Number(probe.width || 0);
+    const requiresOptimization =
       fileStat.size > PREVIEW_REQUIRED_SIZE ||
-      Number(probe.durationSec || 0) > MAX_BACKGROUND_CLIP_SECONDS + 0.5 ||
+      durationSec >= MAX_BACKGROUND_CLIP_SECONDS - 0.5 ||
+      (isVerticalVideo && durationSec >= VERTICAL_PREVIEW_REQUIRED_SECONDS) ||
       ext !== '.mp4';
+    const previewIsRequired =
+      requiresOptimization ||
+      durationSec > MAX_BACKGROUND_CLIP_SECONDS + 0.5;
 
     // Torna o vídeo seekável no navegador (faststart). Containers MP4/MOV/M4V
     // costumam vir com o índice no fim — o que faz o preview voltar pro zero.
@@ -313,6 +320,7 @@ export async function POST(req: NextRequest) {
         previewType: contentType,
         previewMode: 'local-fallback',
         previewFailed: true,
+        requiresOptimization,
         previewError: previewResult.error || null,
         ...probe,
       });
@@ -331,6 +339,7 @@ export async function POST(req: NextRequest) {
       type: contentType,
       previewType: previewFilename.endsWith('.mp4') ? 'video/mp4' : contentType,
       previewMode: previewFilename === servedFilename ? 'source' : previewResult.mode,
+      requiresOptimization,
       ...probe,
     });
   } catch (error) {

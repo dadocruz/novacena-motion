@@ -163,6 +163,8 @@ const SAAS_EXPORT_MODE =
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
+const HEAVY_BACKGROUND_VIDEO_BYTES = 40 * 1024 * 1024;
+const LONG_BACKGROUND_VIDEO_SECONDS = 45;
 const PHONE_TRANSITION_IN_FRAME = 98;
 
 function defaultCoverInFrameForTemplate(templateId: TemplateId) {
@@ -186,6 +188,8 @@ type LocalAssetRef = {
   size: number;
   type: string;
   durationSec?: number;
+  width?: number;
+  height?: number;
   lastModified?: number;
   trimStartSec?: number;
   trimDurationSec?: number;
@@ -193,6 +197,8 @@ type LocalAssetRef = {
   previewSrc?: string;
   serverPreviewSrc?: string;
   renderReadySrc?: string;
+  previewMode?: string;
+  requiresOptimization?: boolean;
 };
 
 type SaasUserSummary = {
@@ -2065,6 +2071,20 @@ export default function Home() {
       motionForPreview.background?.videoSrc &&
       motionForPreview.background.mediaType !== 'image'
     );
+    const backgroundAsset = motionForPreview.background?.localAsset as LocalAssetRef | undefined;
+    const backgroundDurationSec =
+      motionForPreview.background?.videoDurationSec ??
+      backgroundAsset?.durationSec ??
+      durationSeconds;
+    const backgroundIsVertical =
+      Number(backgroundAsset?.height || 0) > Number(backgroundAsset?.width || 0);
+    const backgroundNeedsLightPreview = hasVideoBackground && (
+      Boolean(motionForPreview.background?.videoNeedsTrim) ||
+      Boolean(backgroundAsset?.requiresOptimization) ||
+      Number(backgroundAsset?.size || 0) >= HEAVY_BACKGROUND_VIDEO_BYTES ||
+      backgroundDurationSec >= LONG_BACKGROUND_VIDEO_SECONDS ||
+      backgroundIsVertical
+    );
     const hasVideoOverlay = (motionForPreview.overlays ?? []).some((overlay) => {
       const src = overlay.src || '';
       return overlay.type === 'video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(src);
@@ -2072,7 +2092,9 @@ export default function Home() {
     const hasLongOverlay = (motionForPreview.overlays ?? []).some((overlay) => {
       return overlay.type === 'video' && Math.max(overlay.durationSec ?? 0, overlay.sourceDurationSec ?? 0) >= 20;
     });
-    const useLightPreview = hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40);
+    const useLightPreview =
+      backgroundNeedsLightPreview ||
+      (hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40));
     const previewOverlays = useLightPreview
       ? (motionForPreview.overlays ?? []).map((overlay) => (
           overlay.type === 'video' ? { ...overlay, previewQuality: 'light' as const } : overlay
@@ -2147,6 +2169,11 @@ export default function Home() {
   const focusedPreviewLoop = shouldUseFocusedPreviewLoop ? editPreviewLoop : null;
   const bgIsImage = Boolean(bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo));
   const bgClipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
+  const bgVideoRequiresOptimization = Boolean(bgVideoNeedsTrim && bgVideoLocalAsset?.requiresOptimization);
+  const bgVideoNeedsOnlyOptimization =
+    bgVideoRequiresOptimization &&
+    bgVideoDuration > 0 &&
+    bgVideoDuration <= bgClipDuration + 0.5;
   const bgVideoStartMax = bgVideoNeedsTrim
     ? Math.max(0, bgVideoDuration - bgClipDuration)
     : Math.max(0.1, bgVideoDuration);
@@ -2817,7 +2844,22 @@ export default function Home() {
 
       const totalDuration = Number(d.durationSec) || browserDuration || 0;
       const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
-      const shouldTrim = totalDuration > clipDuration + 0.5;
+      const uploadedWidth = Number(d.width || 0);
+      const uploadedHeight = Number(d.height || 0);
+      const uploadedSize = Number(d.size || file.size || 0);
+      const isVerticalUpload = uploadedHeight > uploadedWidth;
+      const previewFellBackToSource =
+        Boolean(d.previewFailed) ||
+        d.previewMode === 'source' ||
+        (typeof d.previewSrc === 'string' && d.previewSrc === d.sourcePath);
+      const shouldOptimizeFullLength =
+        Boolean(d.requiresOptimization) ||
+        previewFellBackToSource ||
+        uploadedSize >= HEAVY_BACKGROUND_VIDEO_BYTES ||
+        totalDuration >= Math.max(LONG_BACKGROUND_VIDEO_SECONDS, clipDuration - 0.5) ||
+        (isVerticalUpload && totalDuration >= 20);
+      const shouldTrim = totalDuration > clipDuration + 0.5 || shouldOptimizeFullLength;
+      const needsOnlyOptimization = shouldTrim && totalDuration <= clipDuration + 0.5;
       const sourcePath = d.sourcePath || d.videoSrc;
       const serverPreviewSrc = d.previewSrc || d.videoSrc;
       const previewSrc = d.previewFailed ? localPreviewUrl : serverPreviewSrc;
@@ -2833,10 +2875,14 @@ export default function Home() {
         size: file.size,
         type: file.type || 'video/mp4',
         durationSec: totalDuration,
+        width: uploadedWidth || undefined,
+        height: uploadedHeight || undefined,
         lastModified: file.lastModified,
         sourcePath,
         previewSrc,
         serverPreviewSrc,
+        previewMode: d.previewMode,
+        requiresOptimization: shouldOptimizeFullLength,
       });
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
@@ -2845,8 +2891,10 @@ export default function Home() {
       setBgVideoNeedsTrim(shouldTrim);
       setBgVideoOriginalName(file.name);
       setVideoUploadMsg(
-        shouldTrim
-          ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
+        shouldTrim && needsOnlyOptimization
+          ? `Vídeo recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
+          : shouldTrim
+            ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
           : `Vídeo pronto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
       );
     } catch (error) {
@@ -2862,6 +2910,10 @@ export default function Home() {
 
   function useBgVideoWithoutTrim() {
     if (!bgVideo) return;
+    if (bgVideoLocalAsset?.requiresOptimization) {
+      setVideoUploadMsg('Esse vídeo precisa ser otimizado antes de usar inteiro. Clique em otimizar para gerar o arquivo final leve.');
+      return;
+    }
     setBgVideoNeedsTrim(false);
     setBgVideoStartSec(0);
     setBgVideoLocalAsset((asset) => asset ? { ...asset, trimStartSec: 0, trimDurationSec: bgVideoDuration || durationSeconds, renderReadySrc: bgVideo } : asset);
@@ -2910,6 +2962,7 @@ export default function Home() {
         sourcePath: undefined,
         previewSrc: d.videoSrc,
         serverPreviewSrc: d.videoSrc,
+        requiresOptimization: false,
       } : asset);
       setBgVideoStartSec(0);
       setBgTrimPreviewTime(0);
@@ -5004,9 +5057,12 @@ export default function Home() {
 
   async function renderScript(script: string, label: string) {
     if (bgVideoNeedsTrim) {
-      setRenderMessage('⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
+      const pendingVideoMessage = bgVideoRequiresOptimization
+        ? 'Otimize o vídeo antes de renderizar.'
+        : 'Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.';
+      setRenderMessage(`⚠ ${pendingVideoMessage}`);
       setRenderStatus('error');
-      alert('Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.');
+      alert(pendingVideoMessage);
       return;
     }
 
@@ -5105,17 +5161,16 @@ export default function Home() {
 
   async function renderLambda(label: string) {
     if (bgVideoNeedsTrim) {
+      const pendingVideoMessage = bgVideoRequiresOptimization
+        ? (SAAS_EXPORT_MODE ? 'Otimize o vídeo antes de exportar.' : 'Otimize o vídeo antes de renderizar pelo Lambda.')
+        : (SAAS_EXPORT_MODE
+            ? 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
+            : 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.');
       setRenderMessage(
-        SAAS_EXPORT_MODE
-          ? '⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
-          : '⚠ Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.'
+        `⚠ ${pendingVideoMessage}`
       );
       setRenderStatus('error');
-      alert(
-        SAAS_EXPORT_MODE
-          ? 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
-          : 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.'
-      );
+      alert(pendingVideoMessage);
       return;
     }
 
@@ -5281,7 +5336,11 @@ export default function Home() {
 
   const exportStudioPresetV1 = React.useCallback(() => {
     if (bgVideoNeedsTrim) {
-      setPresetImportStatusV1('Corte/otimize o trecho do vídeo antes de exportar o preset.');
+      setPresetImportStatusV1(
+        bgVideoRequiresOptimization
+          ? 'Otimize o vídeo antes de exportar o preset.'
+          : 'Corte/otimize o trecho do vídeo antes de exportar o preset.'
+      );
       window.setTimeout(() => setPresetImportStatusV1(''), 3000);
       return;
     }
@@ -5384,6 +5443,7 @@ export default function Home() {
     posterOutroEnabled,
     motionWithStyles,
     bgVideoNeedsTrim,
+    bgVideoRequiresOptimization,
   ]);
 
 
@@ -7644,7 +7704,9 @@ return (
                 </div>
 
                 <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
-                  Escolha ouvindo/vendo o bruto. Depois o sistema corta só esse trecho, centraliza em {target === 'story' ? '1080×1920' : '1080×1350'} e exclui o restante.
+                  {bgVideoNeedsOnlyOptimization
+                    ? `Esse vídeo já tem a duração final. O sistema só vai otimizar em ${target === 'story' ? '1080×1920' : '1080×1350'} para o preview e o render não travarem.`
+                    : `Escolha ouvindo/vendo o bruto. Depois o sistema corta só esse trecho, centraliza em ${target === 'story' ? '1080×1920' : '1080×1350'} e exclui o restante.`}
                 </div>
                 <button
                   type="button"
@@ -7657,16 +7719,22 @@ return (
                     color: '#fff',
                   }}
                 >
-                  {processingVideoClip ? 'Otimizando trecho…' : `Cortar/otimizar ${bgClipDuration}s`}
+                  {processingVideoClip
+                    ? 'Otimizando trecho…'
+                    : bgVideoNeedsOnlyOptimization
+                      ? `Otimizar ${bgClipDuration}s`
+                      : `Cortar/otimizar ${bgClipDuration}s`}
                 </button>
-                <button
-                  type="button"
-                  onClick={useBgVideoWithoutTrim}
-                  disabled={processingVideoClip || uploadingVideo}
-                  style={smallBtn}
-                >
-                  Usar vídeo inteiro
-                </button>
+                {!bgVideoRequiresOptimization ? (
+                  <button
+                    type="button"
+                    onClick={useBgVideoWithoutTrim}
+                    disabled={processingVideoClip || uploadingVideo}
+                    style={smallBtn}
+                  >
+                    Usar vídeo inteiro
+                  </button>
+                ) : null}
               </div>
             )}
           </div>

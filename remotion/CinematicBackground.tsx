@@ -174,9 +174,7 @@ export const CinematicBackground: React.FC<Props> = ({
   const previewZoom = lightPreview ? 1.08 : bgZoom;
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
   const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
-  const previewVideoFilter = lightPreview
-    ? `saturate(${Math.min(videoSaturation, 1.06)}) brightness(0.94)`
-    : `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
+  const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
 
   // Light leak diagonal varrendo (loop infinito)
   const leakPhase = (frame % 200) / 200;
@@ -241,6 +239,9 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                // Blur capado no preview: custo de GPU cresce com o raio² e
+                // blur grande num vídeo 1080×1920 a 30fps trava o editor.
+                // O render usa o blur cheio (branch OffthreadVideo acima).
                 filter: lightPreview ? 'none' : previewVideoFilter,
                 transform: lightPreview
                   ? 'none'
