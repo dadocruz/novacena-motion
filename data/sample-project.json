@@ -417,6 +417,7 @@
     "youtube_subscribe": {
       "type": "youtube_subscribe",
       "headline": "INSCREVA-SE",
+      "cta": "NO CANAL",
       "channelName": "@SEUCANAL",
       "showCover": false,
       "durationSeconds": 8,
@@ -428,10 +429,13 @@
       },
       "motion": {
         "fontHeadline": "premium-akhand-light",
+        "fontCta1": "premium-akhand-light",
         "fontDate": "premium-akhand-light",
         "styleHeadline": { "color": "#FF1212" },
+        "styleCta1": { "color": "#ffffff" },
         "styleDate": { "color": "#ffffff" },
         "transitionHeadline": "mask_reveal",
+        "transitionCta1": "rise_clean",
         "transitionDate": "scale_pop",
         "particlesEnabled": true,
         "finalFlash": true,

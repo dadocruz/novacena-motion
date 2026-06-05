@@ -255,6 +255,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
   },
   youtube_subscribe: {
     headline: 'INSCREVA-SE',
+    cta1: 'Texto 1',
     date: '@ do canal',
   },
   youtube_views: {
@@ -280,7 +281,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
-  youtube_subscribe: ['headline', 'date'],
+  youtube_subscribe: ['headline', 'cta1', 'date'],
   youtube_views: ['date', 'headline', 'cta1'],
   milestone: ['date', 'headline', 'cta1'],
   out_now: ['headline', 'cta2'],
@@ -1256,11 +1257,13 @@ export default function Home() {
       } else {
         applyTemplateContentDefaults(nextId);
         if (nextId === 'youtube_subscribe') {
-          // Fonte padrão Akhand Light (headline "INSCREVA-SE" + @canal)
+          // Fonte padrão Akhand Light (headline, texto 1 e @canal)
           setFontHeadline('premium-akhand-light');
+          setFontCta1('premium-akhand-light');
           setFontDate('premium-akhand-light');
           // "INSCREVA-SE" em vermelho YouTube (StyledText pinta a cor do estilo)
           setStyleHeadline((s) => ({ ...s, color: '#FF1212' }));
+          setStyleCta1((s) => ({ ...s, color: '#ffffff' }));
           setStyleDate((s) => ({ ...s, color: '#ffffff' }));
         }
         if (nextId === 'youtube_views') {
@@ -4447,6 +4450,7 @@ export default function Home() {
     if (template === 'youtube_subscribe') {
       return [
         { id: 'ytsub-headline', kind: 'text', role: 'headline', label: 'INSCREVA-SE', rect: measuredRect('ytsub-headline', roleRect(10, 66, 80, 12, 'headline')) },
+        { id: 'ytsub-text1', kind: 'text', role: 'cta1', label: 'Texto 1', rect: measuredRect('ytsub-text1', roleRect(14, 75, 72, 7, 'cta1')) },
         { id: 'ytsub-channel', kind: 'text', role: 'date', label: '@ do canal', rect: measuredRect('ytsub-channel', roleRect(20, 82, 60, 6, 'date')) },
         ...elementHotspots,
       ];
@@ -5932,9 +5936,10 @@ return (
           ) : template === 'youtube_subscribe' ? (
             <>
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
-                Arte de inscrição. "INSCREVA-SE NO CANAL" e fixo; aqui voce edita o @ do canal. Use video de fundo no painel Capa/Motion.
+                Arte de inscrição. Edite a chamada, o texto do canal e o @. Use video de fundo no painel Capa/Motion.
               </div>
               <Field label="Headline" value={headline} onChange={setHeadline} placeholder="INSCREVA-SE" />
+              <Field label="Texto 1" value={cta} onChange={setCta} placeholder="NO CANAL" />
               <Field label="@ do canal" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
             </>
           ) : template === 'youtube_views' ? (
