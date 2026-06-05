@@ -2482,23 +2482,97 @@ export default function Home() {
   function applyTimelineTransitionTool(kind: TimelineTool['icon']) {
     stopTransitionPreviewLoopForManualEdit();
 
-    const textTransition: TextTransitionId =
-      kind === 'pop' ? 'scale_pop' :
-      kind === 'letters' ? 'split_letters' :
-      'mask_reveal';
-    const nextCoverMotion: CoverMotionId =
-      kind === 'pop' ? 'zoom_bounce' :
-      kind === 'letters' ? 'slide_up' :
-      'flip_card';
+    const maxFrame = Math.max(0, Math.round(durationSeconds * 30) - 1);
+    const frame = (value: number) => Math.max(0, Math.min(maxFrame, value));
+    const sec = (value: number) => Math.round((frame(value) / 30) * 10) / 10;
+    const config: {
+      textTransition: TextTransitionId;
+      coverMotion: CoverMotionId;
+      overlayTransition: NonNullable<OverlayPlacement['entryTransition']>;
+      overlayEntryDurationFrames: number;
+      tuning: Required<TextTransitionTuning>;
+      frames: Record<TextPreviewRole, number>;
+      coverFrame: number;
+      phoneFrame: number;
+      logosFrame: number;
+    } =
+      kind === 'pop'
+        ? {
+            textTransition: 'scale_pop',
+            coverMotion: 'zoom_bounce',
+            overlayTransition: 'zoom-pop',
+            overlayEntryDurationFrames: 22,
+            tuning: { intensity: 1.65, speed: 1.05, stagger: 0.45 },
+            frames: { headline: 0, date: 28, cta1: 68, cta2: 120 },
+            coverFrame: 44,
+            phoneFrame: 84,
+            logosFrame: 140,
+          }
+        : kind === 'letters'
+          ? {
+              textTransition: 'split_letters',
+              coverMotion: 'slide_up',
+              overlayTransition: 'slide-up',
+              overlayEntryDurationFrames: 32,
+              tuning: { intensity: 1.35, speed: 0.86, stagger: 1.35 },
+              frames: { headline: 0, date: 42, cta1: 88, cta2: 150 },
+              coverFrame: 58,
+              phoneFrame: 104,
+              logosFrame: 170,
+            }
+          : {
+              textTransition: 'mask_reveal',
+              coverMotion: 'flip_card',
+              overlayTransition: 'fade',
+              overlayEntryDurationFrames: 28,
+              tuning: { intensity: 1.42, speed: 0.82, stagger: 0.9 },
+              frames: { headline: 0, date: 38, cta1: 78, cta2: 138 },
+              coverFrame: 54,
+              phoneFrame: 98,
+              logosFrame: 158,
+            };
+    const nextFrames: Record<TextPreviewRole, number> = {
+      headline: frame(config.frames.headline),
+      date: frame(config.frames.date),
+      cta1: frame(config.frames.cta1),
+      cta2: frame(config.frames.cta2),
+    };
+    const nextTuning = normalizeTransitionTuningState({
+      headline: config.tuning,
+      date: config.tuning,
+      cta1: config.tuning,
+      cta2: config.tuning,
+    });
 
-    setTrHeadline(textTransition);
-    setTrDate(textTransition);
-    setTrCta(textTransition);
-    setTrCta1(textTransition);
-    setTrCta2(textTransition);
-    setCoverMotion(nextCoverMotion);
+    setTrHeadline(config.textTransition);
+    setTrDate(config.textTransition);
+    setTrCta(config.textTransition);
+    setTrCta1(config.textTransition);
+    setTrCta2(config.textTransition);
+    setTransitionTuning(nextTuning);
+    setCoverMotion(config.coverMotion);
+    setCoverInFrame(frame(config.coverFrame));
+    setPhoneInFrame(frame(config.phoneFrame));
+    setLogosInFrame(frame(config.logosFrame));
+    setCta1InFrame(nextFrames.cta1);
+    setCtaSwapFrame(frame(nextFrames.cta1 + 44));
+    setCta2InFrame(nextFrames.cta2);
+    setTextInFrames(nextFrames);
+    setOverlays((items) =>
+      items.map((overlay, index) => ({
+        ...overlay,
+        startSec: typeof overlay.startSec === 'number' ? overlay.startSec : sec(config.logosFrame + index * 10),
+        entryTransition: config.overlayTransition,
+        entryDurationFrames: config.overlayEntryDurationFrames,
+      }))
+    );
+    setSelectedOverlayId(null);
+    setActiveTextRole('headline');
+    setTextPanelTab('entrada');
+    setActiveStudioTool('text');
     setPreviewNonce((n) => n + 1);
-    startTextElementPreviewLoop('headline');
+    setTimelineSec(sec(nextFrames.headline));
+    startEditPreviewLoop(getTextPreviewFrameRange('headline', nextFrames.headline));
   }
 
 
@@ -4733,21 +4807,21 @@ export default function Home() {
       id: 'timeline-transition-reveal',
       label: 'Aplicar transição reveal nas layers',
       icon: 'reveal',
-      active: trHeadline === 'mask_reveal' && trDate === 'mask_reveal' && trCta1 === 'mask_reveal' && trCta2 === 'mask_reveal',
+      active: trHeadline === 'mask_reveal' && trDate === 'mask_reveal' && trCta === 'mask_reveal' && trCta1 === 'mask_reveal' && trCta2 === 'mask_reveal',
       onClick: () => applyTimelineTransitionTool('reveal'),
     },
     {
       id: 'timeline-transition-pop',
       label: 'Aplicar transição pop nas layers',
       icon: 'pop',
-      active: trHeadline === 'scale_pop' && trDate === 'scale_pop' && trCta1 === 'scale_pop' && trCta2 === 'scale_pop',
+      active: trHeadline === 'scale_pop' && trDate === 'scale_pop' && trCta === 'scale_pop' && trCta1 === 'scale_pop' && trCta2 === 'scale_pop',
       onClick: () => applyTimelineTransitionTool('pop'),
     },
     {
       id: 'timeline-transition-letters',
       label: 'Aplicar transição de letras nas layers',
       icon: 'letters',
-      active: trHeadline === 'split_letters' && trDate === 'split_letters' && trCta1 === 'split_letters' && trCta2 === 'split_letters',
+      active: trHeadline === 'split_letters' && trDate === 'split_letters' && trCta === 'split_letters' && trCta1 === 'split_letters' && trCta2 === 'split_letters',
       onClick: () => applyTimelineTransitionTool('letters'),
     },
   ];

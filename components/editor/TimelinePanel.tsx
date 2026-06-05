@@ -62,6 +62,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const dragRef = React.useRef<DragState | null>(null);
   const timelineKeyboardActiveRef = React.useRef(false);
   const [zoomStep, setZoomStep] = React.useState(0);
+  const [pressedToolId, setPressedToolId] = React.useState<string | null>(null);
   const dur = Math.max(0.1, durationSec);
   const zoomScale = Math.pow(1.32, zoomStep);
   const timeAreaWidth = Math.max(BASE_TIME_W, Math.round(dur * BASE_PX_PER_SEC * zoomScale));
@@ -130,6 +131,12 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
     panelRef.current?.focus({ preventScroll: true });
     timelineKeyboardActiveRef.current = true;
   }, []);
+
+  React.useEffect(() => {
+    if (!pressedToolId) return;
+    const timeout = window.setTimeout(() => setPressedToolId(null), 420);
+    return () => window.clearTimeout(timeout);
+  }, [pressedToolId]);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -254,32 +261,42 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                 background: 'rgba(255,255,255,0.045)',
               }}
             >
-              {tools.map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  onClick={tool.onClick}
-                  title={tool.label}
-                  aria-label={tool.label}
-                  style={{
-                    border: tool.active ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(255,255,255,0.12)',
-                    background: tool.active
-                      ? 'linear-gradient(135deg, rgba(34,211,238,0.32), rgba(190,80,255,0.28))'
-                      : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    borderRadius: 7,
-                    width: 28,
-                    height: 24,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    boxShadow: tool.active ? '0 0 14px rgba(34,211,238,0.22)' : undefined,
-                  }}
-                >
-                  {renderToolIcon(tool.icon)}
-                </button>
-              ))}
+              {tools.map((tool) => {
+                const pressed = pressedToolId === tool.id;
+                const highlighted = tool.active || pressed;
+
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    onClick={() => {
+                      setPressedToolId(tool.id);
+                      tool.onClick();
+                    }}
+                    title={tool.label}
+                    aria-label={tool.label}
+                    style={{
+                      border: highlighted ? '1px solid rgba(255,255,255,0.38)' : '1px solid rgba(255,255,255,0.12)',
+                      background: highlighted
+                        ? 'linear-gradient(135deg, rgba(34,211,238,0.38), rgba(190,80,255,0.34))'
+                        : 'rgba(255,255,255,0.08)',
+                      color: '#fff',
+                      borderRadius: 7,
+                      width: 28,
+                      height: 24,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      boxShadow: highlighted ? '0 0 0 1px rgba(255,255,255,0.12), 0 0 16px rgba(34,211,238,0.26)' : undefined,
+                      transform: 'translateY(0) scale(1)',
+                      transition: 'background 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
+                    }}
+                  >
+                    {renderToolIcon(tool.icon)}
+                  </button>
+                );
+              })}
             </div>
           )}
           <div
