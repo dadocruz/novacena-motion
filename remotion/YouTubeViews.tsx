@@ -86,7 +86,26 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
     ? interpolate(frame, [FINAL_HIT - 2, FINAL_HIT, FINAL_HIT + 14], [0, 0.4, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
     : 0;
 
-  const numberWiggle = brazuWiggle(frame, { amplitude: (motion.wiggleHeadline ?? 0.3) * M.wiggleIntensity, frequency: 0.72, seed: 20 });
+  const prefixWiggle = brazuWiggle(frame, {
+    amplitude: (motion.wiggleDate ?? 0.25) * M.wiggleIntensity,
+    frequency: 0.68,
+    seed: 18,
+  });
+  const numberWiggle = brazuWiggle(frame, {
+    amplitude: (motion.wiggleHeadline ?? 0.3) * M.wiggleIntensity,
+    frequency: 0.72,
+    seed: 20,
+  });
+  const labelWiggle = brazuWiggle(frame, {
+    amplitude: (motion.wiggleCta1 ?? motion.wiggleCta ?? 0.25) * M.wiggleIntensity,
+    frequency: 0.76,
+    seed: 24,
+  });
+  const channelWiggle = brazuWiggle(frame, {
+    amplitude: (motion.wiggleCta2 ?? motion.wiggleCta ?? 0.2) * M.wiggleIntensity,
+    frequency: 0.62,
+    seed: 30,
+  });
   const channelOpacity = eased(frame, channelIn, channelIn + 18, easings.outCubic);
 
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
@@ -122,7 +141,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
             textTransform: 'uppercase',
             textShadow: '0 6px 20px rgba(0,0,0,0.5)',
             ...applyTextStyle(motion.styleDate),
-            ...userTextTransform(motion.styleDate),
+            ...userTextTransform(motion.styleDate, { transform: prefixWiggle.transform }),
           }}
         >
           <StyledText previewLayerId="ytviews-prefix" text={prefixText} transition={showAll ? undefined : tPrefix} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />
@@ -160,7 +179,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
             marginTop: 8,
             textShadow: '0 8px 24px rgba(0,0,0,0.5)',
             ...applyTextStyle(motion.styleCta1 ?? motion.styleCta),
-            ...userTextTransform(motion.styleCta1 ?? motion.styleCta),
+            ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: labelWiggle.transform }),
           }}
         >
           <StyledText previewLayerId="ytviews-label" text={labelText} transition={showAll ? undefined : tLabel} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
@@ -190,7 +209,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
               padding: isStory ? '14px 48px' : '12px 38px',
               overflow: 'hidden',
               boxShadow: '0 12px 30px rgba(255,0,0,0.32)',
-              ...userTextTransform(motion.styleCta2),
+              ...userTextTransform(motion.styleCta2, { transform: channelWiggle.transform }),
             }}
           >
             <span
