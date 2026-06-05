@@ -23,8 +23,9 @@ interface TimelinePanelProps {
   onClose: () => void;
 }
 
-const LABEL_W = 122;
-const ROW_H = 30;
+const LABEL_W = 108;
+const ROW_H = 20;
+const PAD_X = 14;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 type DragState =
@@ -86,10 +87,18 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
     };
   }, [secAtClientX, onSeek, dur]);
 
+  const startScrub = (clientX: number) => {
+    dragRef.current = { mode: 'seek' };
+    onSeek(round1(secAtClientX(clientX)));
+  };
+
   const frac = Math.max(0, Math.min(1, currentSec / dur));
   const tickStep = dur <= 10 ? 1 : dur <= 20 ? 2 : dur <= 40 ? 5 : 10;
   const ticks: number[] = [];
   for (let t = 0; t <= dur + 0.001; t += tickStep) ticks.push(Math.round(t));
+
+  // posição do playhead relativa ao container (label + área), descontando os paddings
+  const playheadLeft = `calc(${PAD_X + LABEL_W}px + (100% - ${PAD_X * 2 + LABEL_W}px) * ${frac})`;
 
   return (
     <div
@@ -97,19 +106,19 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       style={{
         position: 'fixed',
         left: '50%',
-        bottom: 88,
+        bottom: 84,
         transform: 'translateX(-50%)',
-        width: 'min(940px, 78vw)',
-        maxHeight: '46vh',
+        width: 'min(940px, 80vw)',
         zIndex: 120,
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 14,
+        borderRadius: 12,
         border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(12,12,16,0.94)',
+        background: 'rgba(12,12,16,0.95)',
         backdropFilter: 'blur(18px)',
-        boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
+        boxShadow: '0 20px 56px rgba(0,0,0,0.5)',
         overflow: 'hidden',
+        userSelect: 'none',
       }}
     >
       {/* Cabeçalho */}
@@ -118,12 +127,12 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 14px',
+          padding: '6px 12px',
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}
       >
-        <span style={{ fontSize: 11, fontWeight: 900, letterSpacing: 1.4, color: 'rgba(255,255,255,0.86)' }}>
-          LINHA DO TEMPO · {round1(dur)}s
+        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: 1.3, color: 'rgba(255,255,255,0.82)' }}>
+          LINHA DO TEMPO · {round1(dur)}s · {round1(currentSec)}s
         </span>
         <button
           type="button"
@@ -132,11 +141,11 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
             border: '1px solid rgba(255,255,255,0.12)',
             background: 'rgba(255,255,255,0.05)',
             color: 'rgba(255,255,255,0.8)',
-            borderRadius: 8,
-            width: 26,
-            height: 26,
+            borderRadius: 7,
+            width: 22,
+            height: 22,
             cursor: 'pointer',
-            fontSize: 13,
+            fontSize: 12,
             lineHeight: 1,
           }}
           aria-label="Fechar linha do tempo"
@@ -145,32 +154,37 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         </button>
       </div>
 
-      {/* Régua */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', padding: '6px 14px 0' }}>
-        <div style={{ width: LABEL_W, flex: '0 0 auto' }} />
-        <div style={{ position: 'relative', flex: 1, height: 16 }}>
-          {ticks.map((t) => (
-            <div
-              key={t}
-              style={{
-                position: 'absolute',
-                left: `${(t / dur) * 100}%`,
-                transform: 'translateX(-50%)',
-                fontSize: 9,
-                color: 'rgba(255,255,255,0.42)',
-                fontWeight: 700,
-              }}
-            >
-              {t}s
-            </div>
-          ))}
+      <div style={{ position: 'relative', padding: `4px ${PAD_X}px 8px`, overflowY: 'auto', maxHeight: '34vh' }}>
+        {/* Régua = barra de scrub (clica/arrasta = move o vídeo, igual ao player) */}
+        <div style={{ display: 'flex', alignItems: 'center', height: 18 }}>
+          <div style={{ width: LABEL_W, flex: '0 0 auto' }} />
+          <div
+            ref={areaRef}
+            onPointerDown={(e) => startScrub(e.clientX)}
+            style={{ position: 'relative', flex: 1, height: 18, cursor: 'col-resize' }}
+          >
+            {ticks.map((t) => (
+              <div
+                key={t}
+                style={{
+                  position: 'absolute',
+                  left: `${(t / dur) * 100}%`,
+                  transform: 'translateX(-50%)',
+                  fontSize: 8.5,
+                  color: 'rgba(255,255,255,0.4)',
+                  fontWeight: 700,
+                  pointerEvents: 'none',
+                }}
+              >
+                {t}s
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Faixas */}
-      <div style={{ position: 'relative', padding: '6px 14px 14px', overflowY: 'auto' }}>
+        {/* Faixas */}
         {tracks.length === 0 ? (
-          <div style={{ padding: '18px 4px', fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
+          <div style={{ padding: '12px 4px', fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
             Nenhuma layer com tempo ajustável neste template.
           </div>
         ) : (
@@ -178,7 +192,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
             const start = Math.max(0, Math.min(dur, track.startSec));
             const end = track.endSec === null ? dur : Math.max(start, Math.min(dur, track.endSec));
             const leftPct = (start / dur) * 100;
-            const widthPct = Math.max(2.2, ((end - start) / dur) * 100);
+            const widthPct = Math.max(2, ((end - start) / dur) * 100);
             const span = track.endSec === null ? null : end - start;
 
             return (
@@ -194,31 +208,29 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     border: 'none',
                     background: 'transparent',
                     color: 'rgba(255,255,255,0.82)',
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 700,
-                    paddingRight: 8,
+                    paddingRight: 6,
                     cursor: track.onSelect ? 'pointer' : 'default',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  <span style={{ color: track.color, marginRight: 6 }}>●</span>
+                  <span style={{ color: track.color, marginRight: 5 }}>●</span>
                   {track.label}
                 </button>
 
                 <div
-                  ref={track === tracks[0] ? areaRef : undefined}
                   onPointerDown={(e) => {
                     if (e.target !== e.currentTarget) return;
-                    dragRef.current = { mode: 'seek' };
-                    onSeek(round1(secAtClientX(e.clientX)));
+                    startScrub(e.clientX);
                   }}
                   style={{
                     position: 'relative',
                     flex: 1,
-                    height: ROW_H - 8,
-                    borderRadius: 7,
+                    height: ROW_H - 6,
+                    borderRadius: 5,
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.06)',
                   }}
@@ -241,21 +253,26 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       bottom: 0,
                       left: `${leftPct}%`,
                       width: `${widthPct}%`,
-                      borderRadius: 6,
+                      borderRadius: 4,
                       background: `linear-gradient(180deg, ${track.color}, ${track.color}cc)`,
-                      boxShadow: `0 2px 10px ${track.color}55`,
                       cursor: 'grab',
                       display: 'flex',
                       alignItems: 'center',
-                      paddingLeft: 8,
-                      fontSize: 9,
-                      fontWeight: 800,
-                      color: 'rgba(0,0,0,0.7)',
                       overflow: 'hidden',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {round1(start)}s
+                    <span
+                      style={{
+                        fontSize: 8.5,
+                        fontWeight: 800,
+                        color: 'rgba(0,0,0,0.72)',
+                        padding: '0 4px',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {round1(start)}s
+                    </span>
                     {track.resizable && track.onChangeEnd && (
                       <div
                         onPointerDown={(e) => {
@@ -267,10 +284,10 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           right: 0,
                           top: 0,
                           bottom: 0,
-                          width: 12,
+                          width: 11,
                           cursor: 'ew-resize',
-                          borderRadius: '0 6px 6px 0',
-                          background: 'rgba(0,0,0,0.22)',
+                          borderRadius: '0 4px 4px 0',
+                          background: 'rgba(0,0,0,0.24)',
                         }}
                         title="Arraste para mudar a duração"
                       />
@@ -282,22 +299,20 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
           })
         )}
 
-        {/* Playhead */}
-        {tracks.length > 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 6,
-              bottom: 14,
-              left: `calc(${LABEL_W + 14}px + (100% - ${LABEL_W + 28}px) * ${frac})`,
-              width: 2,
-              background: '#ffffff',
-              boxShadow: '0 0 8px rgba(255,255,255,0.7)',
-              pointerEvents: 'none',
-              zIndex: 5,
-            }}
-          />
-        )}
+        {/* Playhead — atravessa régua + faixas */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 4,
+            bottom: 8,
+            left: playheadLeft,
+            width: 2,
+            background: '#ffffff',
+            boxShadow: '0 0 7px rgba(255,255,255,0.75)',
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        />
       </div>
     </div>
   );

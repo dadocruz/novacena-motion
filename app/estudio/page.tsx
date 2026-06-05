@@ -290,7 +290,7 @@ export default function Home() {
   const [isClientReady, setIsClientReady] = useState(false);
   const [saasUser, setSaasUser] = useState<SaasUserSummary | null>(null);
   const [activeStudioTool, setActiveStudioTool] = useState<StudioToolId>('cover');
-  const [showTimeline, setShowTimeline] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(true);
   const [timelineSec, setTimelineSec] = useState(0);
   const [activeTextRole, setActiveTextRole] = useState<FontRole>('headline');
   // ─── ARTISTA ──────────────────────────────────────────────
@@ -6156,8 +6156,8 @@ return (
                 style={{
                   position: 'relative',
                   width: target === 'story'
-                    ? 'min(360px, 100%, calc((100dvh - 270px) * 9 / 16))'
-                    : 'min(430px, 100%, calc((100dvh - 270px) * 1080 / 1350))',
+                    ? `min(360px, 100%, calc((100dvh - ${showTimeline ? 466 : 270}px) * 9 / 16))`
+                    : `min(430px, 100%, calc((100dvh - ${showTimeline ? 466 : 270}px) * 1080 / 1350))`,
                   flex: '0 1 auto',
                   aspectRatio: target === 'story' ? '9 / 16' : '1080 / 1350',
                   borderRadius: 22,
@@ -8355,7 +8355,7 @@ return (
         })}
       </div>
 
-      {showTimeline && (
+      {showTimeline && activeTab === 'studio' && (
         <TimelinePanel
           durationSec={durationSeconds}
           currentSec={timelineSec}
