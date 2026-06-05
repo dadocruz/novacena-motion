@@ -62,6 +62,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   );
 
   const showAll = frame >= FINAL_POSTER;
+  const coverIn = Math.max(0, Math.round(props.motion?.coverInFrame ?? COVER_IN));
   const numberText = props.metricNumber || '100.000';
   const labelText = props.metricLabel || 'OUVINTES';
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
@@ -160,9 +161,9 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
           <PremiumCover
             src={props.coverImage}
             size={Math.min(M.coverSize, 460)}
-            entryFrame={COVER_IN}
+            entryFrame={coverIn}
             motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-            spinStart={COVER_IN + 14}
+            spinStart={coverIn + 14}
             spinEnd={FINAL_HIT - 4}
             spinTurns={M.spinTurns}
             wiggleIntensity={M.wiggleIntensity}

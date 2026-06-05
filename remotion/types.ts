@@ -298,6 +298,8 @@ export type MotionConfig = {
   coverX?: number;
   /** Animação de entrada da capa */
   coverMotion?: CoverMotionId;
+  /** Frame de entrada da capa controlado pela timeline */
+  coverInFrame?: number;
   spinTurns?: number;
   wiggleIntensity?: number;
   particlesEnabled?: boolean;
@@ -390,6 +392,8 @@ export type MotionConfig = {
   phoneWiggle?: number;
   /** Dynamic island (true) ou notch (false) */
   phoneDynamicIsland?: boolean;
+  /** Frame de entrada do celular controlado pela timeline */
+  phoneInFrame?: number;
 };
 
 export type MotionProject = {

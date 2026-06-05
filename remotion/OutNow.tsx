@@ -43,6 +43,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
   const fontCta2 = findFont(fontCta2Id, motion.customFonts ?? []);
 
   const coverSize = motion.coverSize ?? 510;
+  const coverIn = Math.max(0, Math.round(motion.coverInFrame ?? COVER_IN));
   const spinTurns = motion.spinTurns ?? 2;
   const wiggleIntensity = motion.wiggleIntensity ?? 1;
   const wH = motion.wiggleHeadline ?? 0.35;
@@ -116,7 +117,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         {/* CAPA */}
         <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <div data-cover-position-wrapper data-novacena-preview-layer="cover" style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
-            <PremiumCover src={props.coverImage} size={coverSize} entryFrame={COVER_IN} spinStart={COVER_IN + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
+            <PremiumCover src={props.coverImage} size={coverSize} entryFrame={coverIn} spinStart={coverIn + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
 

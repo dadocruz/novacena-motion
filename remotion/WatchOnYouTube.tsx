@@ -88,6 +88,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const channelCompactLength = channel.replace(/\s+/g, '').length;
   const channelFontSize = clamp(640 / Math.max(16, channelCompactLength), 25, 36);
   const coverSize = clamp(props.motion?.coverSize ?? 520, 420, 660);
+  const coverIn = Math.max(0, Math.round(props.motion?.coverInFrame ?? COVER_IN));
   const coverTop = clamp(620 + (props.motion?.coverY ?? 0), SAFE_TOP + 230, SAFE_BOTTOM - coverSize - 250);
   const coverLeftOffset = clamp(props.motion?.coverX ?? 0, -220, 220);
   const channelTop = clamp(coverTop + coverSize + 34, SAFE_TOP + 720, SAFE_BOTTOM - 220);
@@ -256,9 +257,9 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               <PremiumCover
                 src={props.coverImage}
                 size={coverSize}
-                entryFrame={COVER_IN}
+                entryFrame={coverIn}
                 motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-                spinStart={COVER_IN + 14}
+                spinStart={coverIn + 14}
                 spinEnd={FINAL_HIT - 4}
                 spinTurns={M.spinTurns}
                 wiggleIntensity={M.wiggleIntensity}
@@ -363,9 +364,9 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             <PremiumCover
               src={props.coverImage}
               size={coverSize}
-              entryFrame={COVER_IN}
+              entryFrame={coverIn}
               motionId={props.motion?.coverMotion ?? 'zoom_bounce'}
-              spinStart={COVER_IN + 14}
+              spinStart={coverIn + 14}
               spinEnd={FINAL_HIT - 4}
               spinTurns={M.spinTurns}
               wiggleIntensity={M.wiggleIntensity}

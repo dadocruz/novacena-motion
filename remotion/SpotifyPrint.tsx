@@ -43,7 +43,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(30, 215, 96, 0.40)');
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
-  const phoneIn = PHONE_IN;
+  const phoneIn = Math.max(0, Math.round(props.motion?.phoneInFrame ?? PHONE_IN));
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
   const labelIn = props.motion?.cta1InFrame ?? LABEL_IN;
   const logoIn = props.motion?.logosInFrame ?? LOGO_IN;
