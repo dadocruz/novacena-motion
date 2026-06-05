@@ -148,6 +148,17 @@ import {
 
 type RenderEngine = 'desktop' | 'local' | 'lambda';
 
+type OverlayPresetItem = {
+  id: string;
+  label: string;
+  template: string;
+  pack?: string;
+  type: 'video' | 'image';
+  thumbnail?: string;
+  placement: Record<string, any>;
+  createdAt: string;
+};
+
 const SAAS_EXPORT_MODE =
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
   process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
@@ -531,6 +542,8 @@ export default function Home() {
 
   // Overlays
   const [overlayAssets, setOverlayAssets] = useState<OverlayAsset[]>([]);
+  const [overlayPresets, setOverlayPresets] = useState<OverlayPresetItem[]>([]);
+  const [savingOverlayPreset, setSavingOverlayPreset] = useState(false);
   const [overlays, setOverlays] = useState<OverlayPlacement[]>([]);
 
   // User fonts
@@ -3193,6 +3206,110 @@ export default function Home() {
     if (!confirm('Remover esse overlay da biblioteca? (Instâncias já no projeto continuam.)')) return;
     await fetch(`/api/upload-overlay?id=${id}`, { method: 'DELETE' });
     setOverlayAssets((arr) => arr.filter((o) => o.id !== id));
+  }
+
+  // ── OVERLAY PRESETS (biblioteca reutilizável por template) ──────────────
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/overlay-presets?template=${template}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && d?.ok) setOverlayPresets(d.presets ?? []);
+      })
+      .catch(() => {
+        /* silencioso */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [template]);
+
+  // Captura um frame do overlay (vídeo) num <video> offscreen → JPEG dataURL.
+  // É same-origin (uploads servidos pelo próprio app), então o canvas não é
+  // "tainted" e o toDataURL funciona.
+  async function captureOverlayThumb(src: string, localSec: number): Promise<string | undefined> {
+    try {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.muted = true;
+      video.src = src;
+      await new Promise<void>((res, rej) => {
+        video.onloadeddata = () => res();
+        video.onerror = () => rej(new Error('load'));
+        window.setTimeout(() => rej(new Error('timeout')), 8000);
+      });
+      const t = Math.max(0, Math.min((video.duration || 0.1) - 0.05, localSec));
+      await new Promise<void>((res) => {
+        video.onseeked = () => res();
+        video.currentTime = t;
+        window.setTimeout(() => res(), 3000);
+      });
+      const w = 240;
+      const ratio = (video.videoHeight || 16) / (video.videoWidth || 9);
+      const h = Math.max(1, Math.round(w * ratio));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return undefined;
+      ctx.fillStyle = '#0a0a0e';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(video, 0, 0, w, h);
+      return canvas.toDataURL('image/jpeg', 0.72);
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function saveOverlayPreset() {
+    const ov = (overlays.find((o) => o.id === selectedOverlayId) ?? overlays[0]) as any;
+    if (!ov) {
+      alert('Aplique um overlay no projeto antes de salvar como preset.');
+      return;
+    }
+    const label = window.prompt('Nome do preset (aparece pro cliente):', ov.label || 'Overlay');
+    if (!label) return;
+
+    setSavingOverlayPreset(true);
+    try {
+      const localSec = Math.max(0, timelineSec - (ov.startSec ?? 0));
+      const thumbnail =
+        ov.type === 'video' ? await captureOverlayThumb(ov.src, localSec) : (ov.src as string);
+      const { id: _omitId, ...placement } = ov;
+      const r = await fetch('/api/overlay-presets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label,
+          template,
+          type: ov.type === 'image' ? 'image' : 'video',
+          thumbnail,
+          placement,
+        }),
+      }).then((x) => x.json());
+      if (!r.ok) throw new Error(r.error || 'Falha ao salvar.');
+      setOverlayPresets((prev) => [r.preset, ...prev]);
+    } catch (e) {
+      alert('Erro ao salvar preset: ' + (e instanceof Error ? e.message : 'desconhecido'));
+    } finally {
+      setSavingOverlayPreset(false);
+    }
+  }
+
+  function applyOverlayPreset(preset: OverlayPresetItem) {
+    const id = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    setOverlays((arr) => [...arr, { ...(preset.placement as any), id }]);
+    setSelectedOverlayId(id);
+  }
+
+  async function removeOverlayPreset(id: string) {
+    if (!confirm('Remover esse preset da biblioteca deste template?')) return;
+    try {
+      await fetch(`/api/overlay-presets?id=${id}`, { method: 'DELETE' });
+    } catch {
+      /* silencioso */
+    }
+    setOverlayPresets((prev) => prev.filter((p) => p.id !== id));
   }
 
   function updateOverlay(id: string, patch: Partial<OverlayPlacement>) {
@@ -6985,6 +7102,67 @@ return (
                   ))}
                 </div>
               )}
+
+              {/* PRESETS DE OVERLAY — por template, com thumbnail do frame escolhido */}
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={miniLabel}>Presets deste template</div>
+                  <button
+                    onClick={saveOverlayPreset}
+                    disabled={savingOverlayPreset}
+                    style={tinyAddBtn}
+                    title="Salva o overlay atual + um print do frame em que a timeline está"
+                  >
+                    {savingOverlayPreset ? 'Salvando…' : '+ Salvar atual'}
+                  </button>
+                </div>
+                {overlayPresets.length === 0 ? (
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.4 }}>
+                    Nenhum preset ainda. Aplique um overlay, posicione o playhead da timeline no
+                    momento bonito e clique “Salvar atual”.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                    {overlayPresets.map((p) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          position: 'relative',
+                          borderRadius: 10,
+                          overflow: 'hidden',
+                          border: '1px solid var(--border-1)',
+                          background: '#0a0a0e',
+                        }}
+                      >
+                        <button
+                          onClick={() => applyOverlayPreset(p)}
+                          style={{ display: 'block', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
+                          title="Aplicar preset"
+                        >
+                          <div style={{ position: 'relative', width: '100%', aspectRatio: '9 / 16', background: '#111' }}>
+                            {p.thumbnail ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={p.thumbnail} alt={p.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ display: 'grid', placeItems: 'center', height: '100%', fontSize: 22 }}>🎞</div>
+                            )}
+                          </div>
+                          <div style={{ padding: '5px 6px', fontSize: 10, color: 'var(--text-1)', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {p.label}
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => removeOverlayPreset(p.id)}
+                          style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.6)', color: '#fff', cursor: 'pointer', fontSize: 12, lineHeight: 1 }}
+                          title="Remover preset"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {selectedElement && (
                 <div

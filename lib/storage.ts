@@ -307,6 +307,51 @@ export async function deleteOverlay(id: string): Promise<boolean> {
 }
 
 // ============================================================
+// OVERLAY PRESETS — biblioteca reutilizável POR TEMPLATE
+// Cada preset guarda o placement completo (p/ reaplicar igual) + uma thumbnail
+// do frame escolhido na timeline. Futuro: campo `pack` p/ packs visuais.
+// ============================================================
+const OVERLAY_PRESETS_FILE = path.join(DATA_DIR, 'overlay-presets.json');
+
+export type OverlayPreset = {
+  id: string;
+  label: string;
+  template: string;
+  pack?: string;
+  type: 'video' | 'image';
+  thumbnail?: string;
+  placement: Record<string, any>;
+  createdAt: string;
+};
+
+export async function listOverlayPresets(template?: string): Promise<OverlayPreset[]> {
+  const all = await readJson<OverlayPreset[]>(OVERLAY_PRESETS_FILE, []);
+  return template ? all.filter((p) => p.template === template) : all;
+}
+
+export async function addOverlayPreset(
+  preset: Omit<OverlayPreset, 'id' | 'createdAt'>
+): Promise<OverlayPreset> {
+  const all = await readJson<OverlayPreset[]>(OVERLAY_PRESETS_FILE, []);
+  const newPreset: OverlayPreset = {
+    ...preset,
+    id: uid('ovp_'),
+    createdAt: new Date().toISOString(),
+  };
+  all.unshift(newPreset);
+  await writeJson(OVERLAY_PRESETS_FILE, all);
+  return newPreset;
+}
+
+export async function deleteOverlayPreset(id: string): Promise<boolean> {
+  const all = await readJson<OverlayPreset[]>(OVERLAY_PRESETS_FILE, []);
+  const filtered = all.filter((p) => p.id !== id);
+  if (filtered.length === all.length) return false;
+  await writeJson(OVERLAY_PRESETS_FILE, filtered);
+  return true;
+}
+
+// ============================================================
 // CUSTOM PLATFORM LOGOS
 // ============================================================
 const PLATFORM_LOGOS_FILE = path.join(DATA_DIR, 'platform-logos.json');
