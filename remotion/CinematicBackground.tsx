@@ -175,7 +175,8 @@ export const CinematicBackground: React.FC<Props> = ({
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
   const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
   const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
-  const lightPreviewVideoFilter = `blur(${Math.min(videoBlur, 3)}px) saturate(${videoSaturation}) brightness(0.94)`;
+  const lightPreviewBlur = Math.min(18, videoBlur * 0.32);
+  const lightPreviewVideoFilter = `blur(${lightPreviewBlur}px) saturate(${videoSaturation}) brightness(0.94)`;
 
   // Light leak diagonal varrendo (loop infinito)
   const leakPhase = (frame % 200) / 200;
