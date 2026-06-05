@@ -173,8 +173,9 @@ export const CinematicBackground: React.FC<Props> = ({
   const bgZoom = kbZoom + accentBoost * 0.02;
   const previewZoom = lightPreview ? 1.08 : bgZoom;
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
+  const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
   const previewVideoFilter = lightPreview
-    ? `saturate(${videoSaturation}) brightness(0.92)`
+    ? `saturate(${Math.min(videoSaturation, 1.06)}) brightness(0.94)`
     : `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
 
   // Light leak diagonal varrendo (loop infinito)
@@ -225,7 +226,7 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
+                filter: renderVideoFilter,
                 transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
               }}
             />
@@ -235,7 +236,7 @@ export const CinematicBackground: React.FC<Props> = ({
               startFrom={videoStartFrame}
               muted={!useVideoAudio}
               volume={useVideoAudio ? (f) => calcVolume(f) : 0}
-              pauseWhenBuffering
+              pauseWhenBuffering={!lightPreview}
               style={{
                 width: '100%',
                 height: '100%',
@@ -246,7 +247,8 @@ export const CinematicBackground: React.FC<Props> = ({
                 filter: previewVideoFilter,
                 transform: `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px) translateZ(0)`,
                 backfaceVisibility: 'hidden',
-                willChange: lightPreview ? 'opacity' : 'transform',
+                willChange: lightPreview ? 'auto' : 'transform',
+                contain: lightPreview ? 'layout paint size' : undefined,
               }}
             />
           )}
