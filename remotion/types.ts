@@ -96,6 +96,28 @@ export type TextTransitionTuning = {
   stagger?: number;
 };
 
+export type GlobalTransitionKind =
+  | 'zoom_bounce'
+  | 'split_horizontal'
+  | 'glitch_rgb'
+  | 'exposure_blur';
+
+/**
+ * Transição global no topo da composição, como uma adjustment layer do After.
+ * Ela fica por cima de todas as layers do template.
+ */
+export type GlobalTransitionPlacement = {
+  id: string;
+  kind: GlobalTransitionKind;
+  startSec: number;
+  durationSec: number;
+  /** Multiplica força visual do efeito. */
+  intensity?: number;
+  /** Opacidade global 0..1. */
+  opacity?: number;
+  label?: string;
+};
+
 export type CoverMotionId =
   | 'zoom_bounce'
   | 'slide_up'
@@ -359,6 +381,8 @@ export type MotionConfig = {
 
   /** Overlays na timeline */
   overlays?: OverlayPlacement[];
+  /** Transições globais por cima de todas as layers. */
+  globalTransitions?: GlobalTransitionPlacement[];
   /** Timing da primeira CTA (frame de entrada) */
   cta1InFrame?: number;
   /** Timing da troca CTA1 -> CTA2 */

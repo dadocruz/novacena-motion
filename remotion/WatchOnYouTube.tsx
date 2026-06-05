@@ -10,6 +10,7 @@ import {
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
+import { GlobalTransitionLayer } from './GlobalTransitionLayer';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
@@ -301,6 +302,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           </div>
         )}
         <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
+        <GlobalTransitionLayer transitions={props.motion?.globalTransitions} />
       </AbsoluteFill>
     );
   }
@@ -418,6 +420,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           pointerEvents: 'none',
         }}
       />
+      <GlobalTransitionLayer transitions={props.motion?.globalTransitions} />
     </AbsoluteFill>
   );
 };

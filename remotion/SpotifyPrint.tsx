@@ -7,6 +7,7 @@ import {
 } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
+import { GlobalTransitionLayer } from './GlobalTransitionLayer';
 import { OverlayLayer } from './OverlayLayer';
 import { PhoneMockup } from './PhoneMockup';
 import { StyledText } from './StyledText';
@@ -294,6 +295,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
           pointerEvents: 'none',
         }}
       />
+      <GlobalTransitionLayer transitions={props.motion?.globalTransitions} />
     </AbsoluteFill>
   );
 };

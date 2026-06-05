@@ -4,6 +4,7 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { easings, eased, getTextTransition } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
+import { GlobalTransitionLayer } from './GlobalTransitionLayer';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
@@ -161,6 +162,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           opacity: showAll ? 1 : cta2Opacity,
         }, showAll ? {} : tC2, motion.styleCta2 ?? motion.styleCta)}
         <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
+        <GlobalTransitionLayer transitions={motion.globalTransitions} />
       </AbsoluteFill>
     );
   }
@@ -265,6 +267,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         </div>
       </AbsoluteFill>
       <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
+      <GlobalTransitionLayer transitions={motion.globalTransitions} />
     </AbsoluteFill>
   );
 };
