@@ -47,6 +47,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const areaRef = React.useRef<HTMLDivElement | null>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const dragRef = React.useRef<DragState | null>(null);
+  const timelineKeyboardActiveRef = React.useRef(false);
   const [zoomStep, setZoomStep] = React.useState(0);
   const dur = Math.max(0.1, durationSec);
   const zoomScale = Math.pow(1.32, zoomStep);
@@ -98,22 +99,48 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
   React.useEffect(() => {
     panelRef.current?.focus({ preventScroll: true });
+    timelineKeyboardActiveRef.current = true;
   }, []);
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
-      if (target?.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select') return;
-      if (event.key !== '1' && event.key !== '2') return;
+      const isTypingTarget = Boolean(
+        target?.isContentEditable ||
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select'
+      );
+      const pressedZoomIn = event.key === '2' || event.code === 'Digit2' || event.code === 'Numpad2';
+      const pressedZoomOut = event.key === '1' || event.code === 'Digit1' || event.code === 'Numpad1';
+      if (!pressedZoomIn && !pressedZoomOut) return;
+
+      const panel = panelRef.current;
+      const targetIsInsideTimeline = Boolean(panel && target && panel.contains(target));
+      if (!timelineKeyboardActiveRef.current && !targetIsInsideTimeline) return;
+      if (isTypingTarget && !timelineKeyboardActiveRef.current) return;
+
       event.preventDefault();
+      event.stopPropagation();
       setZoomStep((current) => {
-        if (event.key === '2') return Math.min(9, current + 1);
+        if (pressedZoomIn) return Math.min(9, current + 1);
         return Math.max(0, current - 1);
       });
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+
+    const onPointerDown = (event: PointerEvent) => {
+      const panel = panelRef.current;
+      const target = event.target as Node | null;
+      timelineKeyboardActiveRef.current = Boolean(panel && target && panel.contains(target));
+    };
+
+    window.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('pointerdown', onPointerDown, true);
+    };
   }, []);
 
   const startScrub = (clientX: number) => {
@@ -146,6 +173,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       data-novacena-timeline="true"
       tabIndex={0}
       onPointerDown={(event) => {
+        timelineKeyboardActiveRef.current = true;
         event.currentTarget.focus({ preventScroll: true });
       }}
       style={{
@@ -163,6 +191,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         backdropFilter: 'blur(18px)',
         boxShadow: '0 20px 56px rgba(0,0,0,0.5)',
         overflow: 'hidden',
+        outline: 'none',
         userSelect: 'none',
       }}
     >
