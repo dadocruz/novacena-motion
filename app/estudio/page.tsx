@@ -2050,20 +2050,16 @@ export default function Home() {
   }, [project, durationSeconds, motionWithStyles, target]);
 
 
+  // O player só REMONTA (volta pra frame 0) em mudanças ESTRUTURAIS: troca de
+  // template/formato, novo vídeo de fundo, ou restart manual (previewNonce).
+  // Transições, textInFrames e coverMotion fluem por inputProps (motion memo) e
+  // atualizam o preview AO VIVO — não entram aqui, senão editar qualquer um
+  // desses (ou undo/redo / aplicar preset) jogava o player de volta pra 0.
   const playerRemountKey = [
     template,
     target,
     previewNonce,
     showCover,
-    coverMotion,
-    trHeadline,
-    trDate,
-    trCta1,
-    trCta2,
-    effectiveTextInFrames.headline,
-    effectiveTextInFrames.date,
-    effectiveTextInFrames.cta1,
-    effectiveTextInFrames.cta2,
     bgVideo,
     bgVideoDuration,
     bgVideoNeedsTrim,
@@ -2251,7 +2247,8 @@ export default function Home() {
       }
       return next;
     });
-    setPreviewNonce((n) => n + 1);
+    // Logos fluem por inputProps (effectiveCustomLogos) e re-medem os rects;
+    // não precisa remontar o player (não resetar a minutagem ao trocar logo).
   }
 
   function selectPlatformLogoPack(pack: PlatformLogoPackId) {
@@ -2267,7 +2264,7 @@ export default function Home() {
       delete next[platform];
       return next;
     });
-    setPreviewNonce((n) => n + 1);
+    // sem remount: o logo entra ao vivo via inputProps, preserva o tempo do player
   }
 
   function startEditPreviewLoop(range: EditPreviewLoop) {
@@ -7384,8 +7381,8 @@ return (
             <SliderRow
               label={template === 'milestone' ? 'Tamanho do logo Spotify' : 'Tamanho geral dos logos'}
               value={template === 'milestone' ? milestoneLogoSize : platformLogoSize}
-              min={28}
-              max={template === 'milestone' ? 240 : 160}
+              min={24}
+              max={template === 'milestone' ? 360 : 240}
               step={1}
               onChange={template === 'milestone' ? setMilestoneLogoSize : setPlatformLogoSize}
               format={(v) => `${Math.round(v)}px`}
@@ -7416,7 +7413,7 @@ return (
                 label="Distância entre logos"
                 value={platformLogoGap}
                 min={0}
-                max={180}
+                max={320}
                 step={1}
                 onChange={setPlatformLogoGap}
                 format={(v) => `${Math.round(v)}px`}
