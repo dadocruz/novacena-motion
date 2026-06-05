@@ -133,6 +133,7 @@ import {
   OverlayTimeline,
   TimelinePanel,
   type TimelineTrack,
+  type TimelineTool,
   TextColorEditor,
   TextLayoutEditor,
   NumberBox,
@@ -1272,40 +1273,13 @@ export default function Home() {
     } else {
       // Primeira abertura: aplica os defaults de fábrica do template
       setTemplate(nextId);
-      if (nextId === 'watch_youtube') {
-        applyWatchYoutubeDefaults();
-      } else {
-        applyTemplateContentDefaults(nextId);
-        if (nextId === 'youtube_subscribe') {
-          // Fonte padrão Akhand Light (headline, texto 1 e @canal)
-          setFontHeadline('premium-akhand-light');
-          setFontCta1('premium-akhand-light');
-          setFontDate('premium-akhand-light');
-          // "INSCREVA-SE" em vermelho YouTube (StyledText pinta a cor do estilo)
-          setStyleHeadline((s) => ({ ...s, color: '#FF1212' }));
-          setStyleCta1((s) => ({ ...s, color: '#ffffff' }));
-          setStyleDate((s) => ({ ...s, color: '#ffffff' }));
-        }
-        if (nextId === 'youtube_views') {
-          // Número em Akhand Black; prefixo/métrica/canal em Bebas Neue
-          setFontHeadline('premium-akhand-black');
-          setFontDate('premium-bebas-neue');
-          setFontCta1('premium-bebas-neue');
-          setFontCta2('premium-akhand-light');
-          setFontCta('premium-bebas-neue');
-          // "ULTRAPASSAMOS" (date) vermelho; número e métrica brancos
-          setStyleDate((s) => ({ ...s, color: '#FF1212' }));
-          setStyleHeadline((s) => ({ ...s, color: '#ffffff' }));
-          setStyleCta1((s) => ({ ...s, color: '#ffffff' }));
-          setStyleCta2((s) => ({ ...s, color: '#ffffff' }));
-        }
-      }
+      applyFactoryTemplateDefaults(nextId);
     }
     setPreviewNonce((n) => n + 1);
   }
 
-  function applyWatchYoutubeDefaults() {
-    const next = getProject('watch_youtube') as ReturnType<typeof getProject> & Record<string, any> & {
+  function applyFactoryTemplateDefaults(tid: TemplateId) {
+    const next = getProject(tid) as ReturnType<typeof getProject> & Record<string, any> & {
       showCta1?: boolean;
       showCta2?: boolean;
       showCover?: boolean;
@@ -1320,13 +1294,16 @@ export default function Home() {
     setTarget((next.target ?? next.renderTarget ?? 'story') as RenderTarget);
     setShowSafeArea(false);
     setReleaseDate(next.releaseDate ?? '');
-    setHeadline(next.headline ?? 'ASSISTA NO YOUTUBE');
-    setCta(next.cta ?? 'CLIPE OFICIAL DISPONÍVEL');
-    setCta2(next.cta2 ?? next.cta ?? 'CLIPE OFICIAL DISPONÍVEL');
-    setShowCta1(next.showCta1 ?? false);
-    setShowCta2(next.showCta2 ?? false);
+    setHeadline(next.headline ?? templateLabels[tid]);
+    setCta(next.cta ?? '');
+    setCta2(next.cta2 ?? next.cta ?? '');
+    setShowCta1(next.showCta1 ?? true);
+    setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
-    setChannelName(next.channelName ?? '@GRUPOFAÇANHA');
+    setChannelName(next.channelName ?? '');
+    setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
+    setMetricNumber(next.metricNumber ?? '100.000');
+    setMetricLabel(next.metricLabel ?? 'OUVINTES');
     setPlatformsSel(cloneHistoryValue((next.platforms ?? ['Spotify', 'Deezer', 'Apple Music', 'YouTube Music']) as PlatformName[]));
 
     setFontHeadline(m.fontHeadline ?? DEFAULT_FONTS.headline);
@@ -1334,12 +1311,12 @@ export default function Home() {
     setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
     setFontCta1(m.fontCta1 ?? m.fontCta ?? DEFAULT_FONTS.cta);
     setFontCta2(m.fontCta2 ?? m.fontCta ?? DEFAULT_FONTS.cta);
-    setCoverSize(m.coverSize ?? 500);
-    setCoverY(m.coverY ?? 10.7);
-    setCoverX(m.coverX ?? -11.2);
+    setCoverSize(m.coverSize ?? 510);
+    setCoverY(m.coverY ?? 0);
+    setCoverX(m.coverX ?? 0);
     setCoverMotion(normalizeCoverMotionId(m.coverMotion ?? 'zoom_bounce'));
-    setCoverInFrame(m.coverInFrame ?? defaultCoverInFrameForTemplate('watch_youtube'));
-    setPhoneInFrame(m.phoneInFrame ?? defaultPhoneInFrameForTemplate('watch_youtube'));
+    setCoverInFrame(m.coverInFrame ?? defaultCoverInFrameForTemplate(tid));
+    setPhoneInFrame(m.phoneInFrame ?? defaultPhoneInFrameForTemplate(tid));
     setSpinTurns(m.spinTurns ?? 2);
     setWiggleIntensity(m.wiggleIntensity ?? 1);
     setWiggleH(m.wiggleHeadline ?? DEFAULT_TEXT_WIGGLE_VALUES.headline);
@@ -1382,7 +1359,7 @@ export default function Home() {
       cta2: typeof m.cta2InFrame === 'number' ? m.cta2InFrame : undefined,
     });
     setLogosInFrame(m.logosInFrame ?? CTA_TIMING_DEFAULTS.logosInFrame);
-    setDurationSeconds(next.durationSeconds ?? m.durationSeconds ?? 8);
+    setDurationSeconds(next.durationSeconds ?? m.durationSeconds ?? 60);
     setPosterFrameEnabled(Boolean(poster.enabled));
     setPosterFrameSec(poster.frameSec ?? 3);
     setPosterHoldSec(poster.holdSec ?? 1);
@@ -2500,6 +2477,28 @@ export default function Home() {
     if (editPreviewLoop?.kind === 'text' && editPreviewLoop.role === role) return;
 
     startTextElementPreviewLoop(role);
+  }
+
+  function applyTimelineTransitionTool(kind: TimelineTool['icon']) {
+    stopTransitionPreviewLoopForManualEdit();
+
+    const textTransition: TextTransitionId =
+      kind === 'pop' ? 'scale_pop' :
+      kind === 'letters' ? 'split_letters' :
+      'mask_reveal';
+    const nextCoverMotion: CoverMotionId =
+      kind === 'pop' ? 'zoom_bounce' :
+      kind === 'letters' ? 'slide_up' :
+      'flip_card';
+
+    setTrHeadline(textTransition);
+    setTrDate(textTransition);
+    setTrCta(textTransition);
+    setTrCta1(textTransition);
+    setTrCta2(textTransition);
+    setCoverMotion(nextCoverMotion);
+    setPreviewNonce((n) => n + 1);
+    startTextElementPreviewLoop('headline');
   }
 
 
@@ -4728,6 +4727,30 @@ export default function Home() {
     activeTextRole,
     selectedOverlayId,
   ]);
+
+  const timelineTools: TimelineTool[] = [
+    {
+      id: 'timeline-transition-reveal',
+      label: 'Aplicar transição reveal nas layers',
+      icon: 'reveal',
+      active: trHeadline === 'mask_reveal' && trDate === 'mask_reveal' && trCta1 === 'mask_reveal' && trCta2 === 'mask_reveal',
+      onClick: () => applyTimelineTransitionTool('reveal'),
+    },
+    {
+      id: 'timeline-transition-pop',
+      label: 'Aplicar transição pop nas layers',
+      icon: 'pop',
+      active: trHeadline === 'scale_pop' && trDate === 'scale_pop' && trCta1 === 'scale_pop' && trCta2 === 'scale_pop',
+      onClick: () => applyTimelineTransitionTool('pop'),
+    },
+    {
+      id: 'timeline-transition-letters',
+      label: 'Aplicar transição de letras nas layers',
+      icon: 'letters',
+      active: trHeadline === 'split_letters' && trDate === 'split_letters' && trCta1 === 'split_letters' && trCta2 === 'split_letters',
+      onClick: () => applyTimelineTransitionTool('letters'),
+    },
+  ];
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
@@ -8717,6 +8740,7 @@ return (
           durationSec={durationSeconds}
           currentSec={timelineSec}
           tracks={timelineTracks}
+          tools={timelineTools}
           onSeek={seekTimeline}
           onClose={() => setShowTimeline(false)}
         />

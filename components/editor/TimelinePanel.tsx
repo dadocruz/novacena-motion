@@ -1,5 +1,5 @@
 import React from 'react';
-import { ZoomIn, ZoomOut } from 'lucide-react';
+import { Sparkles, Type, Zap, ZoomIn, ZoomOut } from 'lucide-react';
 
 export interface TimelineTrack {
   id: string;
@@ -17,10 +17,19 @@ export interface TimelineTrack {
   selected?: boolean;
 }
 
+export interface TimelineTool {
+  id: string;
+  label: string;
+  icon: 'reveal' | 'pop' | 'letters';
+  active?: boolean;
+  onClick: () => void;
+}
+
 interface TimelinePanelProps {
   durationSec: number;
   currentSec: number;
   tracks: TimelineTrack[];
+  tools?: TimelineTool[];
   onSeek: (sec: number) => void;
   onClose: () => void;
 }
@@ -43,6 +52,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   durationSec,
   currentSec,
   tracks,
+  tools = [],
   onSeek,
   onClose,
 }) => {
@@ -58,6 +68,11 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   const innerWidth = LABEL_W + timeAreaWidth;
   const canZoomOut = zoomStep > MIN_ZOOM_STEP;
   const canZoomIn = zoomStep < MAX_ZOOM_STEP;
+  const renderToolIcon = (icon: TimelineTool['icon']) => {
+    if (icon === 'pop') return <Zap size={14} strokeWidth={2.5} />;
+    if (icon === 'letters') return <Type size={14} strokeWidth={2.5} />;
+    return <Sparkles size={14} strokeWidth={2.5} />;
+  };
 
   const changeZoom = React.useCallback((direction: 'in' | 'out') => {
     timelineKeyboardActiveRef.current = true;
@@ -227,6 +242,46 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
             flex: '0 0 auto',
           }}
         >
+          {tools.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: 3,
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.10)',
+                background: 'rgba(255,255,255,0.045)',
+              }}
+            >
+              {tools.map((tool) => (
+                <button
+                  key={tool.id}
+                  type="button"
+                  onClick={tool.onClick}
+                  title={tool.label}
+                  aria-label={tool.label}
+                  style={{
+                    border: tool.active ? '1px solid rgba(255,255,255,0.32)' : '1px solid rgba(255,255,255,0.12)',
+                    background: tool.active
+                      ? 'linear-gradient(135deg, rgba(34,211,238,0.32), rgba(190,80,255,0.28))'
+                      : 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    borderRadius: 7,
+                    width: 28,
+                    height: 24,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: tool.active ? '0 0 14px rgba(34,211,238,0.22)' : undefined,
+                  }}
+                >
+                  {renderToolIcon(tool.icon)}
+                </button>
+              ))}
+            </div>
+          )}
           <div
             style={{
               display: 'flex',

@@ -4,7 +4,7 @@ export { ArtistSelector } from './ArtistSelector';
 export { ArtistModal } from './ArtistModal';
 export { GalleryView } from './GalleryView';
 export { OverlayTimeline } from './OverlayTimeline';
-export { TimelinePanel, type TimelineTrack } from './TimelinePanel';
+export { TimelinePanel, type TimelineTrack, type TimelineTool } from './TimelinePanel';
 export { TextColorEditor } from './TextColorEditor';
 export { TextLayoutEditor } from './TextLayoutEditor';
 export { NumberBox } from './NumberBox';
