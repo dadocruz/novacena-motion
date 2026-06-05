@@ -449,7 +449,7 @@
       "metricPrefix": "ULTRAPASSAMOS",
       "metricNumber": "+ 20 MILHÕES",
       "metricLabel": "DE VISUALIZAÇÕES",
-      "channelName": "",
+      "channelName": "@SEUCANAL",
       "showCover": false,
       "durationSeconds": 8,
       "posterFrame": {
@@ -462,11 +462,16 @@
         "fontHeadline": "premium-akhand-black",
         "fontDate": "premium-bebas-neue",
         "fontCta1": "premium-bebas-neue",
+        "fontCta2": "premium-akhand-light",
         "transitionHeadline": "scale_pop",
         "transitionDate": "mask_reveal",
+        "transitionCta2": "scale_pop",
         "particlesEnabled": true,
         "finalFlash": true,
         "durationSeconds": 8,
+        "styleCta2": {
+          "color": "#ffffff"
+        },
         "overlays": []
       }
     },

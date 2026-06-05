@@ -24,6 +24,32 @@ const CHANNEL_IN = 86;
 const MID_HIT = 120;
 const FINAL_HIT_BASE = 208;
 const FINAL_POSTER_BASE = 222;
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => {
+  if (!style) return {};
+  const {
+    padding,
+    paddingTop,
+    paddingRight,
+    paddingBottom,
+    paddingLeft,
+    width,
+    minWidth,
+    maxWidth,
+    height,
+    minHeight,
+    maxHeight,
+    borderRadius,
+    background,
+    backgroundColor,
+    boxShadow,
+    overflow,
+    whiteSpace,
+    textOverflow,
+    ...textOnly
+  } = style;
+  return textOnly;
+};
 
 export const YouTubeViews: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
@@ -39,6 +65,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
   const fontNumber = findFont(motion.fontHeadline ?? 'premium-akhand-black', motion.customFonts ?? []) ?? M.fontHeadline;
   const fontPrefix = findFont(motion.fontDate ?? 'premium-bebas-neue', motion.customFonts ?? []) ?? M.fontDate;
   const fontLabel = findFont(motion.fontCta1 ?? motion.fontCta ?? 'premium-bebas-neue', motion.customFonts ?? []) ?? M.fontCta;
+  const fontChannel = findFont(motion.fontCta2 ?? 'premium-akhand-light', motion.customFonts ?? []) ?? M.fontCta;
 
   const prefixIn = motion.dateInFrame ?? PREFIX_IN;
   const numberIn = motion.headlineInFrame ?? NUMBER_IN;
@@ -65,11 +92,15 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
   const prefixText = props.metricPrefix || 'ULTRAPASSAMOS';
   const numberText = props.metricNumber || '+ 20 MILHÕES';
   const labelText = props.metricLabel || 'DE VISUALIZAÇÕES';
-  const channelText = props.channelName || '';
+  const channelText = props.channelName || '@SEUCANAL';
+  const channelCompactLength = channelText.replace(/\s+/g, '').length;
+  const channelFontSize = clamp(620 / Math.max(13, channelCompactLength), isStory ? 34 : 28, isStory ? 54 : 44);
+  const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 0.94 + 132, isStory ? 300 : 240, isStory ? 760 : 620);
+  const channelTextStyle = keepTextOnlyStyle(applyTextStyle(motion.styleCta2));
 
   return (
     <AbsoluteFill style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#fff', overflow: 'hidden' }}>
-      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta1 ?? '', motion.fontCta ?? '']} />
+      <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '', motion.fontCta ?? '']} />
       <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={M.particlesEnabled ? 0.55 : 0} background={M.background} />
 
       {/* Seu overlay alpha (animação do After) por cima do BG */}
@@ -135,25 +166,61 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
           <StyledText previewLayerId="ytviews-label" text={labelText} transition={showAll ? undefined : tLabel} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
         </div>
 
-        {channelText.trim() ? (
+        <div
+          style={{
+            marginTop: isStory ? 24 : 18,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: showAll ? 1 : channelOpacity,
+            pointerEvents: 'none',
+          }}
+        >
           <div
             style={{
-              marginTop: isStory ? 26 : 18,
-              opacity: showAll ? 1 : channelOpacity,
-              fontFamily: ff(fontLabel?.family ?? 'Arial'),
-              fontSize: isStory ? 44 : 36,
-              fontWeight: fontLabel?.weight ?? 700,
-              letterSpacing: 1.5,
-              color: '#ffffff',
-              textTransform: 'uppercase',
-              textShadow: '0 8px 24px rgba(0,0,0,0.5)',
-              ...applyTextStyle(motion.styleCta2),
+              width: 'fit-content',
+              maxWidth: channelMaxWidth,
+              minHeight: isStory ? 68 : 58,
+              boxSizing: 'border-box',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 10,
+              background: '#FF0000',
+              padding: isStory ? '14px 48px' : '12px 38px',
+              overflow: 'hidden',
+              boxShadow: '0 12px 30px rgba(255,0,0,0.32)',
               ...userTextTransform(motion.styleCta2),
             }}
           >
-            <StyledText previewLayerId="ytviews-channel" text={channelText} transition={showAll ? undefined : tChannel} style={motion.styleCta2} stroke={motion.strokeCta2} preserveFontShape={false} previewMode={false} />
+            <span
+              style={{
+                maxWidth: '100%',
+                display: 'block',
+                color: '#fff',
+                fontFamily: ff(fontChannel?.family ?? 'Arial'),
+                fontSize: channelFontSize,
+                fontWeight: fontChannel?.weight ?? 700,
+                letterSpacing: 1.1,
+                lineHeight: 1,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                ...channelTextStyle,
+              }}
+            >
+              <StyledText
+                previewLayerId="ytviews-channel"
+                text={channelText}
+                transition={showAll ? undefined : tChannel}
+                style={motion.styleCta2}
+                stroke={motion.strokeCta2}
+                preserveFontShape={false}
+                previewMode={false}
+              />
+            </span>
           </div>
-        ) : null}
+        </div>
       </div>
 
       {M.finalFlash ? <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} /> : null}

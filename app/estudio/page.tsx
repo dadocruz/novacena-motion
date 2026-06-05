@@ -262,6 +262,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
     date: 'ULTRAPASSAMOS',
     headline: 'Numero',
     cta1: 'Metrica',
+    cta2: '@ do canal',
   },
   milestone: {
     date: 'Texto acima',
@@ -282,7 +283,7 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
 const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTransitionRole[]>> = {
   watch_youtube: ['headline', 'date', 'cta1'],
   youtube_subscribe: ['headline', 'cta1', 'date'],
-  youtube_views: ['date', 'headline', 'cta1'],
+  youtube_views: ['date', 'headline', 'cta1', 'cta2'],
   milestone: ['date', 'headline', 'cta1'],
   out_now: ['headline', 'cta2'],
   spotify_print: ['date', 'headline', 'cta1'],
@@ -1271,11 +1272,13 @@ export default function Home() {
           setFontHeadline('premium-akhand-black');
           setFontDate('premium-bebas-neue');
           setFontCta1('premium-bebas-neue');
+          setFontCta2('premium-akhand-light');
           setFontCta('premium-bebas-neue');
           // "ULTRAPASSAMOS" (date) vermelho; número e métrica brancos
           setStyleDate((s) => ({ ...s, color: '#FF1212' }));
           setStyleHeadline((s) => ({ ...s, color: '#ffffff' }));
           setStyleCta1((s) => ({ ...s, color: '#ffffff' }));
+          setStyleCta2((s) => ({ ...s, color: '#ffffff' }));
         }
       }
     }
@@ -4461,7 +4464,7 @@ export default function Home() {
         { id: 'ytviews-prefix', kind: 'text', role: 'date', label: 'ULTRAPASSAMOS', rect: measuredRect('ytviews-prefix', roleRect(14, 47, 72, 6, 'date')) },
         { id: 'ytviews-number', kind: 'text', role: 'headline', label: 'Numero', rect: measuredRect('ytviews-number', roleRect(8, 54, 84, 14, 'headline')) },
         { id: 'ytviews-label', kind: 'text', role: 'cta1', label: 'Metrica', rect: measuredRect('ytviews-label', roleRect(16, 69, 68, 5, 'cta1')) },
-        ...(channelName ? [{ id: 'ytviews-channel', kind: 'text' as const, role: 'cta2' as const, label: '@ do canal', rect: measuredRect('ytviews-channel', roleRect(24, 76, 52, 5, 'cta2')) }] : []),
+        { id: 'ytviews-channel', kind: 'text', role: 'cta2', label: '@ do canal', rect: measuredRect('ytviews-channel', roleRect(24, 76, 52, 5, 'cta2')) },
         ...elementHotspots,
       ];
     }
@@ -5952,7 +5955,7 @@ return (
                 <Field label="Numero" value={metricNumber} onChange={setMetricNumber} placeholder="+ 20 MILHÕES" />
                 <Field label="Metrica" value={metricLabel} onChange={setMetricLabel} placeholder="DE VISUALIZAÇÕES" />
               </div>
-              <Field label="@ do canal (opcional)" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
+              <Field label="@ do canal" value={channelName} onChange={setChannelName} placeholder="@SEUCANAL" />
             </>
           ) : template === 'milestone' ? (
             <>
