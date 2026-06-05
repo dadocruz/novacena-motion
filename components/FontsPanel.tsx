@@ -808,6 +808,7 @@ export default function FontsPanel({
             <button
               key={item}
               type="button"
+              data-text-panel-anchor={`role-${item}`}
               onClick={() => chooseRole(item)}
               style={tab(item === 'cta1' ? role === 'cta1' || role === 'cta' : role === item)}
             >

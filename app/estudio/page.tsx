@@ -4172,6 +4172,7 @@ export default function Home() {
     options?: {
       sectionOverride?: string;
       textPanelTab?: 'fontes' | 'entrada' | 'cor' | 'layout';
+      textRole?: FontRole;
       keepTimelineOpen?: boolean;
     }
   ) {
@@ -4200,7 +4201,8 @@ export default function Home() {
       const sectionTitle = options?.sectionOverride ?? dockEntry?.section;
       const scopedQuery = (selector: string) => rightPanel?.querySelector(selector) as HTMLElement | null;
       const target = tool === 'text'
-        ? scopedQuery(`[data-text-panel-anchor="${options?.textPanelTab ?? 'entrada'}"]`)
+        ? scopedQuery(`[data-text-panel-anchor="role-${options?.textRole ?? activeTextRole}"]`)
+          ?? scopedQuery(`[data-text-panel-anchor="${options?.textPanelTab ?? 'entrada'}"]`)
         : options?.sectionOverride
           ? scopedQuery(`[data-right-panel-section="${options.sectionOverride}"]`)
         : tool === 'motion'
@@ -4592,10 +4594,13 @@ export default function Home() {
           id: layer.id,
           label: layer.label,
           color: '#38bdf8',
-          startSec: 0,
+          startSec: coverInFrame / 30,
           endSec: null,
           resizable: false,
-          onChangeStart: () => undefined,
+          onChangeStart: (sec) => {
+            const fr = Math.max(0, Math.round(sec * 30));
+            setCoverInFrame(fr);
+          },
           onSelect: () => selectPreviewLayer(layer),
         });
       } else if (layer.kind === 'phone') {
@@ -4603,10 +4608,13 @@ export default function Home() {
           id: layer.id,
           label: layer.label,
           color: '#f59e0b',
-          startSec: 0,
+          startSec: phoneInFrame / 30,
           endSec: null,
           resizable: false,
-          onChangeStart: () => undefined,
+          onChangeStart: (sec) => {
+            const fr = Math.max(0, Math.round(sec * 30));
+            setPhoneInFrame(fr);
+          },
           onSelect: () => selectPreviewLayer(layer),
         });
       } else if (layer.kind === 'logos') {
@@ -4642,12 +4650,12 @@ export default function Home() {
 
     return tracks;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewLayerHotspots, effectiveTextInFrames, overlays, logosInFrame, durationSeconds, template]);
+  }, [previewLayerHotspots, effectiveTextInFrames, overlays, logosInFrame, coverInFrame, phoneInFrame, durationSeconds, template]);
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
       setActiveTextRole(layer.role);
-      selectStudioTool('text', { textPanelTab: 'entrada', keepTimelineOpen: true });
+      selectStudioTool('text', { textPanelTab: 'entrada', textRole: layer.role, keepTimelineOpen: true });
       return;
     }
 
@@ -6840,7 +6848,13 @@ return (
                 <button
                   key={`right-${tool.id}`}
                   type="button"
-                  onClick={() => selectStudioTool(tool.id)}
+                  onClick={() => {
+                    if (tool.id === 'text') {
+                      selectStudioTool('text', { textPanelTab: 'entrada', textRole: activeTextRole, keepTimelineOpen: true });
+                      return;
+                    }
+                    selectStudioTool(tool.id);
+                  }}
                   style={{
                     minHeight: 34,
                     borderRadius: 10,
@@ -7996,7 +8010,7 @@ return (
             activeRole={activeTextRole}
             onActiveRoleChange={(role) => {
               setActiveTextRole(role);
-              setActiveStudioTool('text');
+              selectStudioTool('text', { textPanelTab: 'entrada', textRole: role, keepTimelineOpen: true });
             }}
             allFonts={allFonts}
             fontHeadline={fontHeadline} fontDate={fontDate} fontCta={fontCta} fontCta1={fontCta1} fontCta2={fontCta2}
