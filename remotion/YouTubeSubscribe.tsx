@@ -4,7 +4,6 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { easings, eased, getTextTransition, type TextTransitionId } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
-import { GlobalTransitionLayer } from './GlobalTransitionLayer';
 import { OverlayLayer } from './OverlayLayer';
 import { StyledText } from './StyledText';
 import { findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
@@ -215,7 +214,6 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
       </div>
 
       {M.finalFlash ? <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} /> : null}
-      <GlobalTransitionLayer transitions={motion.globalTransitions} />
     </AbsoluteFill>
   );
 };

@@ -132,19 +132,6 @@ export const MotionConfigSchema = z
         }).passthrough()
       )
       .optional(),
-    globalTransitions: z
-      .array(
-        z.object({
-          id: z.string(),
-          kind: z.enum(['zoom_bounce', 'split_horizontal', 'glitch_rgb', 'exposure_blur']),
-          startSec: z.number().min(0),
-          durationSec: z.number().min(0.1).max(10),
-          intensity: z.number().min(0).max(4).optional(),
-          opacity: z.number().min(0).max(1).optional(),
-          label: z.string().optional(),
-        }).passthrough()
-      )
-      .optional(),
   })
   .passthrough();
 

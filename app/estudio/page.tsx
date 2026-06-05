@@ -13,8 +13,6 @@ import { Player } from '@remotion/player';
 import {
   type PlatformName,
   type OverlayPlacement,
-  type GlobalTransitionKind,
-  type GlobalTransitionPlacement,
   type TextStyle,
   type CoverMotionId,
   type TemplateId,
@@ -178,69 +176,6 @@ function defaultCoverInFrameForTemplate(templateId: TemplateId) {
 
 function defaultPhoneInFrameForTemplate(templateId: TemplateId) {
   return templateId === 'spotify_print' ? PHONE_TRANSITION_IN_FRAME : 0;
-}
-
-const GLOBAL_TRANSITION_LABELS: Record<GlobalTransitionKind, string> = {
-  zoom_bounce: 'FX Zoom',
-  split_horizontal: 'FX Split',
-  glitch_rgb: 'FX Glitch',
-  exposure_blur: 'FX Exposure',
-};
-
-function clampTransitionStart(startSec: number, durationSec: number, totalDurationSec: number) {
-  return Math.max(0, Math.min(Math.max(0, totalDurationSec - durationSec), Math.round(startSec * 10) / 10));
-}
-
-function buildBrazuTransitionStack(
-  preset: TimelineTool['icon'],
-  totalDurationSec: number,
-  nonce: number
-): GlobalTransitionPlacement[] {
-  const duration = Math.max(1, totalDurationSec);
-  const endHit = Math.max(0.6, duration - 4.4);
-  const midOne = Math.min(Math.max(9, duration * 0.34), Math.max(0.6, duration - 18));
-  const midTwo = Math.min(Math.max(18, duration * 0.72), Math.max(0.6, duration - 7.2));
-  const make = (
-    index: number,
-    kind: GlobalTransitionKind,
-    startSec: number,
-    durationSec: number,
-    intensity: number,
-    opacity: number
-  ): GlobalTransitionPlacement => ({
-    id: `brazu-${nonce}-${index}-${kind}`,
-    kind,
-    startSec: clampTransitionStart(startSec, durationSec, duration),
-    durationSec,
-    intensity,
-    opacity,
-    label: GLOBAL_TRANSITION_LABELS[kind],
-  });
-
-  if (preset === 'pop') {
-    return [
-      make(0, 'zoom_bounce', 0.45, 1.25, 1.28, 0.76),
-      make(1, 'glitch_rgb', 2.35, 0.72, 1.05, 0.78),
-      make(2, 'split_horizontal', midOne, 1.08, 0.82, 0.66),
-      make(3, 'exposure_blur', endHit, 1.28, 1.05, 0.64),
-    ];
-  }
-
-  if (preset === 'letters') {
-    return [
-      make(0, 'split_horizontal', 0.7, 1.2, 0.9, 0.62),
-      make(1, 'exposure_blur', 2.8, 1.05, 0.72, 0.52),
-      make(2, 'zoom_bounce', midTwo, 1.36, 0.88, 0.58),
-      make(3, 'split_horizontal', endHit, 1.12, 0.94, 0.64),
-    ];
-  }
-
-  return [
-    make(0, 'exposure_blur', 0.55, 1.12, 0.72, 0.5),
-    make(1, 'zoom_bounce', 2.35, 1.18, 0.82, 0.56),
-    make(2, 'split_horizontal', midTwo, 1.08, 0.72, 0.52),
-    make(3, 'exposure_blur', endHit, 1.34, 0.86, 0.58),
-  ];
 }
 
 function formatBRL(value: number) {
@@ -632,7 +567,6 @@ export default function Home() {
   const [overlayPresets, setOverlayPresets] = useState<OverlayPresetItem[]>([]);
   const [savingOverlayPreset, setSavingOverlayPreset] = useState(false);
   const [overlays, setOverlays] = useState<OverlayPlacement[]>([]);
-  const [globalTransitions, setGlobalTransitions] = useState<GlobalTransitionPlacement[]>(factoryMotion.globalTransitions ?? []);
 
   // User fonts
   const [userFonts, setUserFonts] = useState<UserFontRecord[]>([]);
@@ -753,7 +687,6 @@ export default function Home() {
   const [previewDraggingLayerId, setPreviewDraggingLayerId] = useState<string | null>(null);
   const [editingPreviewTextRole, setEditingPreviewTextRole] = useState<FontRole | null>(null);
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
-  const [selectedGlobalTransitionId, setSelectedGlobalTransitionId] = useState<string | null>(null);
   const [txScale, setTxScale] = React.useState<Record<string,number>>(factoryTextMetrics.scale);
   const [txLS, setTxLS] = React.useState<Record<string,number>>(factoryTextMetrics.letterSpacing);
   const [txLH, setTxLH] = React.useState<Record<string,number>>(factoryTextMetrics.lineHeight);
@@ -1461,7 +1394,6 @@ export default function Home() {
     setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
-    setGlobalTransitions(cloneHistoryValue(m.globalTransitions ?? []));
   }
 
   function createEditorSnapshot(): EditorHistorySnapshot {
@@ -1569,7 +1501,6 @@ export default function Home() {
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
-      globalTransitions,
       favoriteFontIds,
       studioMode,
       typoSubTab,
@@ -1708,7 +1639,6 @@ export default function Home() {
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(snapshot.overlays ?? []));
-    setGlobalTransitions(cloneHistoryValue(snapshot.globalTransitions ?? []));
     setFavoriteFontIds(cloneHistoryValue(snapshot.favoriteFontIds ?? []));
     setStudioMode((snapshot.studioMode ?? 'simple') as StudioMode);
     setTypoSubTab((snapshot.typoSubTab ?? 'char') as 'char' | 'layout');
@@ -1917,7 +1847,6 @@ export default function Home() {
       platformLogoWiggle: factoryMotion.platformLogoWiggle ?? 0.065,
       platformLogoWiggleSpeed: factoryMotion.platformLogoWiggleSpeed ?? 1,
       overlays,
-      globalTransitions,
     }),
     [
       fontHeadline,
@@ -1999,7 +1928,6 @@ export default function Home() {
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
-      globalTransitions,
       phoneSize,
       phoneX,
       phoneY,
@@ -2615,7 +2543,6 @@ export default function Home() {
       cta1: config.tuning,
       cta2: config.tuning,
     });
-    const transitionStack = buildBrazuTransitionStack(kind, durationSeconds, Date.now());
 
     setTrHeadline(config.textTransition);
     setTrDate(config.textTransition);
@@ -2639,17 +2566,13 @@ export default function Home() {
         entryDurationFrames: config.overlayEntryDurationFrames,
       }))
     );
-    setGlobalTransitions(transitionStack);
     setSelectedOverlayId(null);
-    setSelectedGlobalTransitionId(transitionStack[0]?.id ?? null);
-    setActiveStudioTool('timeline');
+    setActiveTextRole('headline');
+    setTextPanelTab('entrada');
+    setActiveStudioTool('text');
     setPreviewNonce((n) => n + 1);
-    const firstFxFrame = Math.max(0, Math.round((transitionStack[0]?.startSec ?? 0) * 30));
-    setTimelineSec(sec(firstFxFrame));
-    startEditPreviewLoop({
-      startFrame: Math.max(0, firstFxFrame - 4),
-      endFrame: Math.min(Math.max(0, Math.round(durationSeconds * 30) - 1), firstFxFrame + 52),
-    });
+    setTimelineSec(sec(nextFrames.headline));
+    startEditPreviewLoop(getTextPreviewFrameRange('headline', nextFrames.headline));
   }
 
 
@@ -2892,7 +2815,6 @@ export default function Home() {
         setBgVideoSaturation(m.background.videoSaturation ?? 1.15);
       }
       setOverlays(m.overlays ?? []);
-      setGlobalTransitions(m.globalTransitions ?? []);
     }
     setActiveTab('studio');
   }
@@ -3816,7 +3738,6 @@ export default function Home() {
     setBgVideoBlur(bg.videoBlur ?? 22);
     setBgVideoSaturation(bg.videoSaturation ?? 1.15);
     setOverlays((m as any).overlays ?? []);
-    setGlobalTransitions((m as any).globalTransitions ?? []);
     setAudioSrc(bg.audioSrc ?? '');
     setAudioStartSec(bg.audioStartSec ?? 0);
     setAudioVolume(bg.audioVolume ?? 0.8);
@@ -4860,46 +4781,7 @@ export default function Home() {
           updateOverlay(ov.id, { durationSec: Math.max(0.2, Math.round((sec - (ov.startSec ?? 0)) * 10) / 10) }),
         onSelect: () => {
           setSelectedOverlayId(ov.id);
-          setSelectedGlobalTransitionId(null);
           selectStudioTool('overlay', { keepTimelineOpen: true });
-        },
-      });
-    });
-
-    (globalTransitions ?? []).forEach((fx, i) => {
-      const start = Math.max(0, fx.startSec ?? 0);
-      const fxDur = fx.durationSec && fx.durationSec > 0 ? fx.durationSec : 1.1;
-      const label = fx.label || GLOBAL_TRANSITION_LABELS[fx.kind] || `FX ${i + 1}`;
-      tracks.push({
-        id: `global-fx-${fx.id}`,
-        label,
-        color: '#f472b6',
-        startSec: start,
-        endSec: Math.min(dur, start + fxDur),
-        resizable: true,
-        selected: selectedGlobalTransitionId === fx.id,
-        onChangeStart: (sec) => {
-          setGlobalTransitions((items) =>
-            items.map((item) =>
-              item.id === fx.id
-                ? { ...item, startSec: clampTransitionStart(sec, item.durationSec ?? fxDur, durationSeconds) }
-                : item
-            )
-          );
-        },
-        onChangeEnd: (sec) => {
-          setGlobalTransitions((items) =>
-            items.map((item) =>
-              item.id === fx.id
-                ? { ...item, durationSec: Math.max(0.25, Math.round((sec - (item.startSec ?? 0)) * 10) / 10) }
-                : item
-            )
-          );
-        },
-        onSelect: () => {
-          setSelectedOverlayId(null);
-          setSelectedGlobalTransitionId(fx.id);
-          setActiveStudioTool('timeline');
         },
       });
     });
@@ -4918,28 +4800,26 @@ export default function Home() {
     activeStudioTool,
     activeTextRole,
     selectedOverlayId,
-    selectedGlobalTransitionId,
-    globalTransitions,
   ]);
 
   const timelineTools: TimelineTool[] = [
     {
       id: 'timeline-transition-reveal',
-      label: 'Aplicar pacote Brazu elegante nas layers e FX globais',
+      label: 'Aplicar transição reveal nas layers',
       icon: 'reveal',
       active: trHeadline === 'mask_reveal' && trDate === 'mask_reveal' && trCta === 'mask_reveal' && trCta1 === 'mask_reveal' && trCta2 === 'mask_reveal',
       onClick: () => applyTimelineTransitionTool('reveal'),
     },
     {
       id: 'timeline-transition-pop',
-      label: 'Aplicar pacote Brazu impact nas layers e FX globais',
+      label: 'Aplicar transição pop nas layers',
       icon: 'pop',
       active: trHeadline === 'scale_pop' && trDate === 'scale_pop' && trCta === 'scale_pop' && trCta1 === 'scale_pop' && trCta2 === 'scale_pop',
       onClick: () => applyTimelineTransitionTool('pop'),
     },
     {
       id: 'timeline-transition-letters',
-      label: 'Aplicar pacote Brazu split nas layers e FX globais',
+      label: 'Aplicar transição de letras nas layers',
       icon: 'letters',
       active: trHeadline === 'split_letters' && trDate === 'split_letters' && trCta === 'split_letters' && trCta1 === 'split_letters' && trCta2 === 'split_letters',
       onClick: () => applyTimelineTransitionTool('letters'),
@@ -4948,14 +4828,12 @@ export default function Home() {
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text' && layer.role) {
-      setSelectedGlobalTransitionId(null);
       setActiveTextRole(layer.role);
       selectStudioTool('text', { textPanelTab: 'entrada', textRole: layer.role, keepTimelineOpen: true });
       return;
     }
 
     setEditingPreviewTextRole(null);
-    setSelectedGlobalTransitionId(null);
 
     if (layer.kind === 'phone') {
       selectStudioTool('motion', { sectionOverride: 'Celular', keepTimelineOpen: true });
@@ -4969,7 +4847,6 @@ export default function Home() {
 
     if (layer.kind === 'element' && layer.overlayId) {
       setSelectedOverlayId(layer.overlayId);
-      setSelectedGlobalTransitionId(null);
       selectStudioTool('overlay', { keepTimelineOpen: true });
       return;
     }
@@ -5818,7 +5695,6 @@ export default function Home() {
     if (typeof m.platformLogoPack === 'string') setPlatformLogoPack(m.platformLogoPack as PlatformLogoPackId);
     if (m.customLogos && typeof m.customLogos === 'object') setCustomLogos(m.customLogos);
     if (Array.isArray(m.overlays)) setOverlays(m.overlays);
-    if (Array.isArray(m.globalTransitions)) setGlobalTransitions(m.globalTransitions);
 
     const background = m.background ?? m;
     if (typeof background.videoSrc === 'string') setBgVideo(background.videoSrc);

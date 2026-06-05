@@ -4,7 +4,6 @@ import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { easings, eased, getTextTransition } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
-import { GlobalTransitionLayer } from './GlobalTransitionLayer';
 import { OverlayLayer } from './OverlayLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
@@ -166,7 +165,6 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
         </div>
       </AbsoluteFill>
       <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
-      <GlobalTransitionLayer transitions={motion.globalTransitions} />
     </AbsoluteFill>
   );
 };
