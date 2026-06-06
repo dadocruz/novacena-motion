@@ -2205,9 +2205,6 @@ export default function Home() {
     const useLightPreview =
       backgroundNeedsLightPreview ||
       (hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40));
-    const suppressHeavyBackgroundVideo =
-      backgroundNeedsLightPreview &&
-      (Boolean(motionForPreview.background?.videoNeedsTrim) || Boolean(backgroundAsset?.requiresOptimization));
     const previewOverlays = useLightPreview
       ? (motionForPreview.overlays ?? []).map((overlay) => (
           overlay.type === 'video' ? { ...overlay, previewQuality: 'light' as const } : overlay
@@ -2221,7 +2218,7 @@ export default function Home() {
         ...motionWithStyles,
         background: {
           ...motionForPreview.background,
-          videoSrc: suppressHeavyBackgroundVideo ? undefined : motionForPreview.background?.videoSrc,
+          videoSrc: motionForPreview.background?.videoSrc,
           previewQuality: useLightPreview ? ('light' as const) : ('full' as const),
         },
         overlays: previewOverlays,
