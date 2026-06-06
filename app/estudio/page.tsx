@@ -3161,15 +3161,66 @@ export default function Home() {
     }
   }
 
+  async function uploadBackgroundVideoInChunks(file: File, durationSec: number) {
+    const chunkSize = 8 * 1024 * 1024;
+    const totalChunks = Math.max(1, Math.ceil(file.size / chunkSize));
+    const uploadId =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let finalData: any = null;
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex += 1) {
+      const start = chunkIndex * chunkSize;
+      const end = Math.min(file.size, start + chunkSize);
+      const chunk = file.slice(start, end);
+      const isLastChunk = chunkIndex === totalChunks - 1;
+      const params = new URLSearchParams({
+        chunked: '1',
+        uploadId,
+        chunkIndex: String(chunkIndex),
+        totalChunks: String(totalChunks),
+        totalSize: String(file.size),
+        filename: file.name,
+        ...(durationSec > 0 ? { durationSec: String(durationSec) } : {}),
+      });
+
+      setVideoUploadMsg(
+        isLastChunk
+          ? 'Enviando última parte. Depois vou gerar o preview leve...'
+          : `Enviando vídeo bruto em partes (${chunkIndex + 1}/${totalChunks})...`
+      );
+
+      const data = await uploadChunkWithProgress(
+        chunk,
+        `/api/upload-video/raw?${params.toString()}`,
+        file.type || 'application/octet-stream',
+        (chunkProgress) => {
+          const overall = ((chunkIndex + chunkProgress) / totalChunks) * 100;
+          setVideoUploadProgress(Math.min(99, Math.round(overall)));
+        }
+      );
+
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Falha ao subir vídeo bruto.');
+      }
+
+      if (data.partial) continue;
+      finalData = data;
+    }
+
+    return finalData || { ok: false, error: 'Upload terminou sem retornar o vídeo processado.' };
+  }
+
   async function uploadRawVideoWithProgress(file: File) {
     const durationSec = await readVideoDuration(file);
     setVideoUploadProgress(5);
-    setVideoUploadMsg('Enviando vídeo em chunks para evitar limite de body…');
+    setVideoUploadMsg('Enviando vídeo em partes para evitar limite de body...');
 
-    const data = await uploadOverlayVideoInChunks(file, 'background-video', durationSec);
+    const data = await uploadBackgroundVideoInChunks(file, durationSec);
 
     setVideoUploadProgress(100);
-    setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação…');
+    setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação...');
 
     return data;
   }
@@ -3622,7 +3673,7 @@ export default function Home() {
     setUserFonts((u) => u.filter((f) => f.id !== id));
   }
 
-  function uploadOverlayChunkWithProgress(
+  function uploadChunkWithProgress(
     chunk: Blob,
     uploadUrl: string,
     contentType: string,
@@ -3656,8 +3707,8 @@ export default function Home() {
         reject(new Error(data?.error || `Upload falhou (${xhr.status}).`));
       };
 
-      xhr.onerror = () => reject(new Error('Falha de rede durante o upload do overlay.'));
-      xhr.onabort = () => reject(new Error('Upload de overlay cancelado.'));
+      xhr.onerror = () => reject(new Error('Falha de rede durante o upload.'));
+      xhr.onabort = () => reject(new Error('Upload cancelado.'));
       xhr.send(chunk);
     });
   }
@@ -3694,7 +3745,7 @@ export default function Home() {
           : `Enviando overlay pesado em partes (${chunkIndex + 1}/${totalChunks})...`
       );
 
-      const data = await uploadOverlayChunkWithProgress(
+      const data = await uploadChunkWithProgress(
         chunk,
         `/api/upload-overlay?${params.toString()}`,
         file.type || 'application/octet-stream',
