@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mkdir, stat, unlink } from 'fs/promises';
-import { createWriteStream, existsSync } from 'fs';
+import { mkdir, rm, stat, unlink } from 'fs/promises';
+import { createReadStream, createWriteStream, existsSync } from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -13,6 +13,7 @@ export const maxDuration = 900;
 
 const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'uploads', 'video-sources');
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
+const CHUNK_SIZE_LIMIT = 64 * 1024 * 1024;
 const PREVIEW_REQUIRED_SIZE = 100 * 1024 * 1024;
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
 const VERTICAL_PREVIEW_REQUIRED_SECONDS = 45;
@@ -116,6 +117,45 @@ function isAllowedContentType(contentType: string): boolean {
   return contentType.startsWith('video/');
 }
 
+function cleanUploadId(value: string) {
+  return value.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
+}
+
+function chunkPartName(index: number) {
+  return `${String(index).padStart(6, '0')}.part`;
+}
+
+async function assembleChunks(chunkDir: string, totalChunks: number, outputPath: string) {
+  await new Promise<void>((resolve, reject) => {
+    const output = createWriteStream(outputPath);
+    let index = 0;
+
+    const pipeNext = () => {
+      if (index >= totalChunks) {
+        output.end();
+        return;
+      }
+
+      const input = createReadStream(path.join(chunkDir, chunkPartName(index)));
+      index += 1;
+      input.on('error', reject);
+      input.on('end', pipeNext);
+      input.pipe(output, { end: false });
+    };
+
+    output.on('error', reject);
+    output.on('finish', resolve);
+    pipeNext();
+  });
+}
+
+async function allChunksReady(chunkDir: string, totalChunks: number) {
+  for (let index = 0; index < totalChunks; index += 1) {
+    if (!existsSync(path.join(chunkDir, chunkPartName(index)))) return false;
+  }
+  return true;
+}
+
 function runFfprobe(filepath: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const proc = spawn(FFPROBE_BIN, [
@@ -169,6 +209,135 @@ async function probeVideo(filepath: string) {
   };
 }
 
+async function finalizeUploadedVideo(initialPath: string, filename: string, contentType: string, ext: string) {
+  let localPath = initialPath;
+  const fileStat = await stat(localPath);
+  if (fileStat.size > MAX_RAW_SIZE) {
+    await unlink(localPath).catch(() => {});
+    return NextResponse.json(
+      { ok: false, error: `Arquivo muito grande (${(fileStat.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 8 GB.` },
+      { status: 413 }
+    );
+  }
+
+  const probe = await probeVideo(localPath);
+  if (!probe.hasVideo) {
+    await unlink(localPath).catch(() => {});
+    return NextResponse.json({ ok: false, error: 'O arquivo enviado não tem vídeo.' }, { status: 400 });
+  }
+
+  const durationSec = Number(probe.durationSec || 0);
+  const isVerticalVideo = Number(probe.height || 0) > Number(probe.width || 0);
+  const requiresOptimization =
+    fileStat.size > PREVIEW_REQUIRED_SIZE ||
+    durationSec >= MAX_BACKGROUND_CLIP_SECONDS - 0.5 ||
+    (isVerticalVideo && durationSec >= VERTICAL_PREVIEW_REQUIRED_SECONDS) ||
+    ext !== '.mp4';
+  const previewIsRequired =
+    requiresOptimization ||
+    durationSec > MAX_BACKGROUND_CLIP_SECONDS + 0.5;
+
+  // Torna o vídeo seekável no navegador (faststart). Containers MP4/MOV/M4V
+  // costumam vir com o índice no fim, o que faz o preview voltar pro zero.
+  let servedFilename = filename;
+  let servedSize = fileStat.size;
+  if (!previewIsRequired && ['.mp4', '.mov', '.m4v'].includes(ext)) {
+    const baseName = filename.replace(/\.(mp4|mov|m4v)$/i, '');
+    const webFilename = `${baseName}-web.mp4`;
+    const webPath = path.join(SOURCES_DIR, webFilename);
+    const ok = await remuxFaststart(localPath, webPath).catch(() => false);
+    if (ok && existsSync(webPath)) {
+      try {
+        const webStat = await stat(webPath);
+        const webProbe = await probeVideo(webPath).catch(() => null);
+        const webDuration = Number(webProbe?.durationSec || 0);
+        const expectedDuration = Number(probe.durationSec || 0);
+        if (webStat.size > 0 && webProbe?.hasVideo && durationLooksValid(webDuration, expectedDuration)) {
+          await unlink(localPath).catch(() => {});
+          localPath = webPath;
+          servedFilename = webFilename;
+          servedSize = webStat.size;
+        } else {
+          await unlink(webPath).catch(() => {});
+        }
+      } catch {
+        await unlink(webPath).catch(() => {});
+      }
+    } else if (existsSync(webPath)) {
+      await unlink(webPath).catch(() => {});
+    }
+  }
+
+  const publicPath = `/api/uploads/video-sources/${servedFilename}`;
+  let previewFilename = servedFilename;
+  let previewSize = servedSize;
+  const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
+  const previewCandidate = `${previewBaseName}-preview.mp4`;
+  const previewPath = path.join(SOURCES_DIR, previewCandidate);
+  const previewResult = await createPreviewProxy(localPath, previewPath).catch((error) => ({
+    ok: false,
+    mode: 'failed' as const,
+    error: error instanceof Error ? error.message : 'falha desconhecida ao criar preview',
+  }));
+
+  if (previewResult.ok && existsSync(previewPath)) {
+    try {
+      const previewStat = await stat(previewPath);
+      const previewProbe = await probeVideo(previewPath).catch(() => null);
+      const previewDuration = Number(previewProbe?.durationSec || 0);
+      const expectedDuration = Number(probe.durationSec || 0);
+
+      if (previewStat.size > 0 && previewProbe?.hasVideo && durationLooksValid(previewDuration, expectedDuration)) {
+        previewFilename = previewCandidate;
+        previewSize = previewStat.size;
+      } else {
+        await unlink(previewPath).catch(() => {});
+      }
+    } catch {
+      await unlink(previewPath).catch(() => {});
+    }
+  } else if (existsSync(previewPath)) {
+    await unlink(previewPath).catch(() => {});
+  }
+
+  if (previewIsRequired && previewFilename === servedFilename) {
+    return NextResponse.json({
+      ok: true,
+      sourcePath: publicPath,
+      previewSrc: publicPath,
+      videoSrc: publicPath,
+      filename: servedFilename,
+      previewFilename,
+      size: servedSize,
+      previewSize,
+      type: contentType,
+      previewType: contentType,
+      previewMode: 'local-fallback',
+      previewFailed: true,
+      requiresOptimization,
+      previewError: previewResult.error || null,
+      ...probe,
+    });
+  }
+
+  const previewPublicPath = `/api/uploads/video-sources/${previewFilename}`;
+  return NextResponse.json({
+    ok: true,
+    sourcePath: publicPath,
+    previewSrc: previewPublicPath,
+    videoSrc: previewPublicPath,
+    filename: servedFilename,
+    previewFilename,
+    size: servedSize,
+    previewSize,
+    type: contentType,
+    previewType: previewFilename.endsWith('.mp4') ? 'video/mp4' : contentType,
+    previewMode: previewFilename === servedFilename ? 'source' : previewResult.mode,
+    requiresOptimization,
+    ...probe,
+  });
+}
+
 export async function POST(req: NextRequest) {
   let localPath = '';
 
@@ -179,6 +348,7 @@ export async function POST(req: NextRequest) {
     const ext = path.extname(filenameParam).toLowerCase();
     const contentType = (req.headers.get('content-type') || '').split(';')[0].toLowerCase();
     const contentLength = Number(req.headers.get('content-length') || 0);
+    const isChunkedUpload = req.nextUrl.searchParams.get('chunked') === '1';
 
     if (!ALLOWED_EXT.includes(ext)) {
       return NextResponse.json(
@@ -194,7 +364,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (contentLength > MAX_RAW_SIZE) {
+    if (!isChunkedUpload && contentLength > MAX_RAW_SIZE) {
       return NextResponse.json(
         { ok: false, error: `Arquivo muito grande (${(contentLength / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 8 GB.` },
         { status: 413 }
@@ -206,6 +376,86 @@ export async function POST(req: NextRequest) {
     }
 
     await mkdir(SOURCES_DIR, { recursive: true });
+
+    if (isChunkedUpload) {
+      const uploadId = cleanUploadId(req.nextUrl.searchParams.get('uploadId') || '');
+      const chunkIndex = Number(req.nextUrl.searchParams.get('chunkIndex'));
+      const totalChunks = Number(req.nextUrl.searchParams.get('totalChunks'));
+      const totalSize = Number(req.nextUrl.searchParams.get('totalSize') || 0);
+
+      if (!uploadId || !Number.isInteger(chunkIndex) || !Number.isInteger(totalChunks) || totalChunks <= 0 || chunkIndex < 0 || chunkIndex >= totalChunks) {
+        return NextResponse.json({ ok: false, error: 'Upload em partes inválido.' }, { status: 400 });
+      }
+
+      if (totalSize > MAX_RAW_SIZE) {
+        return NextResponse.json(
+          { ok: false, error: `Arquivo muito grande (${(totalSize / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 8 GB.` },
+          { status: 413 }
+        );
+      }
+
+      if (contentLength > CHUNK_SIZE_LIMIT) {
+        return NextResponse.json(
+          { ok: false, error: 'Parte do upload grande demais. Recarregue a página e tente novamente.' },
+          { status: 413 }
+        );
+      }
+
+      const chunkDir = path.join(SOURCES_DIR, '.chunks', uploadId);
+      await mkdir(chunkDir, { recursive: true });
+      const partPath = path.join(chunkDir, chunkPartName(chunkIndex));
+
+      await pipeline(
+        Readable.fromWeb(req.body as any),
+        createWriteStream(partPath)
+      );
+
+      if (contentLength > 0) {
+        const partSize = (await stat(partPath).catch(() => null))?.size ?? 0;
+        if (partSize < contentLength * 0.98) {
+          await unlink(partPath).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `Upload incompleto nesta parte: recebido ${(partSize / 1024 / 1024).toFixed(1)} MB de ${(contentLength / 1024 / 1024).toFixed(1)} MB.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const ready = await allChunksReady(chunkDir, totalChunks);
+      if (!ready) {
+        return NextResponse.json({
+          ok: true,
+          partial: true,
+          receivedChunks: chunkIndex + 1,
+          totalChunks,
+        });
+      }
+
+      const filename = safeFileName(filenameParam);
+      localPath = path.join(SOURCES_DIR, filename);
+      await assembleChunks(chunkDir, totalChunks, localPath);
+      await rm(chunkDir, { recursive: true, force: true }).catch(() => {});
+
+      if (totalSize > 0) {
+        const assembledSize = (await stat(localPath).catch(() => null))?.size ?? 0;
+        if (assembledSize < totalSize * 0.98) {
+          await unlink(localPath).catch(() => {});
+          return NextResponse.json(
+            {
+              ok: false,
+              error: `Upload incompleto: recebido ${(assembledSize / 1024 / 1024).toFixed(1)} MB de ${(totalSize / 1024 / 1024).toFixed(1)} MB.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      return finalizeUploadedVideo(localPath, filename, contentType, ext);
+    }
+
     const filename = safeFileName(filenameParam);
     localPath = path.join(SOURCES_DIR, filename);
 
@@ -214,134 +464,7 @@ export async function POST(req: NextRequest) {
       createWriteStream(localPath)
     );
 
-    const fileStat = await stat(localPath);
-    if (fileStat.size > MAX_RAW_SIZE) {
-      await unlink(localPath).catch(() => {});
-      return NextResponse.json(
-        { ok: false, error: `Arquivo muito grande (${(fileStat.size / 1024 / 1024).toFixed(1)} MB). Máximo permitido: 8 GB.` },
-        { status: 413 }
-      );
-    }
-
-    const probe = await probeVideo(localPath);
-    if (!probe.hasVideo) {
-      await unlink(localPath).catch(() => {});
-      return NextResponse.json({ ok: false, error: 'O arquivo enviado não tem vídeo.' }, { status: 400 });
-    }
-
-    const durationSec = Number(probe.durationSec || 0);
-    const isVerticalVideo = Number(probe.height || 0) > Number(probe.width || 0);
-    const requiresOptimization =
-      fileStat.size > PREVIEW_REQUIRED_SIZE ||
-      durationSec >= MAX_BACKGROUND_CLIP_SECONDS - 0.5 ||
-      (isVerticalVideo && durationSec >= VERTICAL_PREVIEW_REQUIRED_SECONDS) ||
-      ext !== '.mp4';
-    const previewIsRequired =
-      requiresOptimization ||
-      durationSec > MAX_BACKGROUND_CLIP_SECONDS + 0.5;
-
-    // Torna o vídeo seekável no navegador (faststart). Containers MP4/MOV/M4V
-    // costumam vir com o índice no fim — o que faz o preview voltar pro zero.
-    // Para bruto grande/longa duração, o navegador usa o proxy leve; manter o
-    // original evita remux por stream-copy corromper bitstreams H.264 sensíveis.
-    // WEBM já é streamável, então é pulado. Falha → mantém o original.
-    let servedFilename = filename;
-    let servedSize = fileStat.size;
-    if (!previewIsRequired && ['.mp4', '.mov', '.m4v'].includes(ext)) {
-      const baseName = filename.replace(/\.(mp4|mov|m4v)$/i, '');
-      const webFilename = `${baseName}-web.mp4`;
-      const webPath = path.join(SOURCES_DIR, webFilename);
-      const ok = await remuxFaststart(localPath, webPath).catch(() => false);
-      if (ok && existsSync(webPath)) {
-        try {
-          const webStat = await stat(webPath);
-          const webProbe = await probeVideo(webPath).catch(() => null);
-          const webDuration = Number(webProbe?.durationSec || 0);
-          const expectedDuration = Number(probe.durationSec || 0);
-          if (webStat.size > 0 && webProbe?.hasVideo && durationLooksValid(webDuration, expectedDuration)) {
-            await unlink(localPath).catch(() => {});
-            localPath = webPath; // para limpeza correta em caso de erro posterior
-            servedFilename = webFilename;
-            servedSize = webStat.size;
-          } else {
-            await unlink(webPath).catch(() => {});
-          }
-        } catch {
-          await unlink(webPath).catch(() => {});
-        }
-      } else if (existsSync(webPath)) {
-        await unlink(webPath).catch(() => {});
-      }
-    }
-
-    const publicPath = `/api/uploads/video-sources/${servedFilename}`;
-    let previewFilename = servedFilename;
-    let previewSize = servedSize;
-    const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
-    const previewCandidate = `${previewBaseName}-preview.mp4`;
-    const previewPath = path.join(SOURCES_DIR, previewCandidate);
-    const previewResult = await createPreviewProxy(localPath, previewPath).catch((error) => ({
-      ok: false,
-      mode: 'failed' as const,
-      error: error instanceof Error ? error.message : 'falha desconhecida ao criar preview',
-    }));
-
-    if (previewResult.ok && existsSync(previewPath)) {
-      try {
-        const previewStat = await stat(previewPath);
-        const previewProbe = await probeVideo(previewPath).catch(() => null);
-        const previewDuration = Number(previewProbe?.durationSec || 0);
-        const expectedDuration = Number(probe.durationSec || 0);
-
-        if (previewStat.size > 0 && previewProbe?.hasVideo && durationLooksValid(previewDuration, expectedDuration)) {
-          previewFilename = previewCandidate;
-          previewSize = previewStat.size;
-        } else {
-          await unlink(previewPath).catch(() => {});
-        }
-      } catch {
-        await unlink(previewPath).catch(() => {});
-      }
-    } else if (existsSync(previewPath)) {
-      await unlink(previewPath).catch(() => {});
-    }
-
-    if (previewIsRequired && previewFilename === servedFilename) {
-      return NextResponse.json({
-        ok: true,
-        sourcePath: publicPath,
-        previewSrc: publicPath,
-        videoSrc: publicPath,
-        filename: servedFilename,
-        previewFilename,
-        size: servedSize,
-        previewSize,
-        type: contentType,
-        previewType: contentType,
-        previewMode: 'local-fallback',
-        previewFailed: true,
-        requiresOptimization,
-        previewError: previewResult.error || null,
-        ...probe,
-      });
-    }
-
-    const previewPublicPath = `/api/uploads/video-sources/${previewFilename}`;
-    return NextResponse.json({
-      ok: true,
-      sourcePath: publicPath,
-      previewSrc: previewPublicPath,
-      videoSrc: previewPublicPath,
-      filename: servedFilename,
-      previewFilename,
-      size: servedSize,
-      previewSize,
-      type: contentType,
-      previewType: previewFilename.endsWith('.mp4') ? 'video/mp4' : contentType,
-      previewMode: previewFilename === servedFilename ? 'source' : previewResult.mode,
-      requiresOptimization,
-      ...probe,
-    });
+    return finalizeUploadedVideo(localPath, filename, contentType, ext);
   } catch (error) {
     if (localPath) await unlink(localPath).catch(() => {});
     const message = error instanceof Error ? error.message : 'Erro desconhecido no upload.';

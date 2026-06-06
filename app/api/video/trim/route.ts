@@ -150,6 +150,44 @@ function briefError(error: unknown) {
     .slice(0, 650);
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function stableFileInfo(filePath: string) {
+  // Verifica repetidamente se o arquivo mudou de tamanho/mtime.
+  // Uploads grandes podem ter pausas curtas; precisamos de certeza maior antes de cortar.
+  const checks = 4;
+  const intervalMs = 700;
+
+  let prevStat = await stat(filePath);
+  if (prevStat.size <= 0) {
+    return { stable: false, size: prevStat.size, reason: 'arquivo vazio' };
+  }
+
+  for (let i = 0; i < checks; i += 1) {
+    await wait(intervalMs);
+    const curStat = await stat(filePath);
+    if (curStat.size === prevStat.size && curStat.mtimeMs === prevStat.mtimeMs) {
+      // Será considerado estável se duas leituras consecutivas baterem.
+      return { stable: true, size: curStat.size, reason: '' };
+    }
+
+    // Se o arquivo zerar no meio do upload, falhe rápido.
+    if (curStat.size <= 0) {
+      return { stable: false, size: curStat.size, reason: 'arquivo vazio' };
+    }
+
+    prevStat = curStat;
+  }
+
+  return {
+    stable: false,
+    size: prevStat.size,
+    reason: `arquivo ainda subindo (${(prevStat.size / 1024 / 1024).toFixed(1)} MB)`,
+  };
+}
+
 function trimArgs(
   filePath: string,
   outputPath: string,
@@ -222,6 +260,19 @@ async function tryTrimInput(
   requestedDurationSec: number,
   vf: string
 ): Promise<{ result: TrimAttemptResult | null; errors: string[] }> {
+  const fileInfo = await stableFileInfo(input.filePath).catch((error) => ({
+    stable: false,
+    size: 0,
+    reason: briefError(error),
+  }));
+
+  if (!fileInfo.stable) {
+    return {
+      result: null,
+      errors: [`${input.label}: ${fileInfo.reason || 'arquivo ainda não está pronto para corte'}.`],
+    };
+  }
+
   const inputProbe = await probeVideo(input.filePath).catch((error) => ({
     durationSec: 0,
     hasVideo: false,
@@ -388,9 +439,10 @@ export async function POST(req: NextRequest) {
 
     const message = error instanceof Error ? error.message : 'Erro ao cortar vídeo.';
     const sourceMissing = /não está mais no servidor|bruto.*servidor|reenvie/i.test(message);
+    const sourceBusy = /arquivo ainda subindo|arquivo vazio|ainda não está pronto/i.test(message);
     return NextResponse.json(
-      { ok: false, error: message, canRetryWithReupload: sourceMissing },
-      { status: sourceMissing ? 404 : 500 }
+      { ok: false, error: message, canRetryWithReupload: sourceMissing, sourceBusy },
+      { status: sourceMissing ? 404 : sourceBusy ? 409 : 500 }
     );
   }
 }
