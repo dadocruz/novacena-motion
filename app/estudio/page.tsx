@@ -2464,6 +2464,12 @@ export default function Home() {
     bgVideoRequiresOptimization &&
     effectiveBgVideoDuration > 0 &&
     effectiveBgVideoDuration <= bgClipDuration + 0.5;
+  const mediaProcessingBlocksExport = uploadingVideo || processingVideoClip;
+  const mediaProcessingExportLabel = uploadingVideo
+    ? 'Aguarde o upload do vídeo...'
+    : processingVideoClip
+      ? 'Otimizando vídeo...'
+      : '';
   const bgVideoStartMax = effectiveBgVideoNeedsTrim
     ? Math.max(0, bgVideoDuration - bgClipDuration)
     : Math.max(0.1, effectiveBgVideoDuration);
@@ -3187,7 +3193,7 @@ export default function Home() {
 
       setVideoUploadMsg(
         isLastChunk
-          ? 'Enviando última parte. Depois vou gerar o preview leve...'
+          ? 'Enviando última parte e validando o bruto...'
           : `Enviando vídeo bruto em partes (${chunkIndex + 1}/${totalChunks})...`
       );
 
@@ -3220,7 +3226,7 @@ export default function Home() {
     const data = await uploadBackgroundVideoInChunks(file, durationSec);
 
     setVideoUploadProgress(100);
-    setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação...');
+    setVideoUploadMsg('Upload concluído. Preparando o vídeo no editor...');
 
     return data;
   }
@@ -3307,12 +3313,15 @@ export default function Home() {
       };
       applyBackgroundVideoPatchToState(videoPatch);
       shareBackgroundVideoWithTemplates(videoPatch);
+      const previewNotice = d.previewSkipped
+        ? ' Preview local em qualidade original ativado para o upload não travar.'
+        : '';
       setVideoUploadMsg(
         shouldTrim && needsOnlyOptimization
-          ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
+          ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
           : shouldTrim
-            ? `Bruto recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
-            : `Vídeo pronto aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
+            ? `Bruto recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Escolha o início e clique em Cortar/otimizar antes de exportar.`
+            : `Vídeo pronto aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Ajustes visuais liberados.`
       );
     } catch (error) {
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
@@ -5686,14 +5695,17 @@ export default function Home() {
   }
 
   async function renderScript(script: string, label: string) {
-    const optimizedPatch = await ensureBackgroundVideoReadyForExport();
-    if (optimizedPatch === false) return;
-
     setRendering(true);
-    setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
+    setRenderProgress(0);
+    setRenderStatus('rendering');
     setLambdaOutputUrl(null);
+    setRenderMessage(`Preparando ${label}…`);
     try {
+      const optimizedPatch = await ensureBackgroundVideoReadyForExport();
+      if (optimizedPatch === false) return;
+
+      setRenderMessage(`Gerando ${label}…`);
       const renderPropsForServer = buildRenderInputProps(
         optimizedPatch ? { background: backgroundOverrideFromPatch(optimizedPatch) } : undefined
       );
@@ -5830,17 +5842,18 @@ export default function Home() {
   }
 
   async function renderLambda(label: string) {
-    const optimizedPatch = await ensureBackgroundVideoReadyForExport();
-    if (optimizedPatch === false) return;
-
     setRendering(true);
-    setRenderMessage(SAAS_EXPORT_MODE ? `Preparando exportação de ${label}…` : `☁ Lambda: iniciando ${label}…`);
     setRenderLog('');
     setRenderProgress(0);
     setRenderStatus('rendering');
     setLambdaOutputUrl(null);
+    setRenderMessage(SAAS_EXPORT_MODE ? `Preparando mídia para ${label}…` : `☁ Lambda: preparando ${label}…`);
 
     try {
+      const optimizedPatch = await ensureBackgroundVideoReadyForExport();
+      if (optimizedPatch === false) return;
+
+      setRenderMessage(SAAS_EXPORT_MODE ? `Preparando exportação de ${label}…` : `☁ Lambda: iniciando ${label}…`);
       const inputProps = buildRenderInputProps(
         optimizedPatch ? { background: backgroundOverrideFromPatch(optimizedPatch) } : undefined
       );
@@ -5935,6 +5948,14 @@ export default function Home() {
 
   function handleRender() {
     const label = `${templateLabels[template]} ${target}`;
+    if (uploadingVideo) {
+      setRenderMessage('Aguarde o upload do vídeo terminar antes de exportar.');
+      return;
+    }
+    if (processingVideoClip) {
+      setRenderMessage('Aguarde a otimização do vídeo terminar antes de exportar.');
+      return;
+    }
     if (SAAS_EXPORT_MODE) {
       renderLambda(label);
     } else if (renderEngine === 'desktop') {
@@ -7085,15 +7106,16 @@ return (
             </div>
           )}
           <button
-            disabled={rendering}
+            disabled={rendering || mediaProcessingBlocksExport}
             onClick={handleRender}
             style={renderBtnStyle}
           >
-            {SAAS_EXPORT_MODE
+            {mediaProcessingExportLabel ||
+            (SAAS_EXPORT_MODE
               ? (rendering ? `Exportando… ${renderProgress}%` : `Exportar vídeo (${target})`)
               : rendering
               ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-              : renderEngine === 'desktop' ? `Exportar pacote (${target})` : renderEngine === 'local' ? `Renderizar no servidor (${target})` : `☁ Renderizar vídeo (${target})`}
+              : renderEngine === 'desktop' ? `Exportar pacote (${target})` : renderEngine === 'local' ? `Renderizar no servidor (${target})` : `☁ Renderizar vídeo (${target})`)}
           </button>
           {SAAS_EXPORT_MODE && (
             <button
@@ -7418,15 +7440,16 @@ return (
                 </div>
               )}
               <button
-                disabled={rendering}
+                disabled={rendering || mediaProcessingBlocksExport}
                 onClick={handleRender}
                 style={renderBtnStyle}
               >
-                {SAAS_EXPORT_MODE
+                {mediaProcessingExportLabel ||
+                (SAAS_EXPORT_MODE
                   ? (rendering ? `Exportando… ${renderProgress}%` : `Exportar ${target}`)
                   : rendering
                   ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
-                  : renderEngine === 'desktop' ? `Exportar pacote ${target}` : renderEngine === 'local' ? `Renderizar no servidor ${target}` : `☁ Renderizar ${target}`}
+                  : renderEngine === 'desktop' ? `Exportar pacote ${target}` : renderEngine === 'local' ? `Renderizar no servidor ${target}` : `☁ Renderizar ${target}`)}
               </button>
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>
@@ -7450,7 +7473,7 @@ return (
 
               {!SAAS_EXPORT_MODE && (
                 <>
-                  <button disabled={rendering} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
+                  <button disabled={rendering || mediaProcessingBlocksExport} onClick={() => renderScript('render:all', 'todos')} style={ghostBtnStyle}>
                     Gerar todos
                   </button>
                   <button onClick={openOutFolder} style={ghostBtnStyle}>

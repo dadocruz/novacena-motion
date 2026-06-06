@@ -15,6 +15,8 @@ const SOURCES_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public',
 const MAX_RAW_SIZE = 8 * 1024 * 1024 * 1024; // 8GB
 const CHUNK_SIZE_LIMIT = 64 * 1024 * 1024;
 const PREVIEW_REQUIRED_SIZE = 100 * 1024 * 1024;
+const SERVER_PREVIEW_MAX_SIZE = 120 * 1024 * 1024;
+const SERVER_PREVIEW_MAX_SECONDS = 90;
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
 const VERTICAL_PREVIEW_REQUIRED_SECONDS = 45;
 const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mpg', '.mkv', '.avi', '.3gp', '.3gpp'];
@@ -62,11 +64,11 @@ function runPreviewFfmpeg(input: string, output: string, includeAudio: boolean):
       ...(includeAudio ? ['-map', '0:a:0?'] : []),
       '-sn',
       '-dn',
-      '-vf', 'scale=360:-2,fps=20,format=yuv420p',
+      '-vf', 'scale=540:-2,fps=24,format=yuv420p',
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
-      '-crf', '32',
-      ...(includeAudio ? ['-c:a', 'aac', '-b:a', '96k'] : ['-an']),
+      '-preset', 'veryfast',
+      '-crf', '25',
+      ...(includeAudio ? ['-c:a', 'aac', '-b:a', '128k'] : ['-an']),
       '-movflags', '+faststart',
       '-y', output,
     ];
@@ -400,6 +402,32 @@ export async function POST(req: NextRequest) {
     const publicPath = `/api/uploads/video-sources/${servedFilename}`;
     let previewFilename = servedFilename;
     let previewSize = servedSize;
+
+    const shouldUseBrowserPreview =
+      previewIsRequired &&
+      (fileStat.size > SERVER_PREVIEW_MAX_SIZE || durationSec > SERVER_PREVIEW_MAX_SECONDS);
+
+    if (shouldUseBrowserPreview) {
+      return NextResponse.json({
+        ok: true,
+        sourcePath: publicPath,
+        previewSrc: publicPath,
+        videoSrc: publicPath,
+        filename: servedFilename,
+        previewFilename,
+        size: servedSize,
+        previewSize,
+        type: contentType,
+        previewType: contentType,
+        previewMode: 'local-original',
+        previewFailed: true,
+        previewSkipped: true,
+        requiresOptimization,
+        previewError: 'Preview remoto pulado para concluir o upload sem travar. O navegador usa o arquivo local em qualidade original até o corte.',
+        ...probe,
+      });
+    }
+
     const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
     const previewCandidate = `${previewBaseName}-preview.mp4`;
     const previewPath = path.join(SOURCES_DIR, previewCandidate);

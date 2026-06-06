@@ -16,7 +16,7 @@ const nextConfig = {
   // Inclui assets apenas nas rotas que realmente precisam deles.
   // Evita o Turbopack interpretar que toda rota /api depende do projeto inteiro.
   outputFileTracingIncludes: {
-    '/api/render': [...publicTrace, './data/**/*', './remotion/**/*', './remotion-entry/**/*'],
+    '/api/render': [...publicTrace, './data/**/*', './lib/**/*', './remotion/**/*', './remotion-entry/**/*'],
     '/api/uploads/[...path]': uploadTrace,
     '/api/video/trim': uploadTrace,
     '/api/upload-video/raw': uploadTrace,

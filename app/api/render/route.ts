@@ -8,7 +8,7 @@ import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 
 const execAsync = promisify(exec);
-const APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
+const DEFAULT_APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
 const LAMBDA_POLL_INTERVAL_MS = 5000;
 const LAMBDA_MAX_WAIT_MS = Number(process.env.REMOTION_LAMBDA_MAX_WAIT_MS || 15 * 60 * 1000);
 const LAMBDA_FRAMES_PER_LAMBDA = Number(process.env.REMOTION_LAMBDA_FRAMES_PER_LAMBDA || 999);
@@ -21,13 +21,13 @@ function shQuote(value: string) {
   return JSON.stringify(value);
 }
 
-function toAppAssetUrl(value: string) {
+function toAppAssetUrl(value: string, appOrigin = DEFAULT_APP_ORIGIN) {
   if (!value) return value;
   if (value.startsWith('data:') || value.startsWith('http://') || value.startsWith('https://')) return value;
 
   let fixed = value;
   if (fixed.startsWith('/uploads/')) fixed = fixed.replace('/uploads/', '/api/uploads/');
-  if (fixed.startsWith('/')) return `${APP_ORIGIN}${fixed}`;
+  if (fixed.startsWith('/')) return `${appOrigin}${fixed}`;
 
   return fixed;
 }
@@ -160,6 +160,7 @@ async function pathToDataUrl(urlPath: string): Promise<string | null> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const appOrigin = process.env.NOVACENA_APP_ORIGIN || request.nextUrl.origin || DEFAULT_APP_ORIGIN;
 
     if (body && typeof body === 'object' && 'script' in body) {
       const parsed = ScriptRenderSchema.parse(body);
@@ -203,16 +204,16 @@ export async function POST(request: NextRequest) {
         // Cover é pequena o suficiente para embutir. Isso evita falhas
         // intermitentes da Lambda ao baixar imagem via Traefik/VPS.
         if (renderProps?.coverImage && typeof renderProps.coverImage === 'string' && renderProps.coverImage.startsWith('/')) {
-          renderProps.coverImage = await pathToDataUrl(renderProps.coverImage) || toAppAssetUrl(renderProps.coverImage);
+          renderProps.coverImage = await pathToDataUrl(renderProps.coverImage) || toAppAssetUrl(renderProps.coverImage, appOrigin);
         }
 
         // Audio/Video de fundo → continua HTTP (arquivos grandes)
         const bg = renderProps?.motion?.background;
         if (bg?.audioSrc && typeof bg.audioSrc === 'string' && bg.audioSrc.startsWith('/')) {
-          bg.audioSrc = toAppAssetUrl(bg.audioSrc);
+          bg.audioSrc = toAppAssetUrl(bg.audioSrc, appOrigin);
         }
         if (bg?.videoSrc && typeof bg.videoSrc === 'string' && bg.videoSrc.startsWith('/')) {
-          bg.videoSrc = toAppAssetUrl(bg.videoSrc);
+          bg.videoSrc = toAppAssetUrl(bg.videoSrc, appOrigin);
         }
 
         // Normaliza logos customizados dentro de motion.customLogos.
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest) {
             const val = renderProps.motion.customLogos[key];
 
             if (typeof val === 'string') {
-              renderProps.motion.customLogos[key] = toAppAssetUrl(val);
+              renderProps.motion.customLogos[key] = toAppAssetUrl(val, appOrigin);
             }
           }
         }
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
         if (renderProps?.motion?.overlays && Array.isArray(renderProps.motion.overlays)) {
           renderProps.motion.overlays = renderProps.motion.overlays.map((overlay: any) => {
             if (overlay && typeof overlay.src === 'string') {
-              return { ...overlay, src: toAppAssetUrl(overlay.src) };
+              return { ...overlay, src: toAppAssetUrl(overlay.src, appOrigin) };
             }
             return overlay;
           });
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
           if (obj == null) return obj;
           if (typeof obj === 'string') {
             if (obj.startsWith('/uploads/') || obj.startsWith('/api/uploads/')) {
-              return toAppAssetUrl(obj);
+              return toAppAssetUrl(obj, appOrigin);
             }
             return obj;
           }
@@ -359,7 +360,7 @@ export async function POST(request: NextRequest) {
             composition: comp.id,
             target: comp.target,
             region: lambdaConfig.region,
-            appOrigin: APP_ORIGIN,
+            appOrigin,
             framesPerLambda,
             targetChunks: LAMBDA_TARGET_CHUNKS,
           });
