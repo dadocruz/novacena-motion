@@ -91,18 +91,18 @@ async function probeVideo(filepath: string) {
   };
 }
 
-async function validateTrimmedOutput(outputPath: string, expectedDuration: number, expectedAudio: boolean) {
+async function validateTrimmedOutput(outputPath: string, expectedDuration: number, requireAudio: boolean) {
   const outputStat = await stat(outputPath);
   const outputProbe = await probeVideo(outputPath).catch(() => null);
   const outputDuration = Number(outputProbe?.durationSec || 0);
-  const durationOk = outputDuration >= Math.max(0.5, expectedDuration * 0.75);
-  const audioOk = !expectedAudio || Boolean(outputProbe?.hasAudio);
-  if (outputStat.size < 128 * 1024 || !outputProbe?.hasVideo || !durationOk || !audioOk) {
+  const durationOk = outputDuration >= Math.max(0.5, expectedDuration * 0.7);
+  const audioOk = !requireAudio || Boolean(outputProbe?.hasAudio);
+  if (outputStat.size < 64 * 1024 || !outputProbe?.hasVideo || !durationOk || !audioOk) {
     throw new Error(
-      `Corte gerou arquivo inválido (${(outputStat.size / 1024 / 1024).toFixed(2)} MB, ${outputDuration.toFixed(1)}s${expectedAudio && !outputProbe?.hasAudio ? ', sem áudio' : ''}).`
+      `Corte gerou arquivo inválido (${(outputStat.size / 1024 / 1024).toFixed(2)} MB, ${outputDuration.toFixed(1)}s${requireAudio && !outputProbe?.hasAudio ? ', sem áudio' : ''}).`
     );
   }
-  return { outputStat, outputDuration };
+  return { outputStat, outputDuration, hasAudio: Boolean(outputProbe?.hasAudio) };
 }
 
 function sourcePathToFile(sourcePath: string) {
@@ -127,35 +127,68 @@ function safeOutputBase(name: string) {
   return base.replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 42) || 'clip';
 }
 
-function trimArgs(filePath: string, outputPath: string, startSec: number, durationSec: number, vf: string, accurateSeek: boolean) {
+type TrimSeekMode = 'fast' | 'near';
+type TrimAudioMode = 'aac' | 'none';
+
+function formatSeconds(value: number) {
+  return Math.max(0, value).toFixed(3).replace(/\.?0+$/, '');
+}
+
+function briefError(error: unknown) {
+  return (error instanceof Error ? error.message : String(error))
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 650);
+}
+
+function trimArgs(
+  filePath: string,
+  outputPath: string,
+  startSec: number,
+  durationSec: number,
+  vf: string,
+  seekMode: TrimSeekMode,
+  audioMode: TrimAudioMode
+) {
+  const preSeek = seekMode === 'near' ? Math.max(0, startSec - 3) : startSec;
+  const postSeek = seekMode === 'near' ? Math.max(0, startSec - preSeek) : 0;
   const inputArgs = [
+    '-hide_banner',
+    '-v', 'error',
     '-fflags', '+genpts+discardcorrupt',
     '-err_detect', 'ignore_err',
-    '-analyzeduration', '100M',
-    '-probesize', '100M',
+    '-analyzeduration', '50M',
+    '-probesize', '50M',
     '-ignore_unknown',
     '-i', filePath,
   ];
+  const audioArgs =
+    audioMode === 'none'
+      ? ['-an']
+      : ['-c:a', 'aac', '-b:a', '160k', '-af', 'aresample=async=1:first_pts=0', '-shortest'];
 
   return [
+    '-nostdin',
     '-y',
-    ...(accurateSeek ? [] : ['-ss', String(startSec)]),
+    ...(preSeek > 0 ? ['-ss', formatSeconds(preSeek)] : []),
     ...inputArgs,
-    ...(accurateSeek ? ['-ss', String(startSec)] : []),
-    '-t', String(durationSec),
+    ...(postSeek > 0 ? ['-ss', formatSeconds(postSeek)] : []),
+    '-t', formatSeconds(durationSec),
     '-map', '0:v:0',
-    '-map', '0:a:0?',
+    ...(audioMode !== 'none' ? ['-map', '0:a:0?'] : []),
     '-sn',
     '-dn',
+    '-map_metadata', '-1',
+    '-map_chapters', '-1',
     '-vf', vf,
     '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '20',
-    '-c:a', 'aac',
-    '-b:a', '192k',
+    '-preset', 'ultrafast',
+    '-crf', '22',
+    '-pix_fmt', 'yuv420p',
+    ...audioArgs,
     '-movflags', '+faststart',
     '-avoid_negative_ts', 'make_zero',
-    '-max_muxing_queue_size', '1024',
+    '-max_muxing_queue_size', '2048',
     outputPath,
   ];
 }
@@ -166,16 +199,42 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = TrimSchema.parse(body);
-    const { filename, filePath } = sourcePathToFile(parsed.sourcePath);
+    let sourceInfo: ReturnType<typeof sourcePathToFile>;
+    try {
+      sourceInfo = sourcePathToFile(parsed.sourcePath);
+    } catch (sourceError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: 'O bruto precisa estar salvo no servidor para cortar. Reenvie o vídeo e clique em Cortar/otimizar de novo.',
+          detail: briefError(sourceError),
+          canRetryWithReupload: true,
+        },
+        { status: 400 }
+      );
+    }
 
-    await stat(filePath);
+    const { filename, filePath } = sourceInfo;
+
+    await stat(filePath).catch(() => {
+      throw new Error('O bruto desse vídeo não está mais no servidor. Reenvie o vídeo e clique em Cortar/otimizar de novo.');
+    });
     const sourceProbe = await probeVideo(filePath);
     const videosDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ...VIDEO_PARTS);
     await mkdir(videosDir, { recursive: true });
 
     const width = 1080;
     const height = parsed.target === 'feed' ? 1350 : 1920;
-    const outputName = `${Date.now()}-${safeOutputBase(filename)}-${parsed.target}-${Math.round(parsed.durationSec)}s.mp4`;
+    const sourceDuration = Number(sourceProbe.durationSec || 0);
+    const safeStartSec =
+      sourceDuration > parsed.durationSec
+        ? Math.min(parsed.startSec, Math.max(0, sourceDuration - parsed.durationSec))
+        : Math.max(0, Math.min(parsed.startSec, sourceDuration || parsed.startSec));
+    const safeDurationSec =
+      sourceDuration > 0
+        ? Math.max(0.5, Math.min(parsed.durationSec, Math.max(0.5, sourceDuration - safeStartSec)))
+        : parsed.durationSec;
+    const outputName = `${Date.now()}-${safeOutputBase(filename)}-${parsed.target}-${Math.round(safeDurationSec)}s.mp4`;
     const outputPath = path.join(/*turbopackIgnore: true*/ process.cwd(), ...VIDEO_PARTS, outputName);
 
     const vf = [
@@ -186,21 +245,37 @@ export async function POST(req: NextRequest) {
       'format=yuv420p',
     ].join(',');
 
-    let validation: Awaited<ReturnType<typeof validateTrimmedOutput>>;
-    try {
-      await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, false));
-      validation = await validateTrimmedOutput(outputPath, parsed.durationSec, sourceProbe.hasAudio);
-    } catch (fastError) {
+    const audioModes: TrimAudioMode[] = sourceProbe.hasAudio ? ['aac'] : [];
+    const attempts = [
+      ...audioModes.map((audioMode) => ({ label: `rápido ${audioMode}`, seekMode: 'fast' as const, audioMode })),
+      ...audioModes.map((audioMode) => ({ label: `preciso curto ${audioMode}`, seekMode: 'near' as const, audioMode })),
+      { label: 'rápido sem áudio', seekMode: 'fast' as const, audioMode: 'none' as const },
+      { label: 'preciso curto sem áudio', seekMode: 'near' as const, audioMode: 'none' as const },
+    ];
+
+    let validation: Awaited<ReturnType<typeof validateTrimmedOutput>> | null = null;
+    let usedAttempt = '';
+    const attemptErrors: string[] = [];
+    for (const attempt of attempts) {
       await unlink(outputPath).catch(() => {});
       try {
-        await run(FFMPEG_BIN, trimArgs(filePath, outputPath, parsed.startSec, parsed.durationSec, vf, true));
-        validation = await validateTrimmedOutput(outputPath, parsed.durationSec, sourceProbe.hasAudio);
-      } catch (accurateError) {
-        await unlink(outputPath).catch(() => {});
-        const firstMessage = fastError instanceof Error ? fastError.message : String(fastError);
-        const secondMessage = accurateError instanceof Error ? accurateError.message : String(accurateError);
-        throw new Error(`Nao consegui gerar um clipe valido desse bruto. Corte rapido: ${firstMessage} | Corte preciso: ${secondMessage}`);
+        await run(
+          FFMPEG_BIN,
+          trimArgs(filePath, outputPath, safeStartSec, safeDurationSec, vf, attempt.seekMode, attempt.audioMode)
+        );
+        validation = await validateTrimmedOutput(outputPath, safeDurationSec, sourceProbe.hasAudio && attempt.audioMode !== 'none');
+        usedAttempt = attempt.label;
+        break;
+      } catch (attemptError) {
+        attemptErrors.push(`${attempt.label}: ${briefError(attemptError)}`);
       }
+    }
+
+    if (!validation) {
+      await unlink(outputPath).catch(() => {});
+      throw new Error(
+        `Não consegui gerar um clipe válido desse bruto. Tentativas: ${attemptErrors.slice(0, 4).join(' | ')}`
+      );
     }
 
     if (parsed.deleteSource) {
@@ -221,11 +296,15 @@ export async function POST(req: NextRequest) {
       ok: true,
       videoSrc: `/api/uploads/videos/${outputName}`,
       filename: outputName,
-      durationSec: validation.outputDuration || parsed.durationSec,
+      durationSec: validation.outputDuration || safeDurationSec,
+      trimStartSec: safeStartSec,
       width,
       height,
       size: validation.outputStat.size,
-      hasAudio: sourceProbe.hasAudio,
+      hasAudio: validation.hasAudio,
+      sourceHasAudio: sourceProbe.hasAudio,
+      audioWarning: sourceProbe.hasAudio && !validation.hasAudio ? 'O vídeo de origem tinha áudio, mas o trecho otimizado saiu sem áudio detectável.' : '',
+      trimMode: usedAttempt,
       deletedSource: parsed.deleteSource,
     });
   } catch (error) {
@@ -234,6 +313,10 @@ export async function POST(req: NextRequest) {
     }
 
     const message = error instanceof Error ? error.message : 'Erro ao cortar vídeo.';
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const sourceMissing = /não está mais no servidor|bruto.*servidor|reenvie/i.test(message);
+    return NextResponse.json(
+      { ok: false, error: message, canRetryWithReupload: sourceMissing },
+      { status: sourceMissing ? 404 : 500 }
+    );
   }
 }

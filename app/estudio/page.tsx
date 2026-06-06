@@ -215,6 +215,22 @@ type SharedBackgroundVideoPatch = {
   useVideoAudio: boolean;
 };
 
+type TrimVideoResponse = {
+  ok?: boolean;
+  videoSrc?: string;
+  durationSec?: number;
+  trimStartSec?: number;
+  width?: number;
+  height?: number;
+  size?: number;
+  hasAudio?: boolean;
+  sourceHasAudio?: boolean;
+  audioWarning?: string;
+  error?: string;
+  detail?: string;
+  canRetryWithReupload?: boolean;
+};
+
 type SharedAudioPatch = {
   audioSrc: string;
   audioDuration: number;
@@ -682,6 +698,8 @@ export default function Home() {
   const [bgVideoLocalAsset, setBgVideoLocalAsset] = useState<LocalAssetRef | null>(
     (factoryBackground.localAsset as LocalAssetRef | undefined) ?? null
   );
+  const localBackgroundFilesRef = useRef<Record<string, File>>({});
+  const lastVideoClipErrorRef = useRef('');
   const [activeTab, setActiveTab] = useState<'studio' | 'gallery'>('studio');
   const [studioMode, setStudioMode] = useState<StudioMode>('simple');
   const [typoSubTab, setTypoSubTab] = React.useState<'char'|'layout'>('char');
@@ -3212,6 +3230,7 @@ export default function Home() {
         previewMode: d.previewMode,
         requiresOptimization: shouldOptimizeFullLength,
       };
+      localBackgroundFilesRef.current[uploadedAsset.id] = file;
       const videoPatch: SharedBackgroundVideoPatch = {
         bgVideo: previewSrc,
         bgVideoStartSec: 0,
@@ -3269,67 +3288,202 @@ export default function Home() {
     setVideoUploadMsg('Vídeo inteiro aplicado como fundo. Ajuste opacidade, blur e saturação abaixo.');
   }
 
+  function trimFailureMessage(data: TrimVideoResponse | null | undefined) {
+    const base = data?.error || 'Não consegui otimizar esse trecho do vídeo.';
+    const detail = data?.detail ? ` (${String(data.detail).slice(0, 180)})` : '';
+    return `${base}${detail}`;
+  }
+
+  function shouldRetryTrimWithReupload(data: TrimVideoResponse | null | undefined) {
+    const message = `${data?.error || ''} ${data?.detail || ''}`;
+    return Boolean(data?.canRetryWithReupload) || /bruto|sourcePath|servidor|reenvie|não está mais/i.test(message);
+  }
+
+  async function requestBackgroundVideoTrim(asset: LocalAssetRef | null, clipDuration: number): Promise<TrimVideoResponse> {
+    const sourcePath = asset?.sourcePath || bgVideo;
+    const cleanupPreviewPath = asset?.serverPreviewSrc || '';
+    const previewPath = cleanupPreviewPath.startsWith('/api/uploads/video-sources/') ? cleanupPreviewPath : '';
+    const response = await fetch('/api/video/trim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourcePath,
+        previewPath: previewPath && previewPath !== sourcePath ? previewPath : undefined,
+        startSec: bgVideoStartSec,
+        durationSec: clipDuration,
+        target,
+        deleteSource: true,
+      }),
+    });
+    const data = await response.json().catch(() => ({
+      ok: false,
+      error: `Resposta inválida do servidor de corte (HTTP ${response.status}).`,
+    }));
+    if (!response.ok) {
+      return {
+        ...(data || {}),
+        ok: false,
+        canRetryWithReupload: Boolean(data?.canRetryWithReupload) || response.status === 400 || response.status === 404,
+      };
+    }
+    return data;
+  }
+
+  async function reuploadBackgroundSourceForTrim(currentAsset: LocalAssetRef | null): Promise<LocalAssetRef | null> {
+    const cachedFile = currentAsset?.id ? localBackgroundFilesRef.current[currentAsset.id] : null;
+    let uploadFile: File | null = cachedFile || null;
+
+    if (!uploadFile && bgVideo.startsWith('blob:')) {
+      try {
+        const blob = await fetch(bgVideo).then((response) => response.blob());
+        uploadFile = new File(
+          [blob],
+          currentAsset?.name || bgVideoOriginalName || 'video.mp4',
+          {
+            type: blob.type || currentAsset?.type || 'video/mp4',
+            lastModified: currentAsset?.lastModified || Date.now(),
+          }
+        );
+      } catch {
+        uploadFile = null;
+      }
+    }
+
+    if (!uploadFile) {
+      const message = 'O bruto não está mais no servidor e esta aba não tem o arquivo local. Reenvie o vídeo e clique em Cortar/otimizar de novo.';
+      lastVideoClipErrorRef.current = message;
+      setVideoUploadMsg(message);
+      return null;
+    }
+
+    setUploadingVideo(true);
+    setVideoUploadProgress(0);
+    setVideoUploadMsg('Reenviando o bruto para conseguir cortar o trecho...');
+
+    try {
+      const data = await uploadRawVideoWithProgress(uploadFile);
+      if (!data?.ok) {
+        throw new Error(data?.error || 'Falha ao reenviar o bruto.');
+      }
+
+      const sourcePath = data.sourcePath || data.videoSrc;
+      const serverPreviewSrc = data.previewSrc || data.videoSrc || sourcePath;
+      const previewSrc =
+        data.previewFailed
+          ? (bgVideo.startsWith('blob:') ? bgVideo : URL.createObjectURL(uploadFile))
+          : serverPreviewSrc;
+      const id = currentAsset?.id || `local-bg-${uploadFile.size}-${uploadFile.lastModified}`;
+      const refreshedAsset: LocalAssetRef = {
+        id,
+        kind: 'backgroundVideo',
+        name: currentAsset?.name || uploadFile.name,
+        size: uploadFile.size || currentAsset?.size || 0,
+        type: uploadFile.type || currentAsset?.type || 'video/mp4',
+        durationSec: Number(data.durationSec) || currentAsset?.durationSec || bgVideoDuration || 0,
+        width: Number(data.width) || currentAsset?.width,
+        height: Number(data.height) || currentAsset?.height,
+        lastModified: uploadFile.lastModified || currentAsset?.lastModified,
+        trimStartSec: currentAsset?.trimStartSec,
+        trimDurationSec: currentAsset?.trimDurationSec,
+        sourcePath,
+        previewSrc,
+        serverPreviewSrc,
+        previewMode: data.previewMode,
+        requiresOptimization: true,
+      };
+      localBackgroundFilesRef.current[id] = uploadFile;
+
+      const refreshedPatch: SharedBackgroundVideoPatch = {
+        bgVideo: previewSrc || bgVideo,
+        bgVideoStartSec,
+        bgVideoDuration: refreshedAsset.durationSec || bgVideoDuration,
+        bgVideoNeedsTrim: true,
+        bgVideoOriginalName: bgVideoOriginalName || uploadFile.name,
+        bgVideoLocalAsset: refreshedAsset,
+        bgVideoOpacity,
+        bgVideoBlur,
+        bgVideoSaturation,
+        useVideoAudio,
+      };
+      applyBackgroundVideoPatchToState(refreshedPatch);
+      shareBackgroundVideoWithTemplates(refreshedPatch);
+      return refreshedAsset;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'falha desconhecida';
+      lastVideoClipErrorRef.current = message;
+      setVideoUploadMsg(`Erro ao reenviar o bruto: ${message}`);
+      return null;
+    } finally {
+      setUploadingVideo(false);
+      setVideoUploadProgress(null);
+    }
+  }
+
   async function processBgVideoClip(): Promise<SharedBackgroundVideoPatch | null> {
     if (!bgVideo || !bgVideoNeedsTrim) return null;
 
     const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
     setProcessingVideoClip(true);
-    setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}…`);
+    lastVideoClipErrorRef.current = '';
+    setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}...`);
 
     try {
-      const sourcePath = bgVideoLocalAsset?.sourcePath || bgVideo;
-      const cleanupPreviewPath = bgVideoLocalAsset?.serverPreviewSrc || '';
-      const previewPath = cleanupPreviewPath.startsWith('/api/uploads/') ? cleanupPreviewPath : '';
-      const r = await fetch('/api/video/trim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sourcePath,
-          previewPath: previewPath !== sourcePath ? previewPath : undefined,
-          startSec: bgVideoStartSec,
-          durationSec: clipDuration,
-          target,
-          deleteSource: true,
-        }),
-      });
-      const d = await r.json();
+      let assetForTrim = bgVideoLocalAsset;
+      let data = await requestBackgroundVideoTrim(assetForTrim, clipDuration);
 
-      if (!d.ok) {
-        setVideoUploadMsg(`Erro: ${d.error}`);
+      if (!data.ok && shouldRetryTrimWithReupload(data)) {
+        const refreshedAsset = await reuploadBackgroundSourceForTrim(assetForTrim);
+        if (refreshedAsset) {
+          assetForTrim = refreshedAsset;
+          setVideoUploadMsg('Bruto reenviado. Cortando o trecho otimizado agora...');
+          data = await requestBackgroundVideoTrim(refreshedAsset, clipDuration);
+        }
+      }
+
+      if (!data.ok || !data.videoSrc) {
+        const message = trimFailureMessage(data);
+        lastVideoClipErrorRef.current = message;
+        setVideoUploadMsg(`Erro: ${message}`);
         return null;
       }
 
-      const trimStartSec = bgVideoStartSec;
-      const optimizedAsset = bgVideoLocalAsset ? {
-        ...bgVideoLocalAsset,
+      const trimStartSec = data.trimStartSec ?? bgVideoStartSec;
+      const sourceAsset = assetForTrim ?? bgVideoLocalAsset;
+      const optimizedAsset = sourceAsset ? {
+        ...sourceAsset,
         trimStartSec,
-        trimDurationSec: d.durationSec ?? clipDuration,
-        renderReadySrc: d.videoSrc,
+        trimDurationSec: data.durationSec ?? clipDuration,
+        renderReadySrc: data.videoSrc,
         sourcePath: undefined,
-        previewSrc: d.videoSrc,
-        serverPreviewSrc: d.videoSrc,
+        previewSrc: data.videoSrc,
+        serverPreviewSrc: data.videoSrc,
         requiresOptimization: false,
       } : null;
       const optimizedPatch: SharedBackgroundVideoPatch = {
-        bgVideo: d.videoSrc,
+        bgVideo: data.videoSrc,
         bgVideoStartSec: 0,
-        bgVideoDuration: d.durationSec ?? clipDuration,
+        bgVideoDuration: data.durationSec ?? clipDuration,
         bgVideoNeedsTrim: false,
         bgVideoOriginalName: '',
         bgVideoLocalAsset: optimizedAsset,
         bgVideoOpacity,
         bgVideoBlur,
         bgVideoSaturation,
-        useVideoAudio,
+        useVideoAudio: data.hasAudio === false ? false : useVideoAudio,
       };
       applyBackgroundVideoPatchToState(optimizedPatch);
       shareBackgroundVideoWithTemplates(optimizedPatch);
+      const sizeLabel = data.size ? `${(data.size / 1024 / 1024).toFixed(1)} MB` : 'arquivo leve';
+      const audioMessage =
+        data.audioWarning ||
+        (data.sourceHasAudio && data.hasAudio === false ? 'Atenção: o trecho otimizado saiu sem áudio detectável.' : '');
       setVideoUploadMsg(
-        `Trecho otimizado pronto (${(d.size / 1024 / 1024).toFixed(1)} MB). O bruto foi descartado.`
+        `Trecho otimizado pronto (${sizeLabel}). O bruto foi descartado.${audioMessage ? ` ${audioMessage}` : ''}`
       );
       return optimizedPatch;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha desconhecida';
+      lastVideoClipErrorRef.current = message;
       setVideoUploadMsg(`Erro: ${message}`);
       return null;
     } finally {
@@ -5536,7 +5690,11 @@ export default function Home() {
 
     if (!optimizedPatch) {
       setRenderStatus('error');
-      setRenderMessage('Não consegui otimizar o vídeo. Confira o trecho e tente novamente.');
+      setRenderMessage(
+        lastVideoClipErrorRef.current
+          ? `Não consegui otimizar o vídeo: ${lastVideoClipErrorRef.current}`
+          : 'Não consegui otimizar o vídeo. Confira o trecho e tente novamente.'
+      );
       return false;
     }
 
