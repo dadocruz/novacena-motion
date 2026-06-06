@@ -36,6 +36,11 @@ export const TEMPLATE_INFO: Record<TemplateId, { label: string; description: str
     description: 'Promoção genérica',
     emoji: '🎵',
   },
+  listen_deezer: {
+    label: 'Ouça na Deezer',
+    description: 'Promoção focada na Deezer',
+    emoji: '🎧',
+  },
   spotify_print: {
     label: 'Spotify Print',
     description: 'Print do Spotify dentro de um celular',
@@ -49,7 +54,7 @@ export interface TemplateSelectorProps {
 
 export const TemplateSelector: React.FC<TemplateSelectorProps> = ({ className = '' }) => {
   const { selectedTemplate, setSelectedTemplate } = useEditorStore();
-  const templateIds: TemplateId[] = ['available_now', 'watch_youtube', 'milestone', 'out_now'];
+  const templateIds: TemplateId[] = ['available_now', 'watch_youtube', 'milestone', 'out_now', 'listen_deezer'];
 
   return (
     <div className={`space-y-2 ${className}`}>

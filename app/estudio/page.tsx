@@ -226,6 +226,10 @@ type SharedAudioPatch = {
   useVideoAudio: boolean;
 };
 
+type SharedCoverPatch = {
+  coverImage: string;
+};
+
 type SaasUserSummary = {
   email: string;
   name: string;
@@ -274,6 +278,51 @@ const ROUND_WHITE_PLATFORM_LOGOS: Partial<Record<PlatformName, string>> = {
   Tidal: '/logos/platforms/round-white/TIDAL.png',
 };
 
+const PHONE_PRINT_COVER_TEMPLATES = new Set<TemplateId>(['spotify_print']);
+
+const TEMPLATE_PLATFORM_GROUPS: Array<{
+  id: string;
+  label: string;
+  description: string;
+  logoSrc?: string;
+  fallbackLogo?: string;
+  accent: string;
+  templates: TemplateId[];
+}> = [
+  {
+    id: 'release',
+    label: 'Lançamento',
+    description: 'Pré-save e disponível',
+    fallbackLogo: 'L',
+    accent: '#ff9244',
+    templates: ['available_now', 'out_now'],
+  },
+  {
+    id: 'youtube',
+    label: 'YouTube',
+    description: 'Vídeo, inscrição e views',
+    logoSrc: '/logos/platforms/round-white/YOUTUBE.png',
+    accent: '#ff3158',
+    templates: ['watch_youtube', 'youtube_subscribe', 'youtube_views'],
+  },
+  {
+    id: 'spotify',
+    label: 'Spotify',
+    description: 'Plays e ouvintes mensais',
+    logoSrc: '/logos/platforms/round-white/SPOTIFY.png',
+    accent: '#1ed760',
+    templates: ['milestone', 'spotify_print'],
+  },
+  {
+    id: 'deezer',
+    label: 'Deezer',
+    description: 'Arte dedicada Deezer',
+    logoSrc: '/logos/platforms/round-white/DEEZER.png',
+    accent: '#00c2ff',
+    templates: ['listen_deezer'],
+  },
+];
+
 function isFactoryPlatformLogoPath(src?: string) {
   return typeof src === 'string' && src.startsWith('/logos/platforms/');
 }
@@ -315,6 +364,10 @@ const TEXT_ROLE_LABELS_BY_TEMPLATE: Partial<Record<TemplateId, Partial<Record<Fo
     headline: 'Headline',
     cta2: 'CTA plataformas',
   },
+  listen_deezer: {
+    headline: 'Headline',
+    cta2: 'CTA Deezer',
+  },
   spotify_print: {
     date: 'Texto acima',
     headline: 'Numero',
@@ -328,6 +381,7 @@ const VISIBLE_TEXT_ROLES_BY_TEMPLATE: Partial<Record<TemplateId, EditorTextTrans
   youtube_views: ['date', 'headline', 'cta1', 'cta2'],
   milestone: ['date', 'headline', 'cta1'],
   out_now: ['headline', 'cta2'],
+  listen_deezer: ['headline', 'cta2'],
   spotify_print: ['date', 'headline', 'cta1'],
 };
 
@@ -1286,6 +1340,10 @@ export default function Home() {
   const templateConfigsRef = useRef<Partial<Record<TemplateId, EditorHistorySnapshot>>>({});
   const sharedBackgroundVideoRef = useRef<SharedBackgroundVideoPatch | null>(null);
   const sharedAudioRef = useRef<SharedAudioPatch | null>(null);
+  const sharedSquareCoverRef = useRef<SharedCoverPatch | null>(
+    factoryAvailableNow.coverImage ? { coverImage: factoryAvailableNow.coverImage } : null
+  );
+  const sharedPhonePrintCoverRef = useRef<SharedCoverPatch | null>(null);
 
   function switchTemplate(nextId: TemplateId) {
     if (nextId === template) return;
@@ -1421,6 +1479,12 @@ export default function Home() {
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
 
+    const sharedCoverPatch = coverPatchForTemplate(tid);
+    if (sharedCoverPatch) {
+      applyCoverPatchToState(sharedCoverPatch);
+    } else {
+      setCoverImage(next.coverImage ?? '');
+    }
     if (sharedBackgroundVideoRef.current) {
       applyBackgroundVideoPatchToState(sharedBackgroundVideoRef.current);
     }
@@ -1457,9 +1521,24 @@ export default function Home() {
     };
   }
 
-  function patchSavedTemplateSnapshots(patch: EditorHistorySnapshot) {
+  function coverSnapshotPatch(patch: SharedCoverPatch): EditorHistorySnapshot {
+    return {
+      coverImage: patch.coverImage,
+    };
+  }
+
+  function usesPhonePrintCover(tid: TemplateId) {
+    return PHONE_PRINT_COVER_TEMPLATES.has(tid);
+  }
+
+  function coverPatchForTemplate(tid: TemplateId) {
+    return usesPhonePrintCover(tid) ? sharedPhonePrintCoverRef.current : sharedSquareCoverRef.current;
+  }
+
+  function patchSavedTemplateSnapshots(patch: EditorHistorySnapshot, shouldPatch?: (templateId: TemplateId) => boolean) {
     for (const templateId of templateOrder) {
       if (templateId === template) continue;
+      if (shouldPatch && !shouldPatch(templateId)) continue;
       const saved = templateConfigsRef.current[templateId];
       if (!saved) continue;
       templateConfigsRef.current[templateId] = cloneHistoryValue({
@@ -1467,6 +1546,41 @@ export default function Home() {
         ...patch,
       });
     }
+  }
+
+  function applyCoverPatchToState(patch: SharedCoverPatch) {
+    setCoverImage(patch.coverImage);
+  }
+
+  function shareCoverWithTemplates(coverSrc: string) {
+    const cleanPatch = cloneHistoryValue({ coverImage: coverSrc });
+    if (usesPhonePrintCover(template)) {
+      sharedPhonePrintCoverRef.current = cleanPatch;
+      patchSavedTemplateSnapshots(coverSnapshotPatch(cleanPatch), usesPhonePrintCover);
+      return;
+    }
+
+    sharedSquareCoverRef.current = cleanPatch;
+    patchSavedTemplateSnapshots(coverSnapshotPatch(cleanPatch), (templateId) => !usesPhonePrintCover(templateId));
+  }
+
+  function applyCoverForCurrentTemplate(coverSrc: string) {
+    setCoverImage(coverSrc);
+    shareCoverWithTemplates(coverSrc);
+    setSaveMessage(
+      usesPhonePrintCover(template)
+        ? 'Print do celular aplicado neste template.'
+        : 'Capa aplicada aos templates compatíveis.'
+    );
+  }
+
+  function removeCoverFromCurrentTemplate() {
+    setCoverImage('');
+    setSaveMessage(
+      usesPhonePrintCover(template)
+        ? 'Print removido somente deste template.'
+        : 'Capa removida somente deste template.'
+    );
   }
 
   function applyBackgroundVideoPatchToState(patch: SharedBackgroundVideoPatch) {
@@ -2274,6 +2388,14 @@ export default function Home() {
   }, [playerRemountKey, isClientReady]);
 
   const Component = componentByTemplate[template];
+  const activeTemplateGroup = TEMPLATE_PLATFORM_GROUPS.find((group) => group.templates.includes(template)) ?? TEMPLATE_PLATFORM_GROUPS[0];
+  const phonePrintCoverTemplate = usesPhonePrintCover(template);
+  const coverSectionTitle = phonePrintCoverTemplate ? 'Print do Spotify' : 'Capa principal';
+  const coverUploadTitle = phonePrintCoverTemplate ? 'Trocar print do celular' : 'Trocar capa';
+  const coverUploadHint = phonePrintCoverTemplate ? 'PNG/JPG vertical do Spotify' : 'PNG/JPG quadrado';
+  const coverSharingHint = phonePrintCoverTemplate
+    ? 'Este slot fica separado da capa 1x1.'
+    : 'A capa entra nos templates compatíveis.';
 
   const compositionHeight = target === 'story' ? 1920 : 1350;
   const shouldUseFocusedPreviewLoop = Boolean(editPreviewLoop) && activeStudioTool !== 'overlay' && !selectedOverlayId;
@@ -4148,7 +4270,7 @@ export default function Home() {
 
       // ─── Template ────────────────────────────────────────
       const newTemplate = full.template ?? plan.templateId;
-      if (newTemplate && ['available_now','watch_youtube','youtube_subscribe','youtube_views','milestone','out_now','spotify_print'].includes(newTemplate)) {
+      if (newTemplate && templateOrder.includes(newTemplate as TemplateId)) {
         switchTemplate(newTemplate as TemplateId);
       }
 
@@ -4632,7 +4754,7 @@ export default function Home() {
         return cta2;
       }
 
-      if (template === 'out_now') {
+      if (template === 'out_now' || template === 'listen_deezer') {
         if (role === 'headline') return headline;
         if (role === 'cta2') return cta2;
         if (role === 'cta' || role === 'cta1') return cta;
@@ -4806,11 +4928,11 @@ export default function Home() {
       ];
     }
 
-    if (template === 'out_now') {
+    if (template === 'out_now' || template === 'listen_deezer') {
       return [
-        { id: 'outnow-title', kind: 'text', role: 'headline', label: 'Headline', rect: measuredRect('outnow-title', roleRect(6, 11, 88, 18, 'headline')) },
+        { id: 'outnow-title', kind: 'text', role: 'headline', label: template === 'listen_deezer' ? 'Headline Deezer' : 'Headline', rect: measuredRect('outnow-title', roleRect(6, 11, 88, 18, 'headline')) },
         { id: 'cover', kind: 'cover', label: 'Capa', rect: measuredRect('cover', mediaRect(50, 48, coverPct, coverHeightPct, coverX, coverY)) },
-        { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: 'CTA de plataformas', rect: measuredRect('outnow-cta', roleRect(10, 72, 80, 8, 'cta2')) },
+        { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: template === 'listen_deezer' ? 'CTA Deezer' : 'CTA de plataformas', rect: measuredRect('outnow-cta', roleRect(10, 72, 80, 8, 'cta2')) },
         { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', { left: '30%', top: '84%', width: '40%', height: '8%' }) },
         ...elementHotspots,
       ];
@@ -5212,7 +5334,7 @@ export default function Home() {
       return cta2;
     }
 
-    if (template === 'out_now') {
+    if (template === 'out_now' || template === 'listen_deezer') {
       if (role === 'headline') return headline;
       if (role === 'cta' || role === 'cta1') return cta;
       return cta2;
@@ -5239,7 +5361,7 @@ export default function Home() {
       return;
     }
 
-    if (template === 'out_now') {
+    if (template === 'out_now' || template === 'listen_deezer') {
       if (role === 'headline') setHeadline(value);
       else if (role === 'cta2') setCta2(value);
       else if (role === 'cta' || role === 'cta1') setCta(value);
@@ -5754,7 +5876,7 @@ export default function Home() {
     }
 
     const nextTemplate = preset.template ?? preset.type;
-    if (['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'spotify_print'].includes(nextTemplate)) {
+    if (templateOrder.includes(nextTemplate as TemplateId)) {
       switchTemplate(nextTemplate as TemplateId);
     }
 
@@ -6240,19 +6362,87 @@ return (
       {/* ─── SIDEBAR ESQUERDA ─── */}
       <aside style={leftSidebar} data-novacena-left-panel="true">
         <Section title="Template">
-          <div style={gridTwoCols}>
-            {templateOrder.map((id) => (
-              <TemplateButton key={id} active={template === id} onClick={() => switchTemplate(id)}>
-                {templateLabels[id]}
-              </TemplateButton>
-            ))}
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {TEMPLATE_PLATFORM_GROUPS.map((group) => {
+                const active = group.templates.includes(template);
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => switchTemplate(group.templates[0])}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '38px 1fr',
+                      alignItems: 'center',
+                      gap: 9,
+                      minHeight: 64,
+                      padding: 9,
+                      borderRadius: 8,
+                      border: active ? `1px solid ${group.accent}` : '1px solid var(--border-1)',
+                      background: active
+                        ? `linear-gradient(135deg, ${group.accent}28, rgba(255,255,255,0.06))`
+                        : 'var(--surface-1)',
+                      color: active ? 'var(--text-1)' : 'var(--text-2)',
+                      textAlign: 'left',
+                      boxShadow: active ? `0 0 0 1px ${group.accent}22, 0 10px 28px ${group.accent}18` : 'none',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: 8,
+                        display: 'grid',
+                        placeItems: 'center',
+                        background: group.logoSrc
+                          ? 'rgba(255,255,255,0.08)'
+                          : 'linear-gradient(135deg, #b855ff, #ff9244)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {group.logoSrc ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={group.logoSrc} alt="" style={{ width: 26, height: 26, objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontSize: 17, fontWeight: 900, color: '#fff' }}>{group.fallbackLogo}</span>
+                      )}
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 12, fontWeight: 800, lineHeight: 1.15 }}>
+                        {group.label}
+                      </span>
+                      <span style={{ display: 'block', marginTop: 3, fontSize: 10, lineHeight: 1.2, color: 'var(--text-3)' }}>
+                        {group.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div
+              style={{
+                border: '1px solid var(--border-1)',
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.025)',
+                padding: 8,
+              }}
+            >
+              <div style={{ ...miniLabel, marginBottom: 7 }}>{activeTemplateGroup.label}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {activeTemplateGroup.templates.map((id) => (
+                  <TemplateButton key={id} active={template === id} onClick={() => switchTemplate(id)}>
+                    {templateLabels[id]}
+                  </TemplateButton>
+                ))}
+              </div>
+            </div>
           </div>
         </Section>
 
 
 
-
-        <Section title="Capa principal">
+        <Section title={coverSectionTitle}>
           <button
             style={uploadCardStyle}
             onClick={() => fileInputRef.current?.click()}
@@ -6260,14 +6450,33 @@ return (
             <div style={uploadThumbStyle}>
               {coverImage && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={coverImage} alt="capa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={coverImage}
+                  alt="capa"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: phonePrintCoverTemplate ? 'contain' : 'cover',
+                    background: phonePrintCoverTemplate ? '#08080b' : undefined,
+                  }}
+                />
               )}
             </div>
             <div style={{ flex: 1, textAlign: 'left' }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>Trocar capa</div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>PNG/JPG quadrado</div>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{coverUploadTitle}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{coverUploadHint}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 5 }}>{coverSharingHint}</div>
             </div>
           </button>
+          {coverImage && (
+            <button
+              type="button"
+              onClick={removeCoverFromCurrentTemplate}
+              style={{ ...linkBtnDanger, width: '100%', marginTop: 8, justifyContent: 'center' }}
+            >
+              Remover somente deste template
+            </button>
+          )}
           <input
             ref={fileInputRef}
             type="file"
@@ -6291,7 +6500,7 @@ return (
                 return;
               }
 
-              setCoverImage(d.coverSrc);
+              applyCoverForCurrentTemplate(d.coverSrc);
             }}
             style={{ display: 'none' }}
           />
@@ -6324,7 +6533,7 @@ return (
               {photos.slice(0, 12).map((ph) => (
                 <div key={ph.id} style={{ position: 'relative' }}>
                   <button
-                    onClick={() => setCoverImage(ph.path)}
+                    onClick={() => applyCoverForCurrentTemplate(ph.path)}
                     style={{
                       width: '100%',
                       aspectRatio: '1',
@@ -6405,13 +6614,26 @@ return (
                 <Field label="Metrica" value={metricLabel} onChange={setMetricLabel} placeholder="OUVINTES MENSAIS" />
               </div>
             </>
-          ) : template === 'out_now' ? (
+          ) : template === 'out_now' || template === 'listen_deezer' ? (
             <>
               <div style={{ marginBottom: 10, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.45 }}>
-                Arte de disponivel. Use depois que o single ja saiu: sem data e sem "faca o pre-save".
+                {template === 'listen_deezer'
+                  ? 'Arte focada na Deezer. Use capa, video e audio compartilhados dos templates compatíveis.'
+                  : 'Arte de disponivel. Use depois que o single ja saiu: sem data e sem "faca o pre-save".'}
               </div>
-              <Field label="Headline" value={headline} onChange={setHeadline} placeholder="DISPONIVEL ou OUCA AGORA" />
-              <TextAreaField label="CTA de plataformas" value={cta2} onChange={setCta2} placeholder={"EM TODAS AS PLATAFORMAS DIGITAIS"} rows={2} />
+              <Field
+                label="Headline"
+                value={headline}
+                onChange={setHeadline}
+                placeholder={template === 'listen_deezer' ? 'OUÇA NA DEEZER' : 'DISPONIVEL ou OUCA AGORA'}
+              />
+              <TextAreaField
+                label={template === 'listen_deezer' ? 'CTA Deezer' : 'CTA de plataformas'}
+                value={cta2}
+                onChange={setCta2}
+                placeholder={template === 'listen_deezer' ? 'DISPONÍVEL NA DEEZER' : 'EM TODAS AS PLATAFORMAS DIGITAIS'}
+                rows={2}
+              />
             </>
           ) : (
             <>

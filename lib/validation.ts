@@ -11,6 +11,7 @@ export const TemplateIdSchema = z.enum([
   'watch_youtube',
   'milestone',
   'out_now',
+  'listen_deezer',
   'spotify_print',
   'collaborator',
 ]);

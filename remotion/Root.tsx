@@ -142,6 +142,9 @@ const MilestoneWithFonts: React.FC<any> = (props) => (
 const OutNowWithFonts: React.FC<any> = (props) => (
   <FontsInjector><OutNow {...props} /></FontsInjector>
 );
+const ListenDeezerWithFonts: React.FC<any> = (props) => (
+  <FontsInjector><OutNow {...props} /></FontsInjector>
+);
 const SpotifyPrintWithFonts: React.FC<any> = (props) => (
   <FontsInjector><SpotifyPrint {...props} /></FontsInjector>
 );
@@ -153,6 +156,7 @@ const templates = [
   { id: 'YouTubeViews', component: YouTubeViewsWithFonts, project: getProject('youtube_views') },
   { id: 'Milestone', component: MilestoneWithFonts, project: getProject('milestone') },
   { id: 'OutNow', component: OutNowWithFonts, project: getProject('out_now') },
+  { id: 'ListenDeezer', component: ListenDeezerWithFonts, project: getProject('listen_deezer') },
   { id: 'SpotifyPrint', component: SpotifyPrintWithFonts, project: getProject('spotify_print') },
 ] as const;
 

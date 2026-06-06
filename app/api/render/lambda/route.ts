@@ -25,6 +25,8 @@ const COMPOSITION_MAP: Record<string, string> = {
   'milestone:feed': 'MilestoneFeed',
   out_now: 'OutNow',
   'out_now:feed': 'OutNowFeed',
+  listen_deezer: 'ListenDeezer',
+  'listen_deezer:feed': 'ListenDeezerFeed',
   spotify_print: 'SpotifyPrint',
   'spotify_print:feed': 'SpotifyPrintFeed',
 };

@@ -35,6 +35,7 @@ export type TemplateId =
   | 'youtube_views'
   | 'milestone'
   | 'out_now'
+  | 'listen_deezer'
   | 'spotify_print';
 
 export type PlatformName =

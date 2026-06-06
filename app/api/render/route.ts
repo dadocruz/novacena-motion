@@ -50,7 +50,7 @@ export const maxDuration = 900;
 
 const RenderRequestSchema = z.object({
   project: z.object({
-    type: z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'spotify_print', 'collaborator']),
+    type: z.enum(['available_now', 'watch_youtube', 'youtube_subscribe', 'youtube_views', 'milestone', 'out_now', 'listen_deezer', 'spotify_print', 'collaborator']),
     artistName: z.string().min(1),
     songTitle: z.string().min(1),
     formats: z.array(z.enum(['story', 'feed'])),
@@ -68,10 +68,16 @@ const ALLOWED_RENDER_SCRIPTS = new Set([
   'render:available:feed',
   'render:youtube',
   'render:youtube:feed',
+  'render:youtubesubscribe',
+  'render:youtubesubscribe:feed',
+  'render:youtubeviews',
+  'render:youtubeviews:feed',
   'render:milestone',
   'render:milestone:feed',
   'render:outnow',
   'render:outnow:feed',
+  'render:deezer',
+  'render:deezer:feed',
   'render:spotifyprint',
   'render:spotifyprint:feed',
   'render:all',
@@ -181,6 +187,8 @@ export async function POST(request: NextRequest) {
         'render:milestone:feed': { id: 'MilestoneFeed',      out: 'out/milestone-feed.mp4',      target: 'feed'  },
         'render:outnow':         { id: 'OutNow',             out: 'out/out-now-story.mp4',       target: 'story' },
         'render:outnow:feed':    { id: 'OutNowFeed',         out: 'out/out-now-feed.mp4',        target: 'feed'  },
+        'render:deezer':         { id: 'ListenDeezer',       out: 'out/deezer-story.mp4',        target: 'story' },
+        'render:deezer:feed':    { id: 'ListenDeezerFeed',   out: 'out/deezer-feed.mp4',         target: 'feed'  },
         'render:spotifyprint':      { id: 'SpotifyPrint',     out: 'out/spotify-print-story.mp4', target: 'story' },
         'render:spotifyprint:feed': { id: 'SpotifyPrintFeed', out: 'out/spotify-print-feed.mp4',  target: 'feed'  },
       };

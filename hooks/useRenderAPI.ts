@@ -112,7 +112,7 @@ export async function bulkRender(projects: any[]) {
       projects: projects.map(p => ({
         artistName: p.artistName,
         songTitle: p.songTitle,
-        templates: ['available_now', 'out_now'],
+        templates: ['available_now', 'out_now', 'listen_deezer'],
         formats: ['story', 'feed'],
       })),
     }),

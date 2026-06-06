@@ -13,6 +13,8 @@ const renders = [
   ['Milestone Feed', 'MilestoneFeed', 'out/milestone-feed.mp4'],
   ['OutNow Story', 'OutNow', 'out/out-now-story.mp4'],
   ['OutNow Feed', 'OutNowFeed', 'out/out-now-feed.mp4'],
+  ['ListenDeezer Story', 'ListenDeezer', 'out/deezer-story.mp4'],
+  ['ListenDeezer Feed', 'ListenDeezerFeed', 'out/deezer-feed.mp4'],
 ];
 
 for (const [name, composition, output] of renders) {
@@ -20,4 +22,4 @@ for (const [name, composition, output] of renders) {
   execSync(`npx remotion render remotion/index.ts ${composition} ${output}`, { stdio: 'inherit' });
 }
 
-console.log('\n✓ Todos os 8 renders concluídos na pasta out/');
+console.log('\n✓ Todos os renders concluídos na pasta out/');

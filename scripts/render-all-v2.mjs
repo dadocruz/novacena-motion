@@ -2,7 +2,7 @@
 
 /**
  * Parallel Render Script v2 - OTIMIZADO
- * Renderiza todos os 8 templates simultânea (story + feed)
+ * Renderiza todos os templates simultaneamente (story + feed)
  * Com streaming, progresso em tempo real, e cache
  */
 
@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 const OUTPUT_DIR = './out';
-const TEMPLATES = ['AvailableNow', 'WatchOnYouTube', 'Milestone', 'OutNow'];
+const TEMPLATES = ['AvailableNow', 'WatchOnYouTube', 'Milestone', 'OutNow', 'ListenDeezer'];
 
 // Criar diretório de output
 if (!fs.existsSync(OUTPUT_DIR)) {

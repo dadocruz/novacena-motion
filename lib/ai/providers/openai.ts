@@ -75,8 +75,8 @@ ${input.briefing ? `Briefing: ${input.briefing}` : ''}`;
       const formats = input.targetFormats.length > 0 ? input.targetFormats : ['story', 'square'];
 
       const prompt = `Gere plano de motion graphics em JSON com:
-- templateId (available_now | watch_youtube | milestone | out_now | spotify_print)
-- category (spotify_milestone | available_now | pre_save | youtube_watch)
+- templateId (available_now | watch_youtube | milestone | out_now | listen_deezer | spotify_print)
+- category (spotify_milestone | available_now | pre_save | youtube_watch | deezer_listen)
 - formats (${JSON.stringify(formats)})
 - durationSeconds (8-15)
 - assets (use os dados fornecidos)

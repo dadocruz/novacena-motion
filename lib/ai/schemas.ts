@@ -6,6 +6,7 @@ export type NovaCenaTemplateCategory =
   | 'youtube_subscribe'
   | 'available_now'
   | 'pre_save'
+  | 'deezer_listen'
   | 'custom_reference';
 
 export type NovaCenaMood =

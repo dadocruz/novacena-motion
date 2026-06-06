@@ -163,7 +163,7 @@ export function recommendRenderProfile(
   }
 
   // Baseado no template
-  if (project.type === 'available_now' || project.type === 'out_now') {
+  if (project.type === 'available_now' || project.type === 'out_now' || project.type === 'listen_deezer') {
     return RENDER_PROFILES.story;
   }
 

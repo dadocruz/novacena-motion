@@ -25,6 +25,8 @@
     "render:milestone:feed": "remotion render remotion-entry/index.ts MilestoneFeed out/milestone-feed.mp4",
     "render:outnow": "remotion render remotion-entry/index.ts OutNow out/out-now-story.mp4",
     "render:outnow:feed": "remotion render remotion-entry/index.ts OutNowFeed out/out-now-feed.mp4",
+    "render:deezer": "remotion render remotion-entry/index.ts ListenDeezer out/deezer-story.mp4",
+    "render:deezer:feed": "remotion render remotion-entry/index.ts ListenDeezerFeed out/deezer-feed.mp4",
     "render:spotifyprint": "remotion render remotion-entry/index.ts SpotifyPrint out/spotify-print-story.mp4",
     "render:spotifyprint:feed": "remotion render remotion-entry/index.ts SpotifyPrintFeed out/spotify-print-feed.mp4",
     "test": "vitest",

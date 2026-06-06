@@ -26,6 +26,12 @@ export const STUDIO_CATALOG = {
       mandatory_texts: ['headline', 'cta'],
     },
     {
+      id: 'listen_deezer',
+      name: 'Ouça na Deezer',
+      use_case: 'Arte para single ja lançado com foco exclusivo na Deezer.',
+      mandatory_texts: ['headline', 'cta2'],
+    },
+    {
       id: 'watch_youtube',
       name: 'Assista no YouTube',
       use_case: 'Lançamento de clipe oficial',
@@ -150,7 +156,7 @@ Olhe o "vibe" de cada fonte e escolha as que CONVERSAM com o estilo tipográfico
  * Cada campo aplica DIRETO no Studio Remotion.
  */
 export const AI_MOTION_PLAN_SCHEMA = `{
-  "template": "available_now" | "milestone" | "out_now" | "watch_youtube" | "spotify_print",
+  "template": "available_now" | "milestone" | "out_now" | "listen_deezer" | "watch_youtube" | "spotify_print",
   "durationSeconds": 8-15,
   "headline": "string — texto da headline (mantém o do user se vier)",
   "cta": "string — CTA principal",

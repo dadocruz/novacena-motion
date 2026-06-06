@@ -31,7 +31,7 @@ export type ReferenceAnalysis = {
   /** Estrutura de layout (top text / cover / bottom CTA / etc.) */
   layoutStructure: string;
   /** Templates do NovaCena que mais se aproximam */
-  suggestedTemplate: 'available_now' | 'milestone' | 'out_now' | 'watch_youtube' | 'spotify_print';
+  suggestedTemplate: 'available_now' | 'milestone' | 'out_now' | 'listen_deezer' | 'watch_youtube' | 'spotify_print';
   /** Mood detectado */
   mood: string[];
   /** Briefing pronto pra passar pro motion director */
@@ -79,7 +79,7 @@ Analise o frame com olho de designer e retorne SOMENTE JSON válido:
     "string descrevendo motion 3"
   ],
   "layoutStructure": "descrição da estrutura visual (onde fica headline, cover, CTA)",
-  "suggestedTemplate": "available_now" | "milestone" | "out_now" | "watch_youtube" | "spotify_print",
+  "suggestedTemplate": "available_now" | "milestone" | "out_now" | "listen_deezer" | "watch_youtube" | "spotify_print",
   "mood": ["um ou mais de: sertanejo, trap, gospel, pop, indie, rock, funk, eletronica, premium, stage, clean, neon, elegant, romantic, youtube"],
   "motionDirectorBrief": "BRIEFING DETALHADO pronto pra passar pra outro modelo IA gerar um motion plan similar. Mencione: paleta, fontes equivalentes do tipo necessário, transições sugeridas, cover motion, BG style, level de impacto."
 }

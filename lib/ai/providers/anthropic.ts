@@ -124,7 +124,7 @@ ${CORE_DIRECTIVE}
 ═══════════════════════════════════════════════════════════════
 
 A partir da capa + análise visual + briefing, MONTE um motion graphic CINEMATOGRÁFICO completo (não genérico, não agressivo por default — siga a Diretriz Mestre acima) escolhendo:
-- Template apropriado (available_now / milestone / out_now / watch_youtube / spotify_print)
+- Template apropriado (available_now / milestone / out_now / listen_deezer / watch_youtube / spotify_print)
 - 5 fontes diferentes (uma pra cada elemento: headline, date, cta, cta1, cta2)
 - Cover motion que COMBINE com o mood
 - 5 transições de texto diferentes (uma pra cada elemento)

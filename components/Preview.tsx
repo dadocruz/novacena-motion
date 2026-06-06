@@ -45,6 +45,7 @@ const COMPONENTS: Record<TemplateId, React.LazyExoticComponent<any>> = {
   youtube_views: YouTubeViews,
   milestone: Milestone,
   out_now: OutNow,
+  listen_deezer: OutNow,
   spotify_print: SpotifyPrint,
 };
 

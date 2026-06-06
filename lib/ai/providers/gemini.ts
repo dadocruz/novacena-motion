@@ -156,8 +156,8 @@ FORMATOS: ${JSON.stringify(input.targetFormats.length > 0 ? input.targetFormats 
 ${input.briefing ? `BRIEFING: ${input.briefing}` : ''}
 
 Regras:
-- templateId: available_now, watch_youtube, milestone, out_now, ou spotify_print
-- category: spotify_milestone, available_now, pre_save, youtube_watch
+- templateId: available_now, watch_youtube, milestone, out_now, listen_deezer, ou spotify_print
+- category: spotify_milestone, available_now, pre_save, youtube_watch, deezer_listen
 - durationSeconds: entre 8 e 15
 - style.mood: neon, elegant, gospel, youtube, premium, sertanejo, romantic, stage, clean
 - motion.preset: spotify_milestone_neon_bounce, youtube_icons_card_reveal, available_now_slow_elegant, pre_save_platform_orbit, custom_reference_motion

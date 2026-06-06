@@ -22,6 +22,7 @@ export const componentByTemplate = {
   youtube_views: YouTubeViews,
   milestone: Milestone,
   out_now: OutNow,
+  listen_deezer: OutNow,
   spotify_print: SpotifyPrint,
 };
 
@@ -177,6 +178,7 @@ export const TEXT_IN_FRAME_DEFAULTS_BY_TEMPLATE: Record<TemplateId, Record<TextP
   youtube_views: { headline: 30, date: 12, cta1: 64, cta2: 86 },
   milestone: { headline: 78, date: 14, cta1: 106, cta2: 106 },
   out_now: { headline: 14, date: 130, cta1: 88, cta2: 88 },
+  listen_deezer: { headline: 14, date: 130, cta1: 88, cta2: 88 },
   spotify_print: { headline: 78, date: 14, cta1: 106, cta2: 106 },
 };
 
@@ -316,6 +318,7 @@ export function renderScriptFor(template: TemplateId, target: RenderTarget): str
   if (template === 'youtube_subscribe') return `render:youtubesubscribe${suffix}`;
   if (template === 'youtube_views') return `render:youtubeviews${suffix}`;
   if (template === 'milestone') return `render:milestone${suffix}`;
+  if (template === 'listen_deezer') return `render:deezer${suffix}`;
   if (template === 'spotify_print') return `render:spotifyprint${suffix}`;
   return `render:outnow${suffix}`;
 }
