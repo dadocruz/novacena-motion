@@ -121,6 +121,15 @@ function sourcePathToFile(sourcePath: string) {
   return { filename, filePath };
 }
 
+function optionalPreviewPathToFile(previewPath: string) {
+  if (!previewPath) return null;
+  try {
+    return sourcePathToFile(previewPath);
+  } catch {
+    return null;
+  }
+}
+
 function safeOutputBase(name: string) {
   const ext = path.extname(name);
   const base = path.basename(name, ext).replace(/^[0-9]+-/, '');
@@ -193,6 +202,84 @@ function trimArgs(
   ];
 }
 
+type TrimInput = {
+  label: string;
+  filePath: string;
+};
+
+type TrimAttemptResult = Awaited<ReturnType<typeof validateTrimmedOutput>> & {
+  trimStartSec: number;
+  safeDurationSec: number;
+  trimMode: string;
+  inputLabel: string;
+  inputHasAudio: boolean;
+};
+
+async function tryTrimInput(
+  input: TrimInput,
+  outputPath: string,
+  requestedStartSec: number,
+  requestedDurationSec: number,
+  vf: string
+): Promise<{ result: TrimAttemptResult | null; errors: string[] }> {
+  const inputProbe = await probeVideo(input.filePath).catch((error) => ({
+    durationSec: 0,
+    hasVideo: false,
+    hasAudio: false,
+    probeError: briefError(error),
+  }));
+  const inputDuration = Number(inputProbe.durationSec || 0);
+  if (!inputProbe.hasVideo || inputDuration <= 0) {
+    return {
+      result: null,
+      errors: [`${input.label}: arquivo sem vídeo/duração válida (${inputDuration.toFixed(1)}s${'probeError' in inputProbe ? `, ${inputProbe.probeError}` : ''}).`],
+    };
+  }
+
+  const safeStartSec =
+    inputDuration > requestedDurationSec
+      ? Math.min(requestedStartSec, Math.max(0, inputDuration - requestedDurationSec))
+      : Math.max(0, Math.min(requestedStartSec, inputDuration || requestedStartSec));
+  const safeDurationSec =
+    inputDuration > 0
+      ? Math.max(0.5, Math.min(requestedDurationSec, Math.max(0.5, inputDuration - safeStartSec)))
+      : requestedDurationSec;
+  const audioModes: TrimAudioMode[] = inputProbe.hasAudio ? ['aac'] : [];
+  const attempts = [
+    ...audioModes.map((audioMode) => ({ label: `rápido ${audioMode}`, seekMode: 'fast' as const, audioMode })),
+    ...audioModes.map((audioMode) => ({ label: `preciso curto ${audioMode}`, seekMode: 'near' as const, audioMode })),
+    { label: 'rápido sem áudio', seekMode: 'fast' as const, audioMode: 'none' as const },
+    { label: 'preciso curto sem áudio', seekMode: 'near' as const, audioMode: 'none' as const },
+  ];
+
+  const errors: string[] = [];
+  for (const attempt of attempts) {
+    await unlink(outputPath).catch(() => {});
+    try {
+      await run(
+        FFMPEG_BIN,
+        trimArgs(input.filePath, outputPath, safeStartSec, safeDurationSec, vf, attempt.seekMode, attempt.audioMode)
+      );
+      const validation = await validateTrimmedOutput(outputPath, safeDurationSec, inputProbe.hasAudio && attempt.audioMode !== 'none');
+      return {
+        result: {
+          ...validation,
+          trimStartSec: safeStartSec,
+          safeDurationSec,
+          trimMode: `${input.label} · ${attempt.label}`,
+          inputLabel: input.label,
+          inputHasAudio: inputProbe.hasAudio,
+        },
+        errors,
+      };
+    } catch (attemptError) {
+      errors.push(`${input.label} ${attempt.label}: ${briefError(attemptError)}`);
+    }
+  }
+
+  return { result: null, errors };
+}
+
 export async function POST(req: NextRequest) {
   try {
     cleanupTransientFiles().catch(() => {});
@@ -219,22 +306,17 @@ export async function POST(req: NextRequest) {
     await stat(filePath).catch(() => {
       throw new Error('O bruto desse vídeo não está mais no servidor. Reenvie o vídeo e clique em Cortar/otimizar de novo.');
     });
-    const sourceProbe = await probeVideo(filePath);
+    const sourceProbe = await probeVideo(filePath).catch(() => ({
+      durationSec: 0,
+      hasVideo: false,
+      hasAudio: false,
+    }));
     const videosDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ...VIDEO_PARTS);
     await mkdir(videosDir, { recursive: true });
 
     const width = 1080;
     const height = parsed.target === 'feed' ? 1350 : 1920;
-    const sourceDuration = Number(sourceProbe.durationSec || 0);
-    const safeStartSec =
-      sourceDuration > parsed.durationSec
-        ? Math.min(parsed.startSec, Math.max(0, sourceDuration - parsed.durationSec))
-        : Math.max(0, Math.min(parsed.startSec, sourceDuration || parsed.startSec));
-    const safeDurationSec =
-      sourceDuration > 0
-        ? Math.max(0.5, Math.min(parsed.durationSec, Math.max(0.5, sourceDuration - safeStartSec)))
-        : parsed.durationSec;
-    const outputName = `${Date.now()}-${safeOutputBase(filename)}-${parsed.target}-${Math.round(safeDurationSec)}s.mp4`;
+    const outputName = `${Date.now()}-${safeOutputBase(filename)}-${parsed.target}-${Math.round(parsed.durationSec)}s.mp4`;
     const outputPath = path.join(/*turbopackIgnore: true*/ process.cwd(), ...VIDEO_PARTS, outputName);
 
     const vf = [
@@ -245,29 +327,20 @@ export async function POST(req: NextRequest) {
       'format=yuv420p',
     ].join(',');
 
-    const audioModes: TrimAudioMode[] = sourceProbe.hasAudio ? ['aac'] : [];
-    const attempts = [
-      ...audioModes.map((audioMode) => ({ label: `rápido ${audioMode}`, seekMode: 'fast' as const, audioMode })),
-      ...audioModes.map((audioMode) => ({ label: `preciso curto ${audioMode}`, seekMode: 'near' as const, audioMode })),
-      { label: 'rápido sem áudio', seekMode: 'fast' as const, audioMode: 'none' as const },
-      { label: 'preciso curto sem áudio', seekMode: 'near' as const, audioMode: 'none' as const },
-    ];
+    const trimInputs: TrimInput[] = [{ label: 'bruto', filePath }];
+    const previewInfo = optionalPreviewPathToFile(parsed.previewPath);
+    if (previewInfo && previewInfo.filePath !== filePath) {
+      trimInputs.push({ label: 'preview leve', filePath: previewInfo.filePath });
+    }
 
-    let validation: Awaited<ReturnType<typeof validateTrimmedOutput>> | null = null;
-    let usedAttempt = '';
+    let validation: TrimAttemptResult | null = null;
     const attemptErrors: string[] = [];
-    for (const attempt of attempts) {
-      await unlink(outputPath).catch(() => {});
-      try {
-        await run(
-          FFMPEG_BIN,
-          trimArgs(filePath, outputPath, safeStartSec, safeDurationSec, vf, attempt.seekMode, attempt.audioMode)
-        );
-        validation = await validateTrimmedOutput(outputPath, safeDurationSec, sourceProbe.hasAudio && attempt.audioMode !== 'none');
-        usedAttempt = attempt.label;
+    for (const input of trimInputs) {
+      const attempt = await tryTrimInput(input, outputPath, parsed.startSec, parsed.durationSec, vf);
+      attemptErrors.push(...attempt.errors);
+      if (attempt.result) {
+        validation = attempt.result;
         break;
-      } catch (attemptError) {
-        attemptErrors.push(`${attempt.label}: ${briefError(attemptError)}`);
       }
     }
 
@@ -296,15 +369,16 @@ export async function POST(req: NextRequest) {
       ok: true,
       videoSrc: `/api/uploads/videos/${outputName}`,
       filename: outputName,
-      durationSec: validation.outputDuration || safeDurationSec,
-      trimStartSec: safeStartSec,
+      durationSec: validation.outputDuration || validation.safeDurationSec,
+      trimStartSec: validation.trimStartSec,
       width,
       height,
       size: validation.outputStat.size,
       hasAudio: validation.hasAudio,
       sourceHasAudio: sourceProbe.hasAudio,
       audioWarning: sourceProbe.hasAudio && !validation.hasAudio ? 'O vídeo de origem tinha áudio, mas o trecho otimizado saiu sem áudio detectável.' : '',
-      trimMode: usedAttempt,
+      trimMode: validation.trimMode,
+      trimInput: validation.inputLabel,
       deletedSource: parsed.deleteSource,
     });
   } catch (error) {

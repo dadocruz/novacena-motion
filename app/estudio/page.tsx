@@ -231,6 +231,11 @@ type TrimVideoResponse = {
   canRetryWithReupload?: boolean;
 };
 
+function isOptimizedBackgroundVideoSrc(src: string | undefined | null) {
+  const normalized = String(src || '').replace(/^https?:\/\/[^/]+/, '');
+  return normalized.startsWith('/api/uploads/videos/');
+}
+
 type SharedAudioPatch = {
   audioSrc: string;
   audioDuration: number;
@@ -2012,6 +2017,35 @@ export default function Home() {
     if (role === 'cta2') setStrokeCta2(nextStroke);
   }
 
+  const bgVideoReadySrc =
+    bgVideoLocalAsset?.renderReadySrc ||
+    (isOptimizedBackgroundVideoSrc(bgVideo) ? bgVideo : '');
+  const bgVideoHasReadyClip = Boolean(bgVideoReadySrc);
+  const effectiveBgVideoDuration =
+    bgVideoHasReadyClip
+      ? (bgVideoLocalAsset?.trimDurationSec ?? Math.min(bgVideoDuration || durationSeconds, durationSeconds))
+      : bgVideoDuration;
+  const effectiveBgVideoNeedsTrim = Boolean(bgVideoNeedsTrim && !bgVideoHasReadyClip);
+  const effectiveBgVideoStartSec = bgVideoHasReadyClip ? 0 : bgVideoStartSec;
+  const effectiveBgVideoLocalAsset = bgVideoHasReadyClip
+    ? ({
+        ...(bgVideoLocalAsset ?? {
+          id: `optimized-bg-${bgVideoReadySrc}`,
+          kind: 'backgroundVideo' as const,
+          name: 'clip-otimizado.mp4',
+          size: 0,
+          type: 'video/mp4',
+        }),
+        trimStartSec: bgVideoLocalAsset?.trimStartSec ?? 0,
+        trimDurationSec: effectiveBgVideoDuration,
+        renderReadySrc: bgVideoReadySrc,
+        sourcePath: undefined,
+        previewSrc: bgVideoReadySrc,
+        serverPreviewSrc: bgVideoReadySrc,
+        requiresOptimization: false,
+      } satisfies LocalAssetRef)
+    : bgVideoLocalAsset;
+
   const motion: MotionConfig = useMemo(
     () => ({
       fontHeadline,
@@ -2076,13 +2110,13 @@ export default function Home() {
       cta2InFrame: effectiveTextInFrames.cta2,
       logosInFrame,
       background: {
-        videoSrc: bgVideo || undefined,
+        videoSrc: (bgVideoReadySrc || bgVideo) || undefined,
         mediaType: bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo) ? 'image' : 'video',
-        videoStartFrame: Math.floor(bgVideoStartSec * 30),
-        videoDurationSec: bgVideoDuration || undefined,
-        videoNeedsTrim: bgVideoNeedsTrim || undefined,
-        videoOriginalName: bgVideoOriginalName || undefined,
-        localAsset: bgVideoLocalAsset ?? undefined,
+        videoStartFrame: Math.floor(effectiveBgVideoStartSec * 30),
+        videoDurationSec: effectiveBgVideoDuration || undefined,
+        videoNeedsTrim: effectiveBgVideoNeedsTrim || undefined,
+        videoOriginalName: effectiveBgVideoNeedsTrim ? (bgVideoOriginalName || undefined) : undefined,
+        localAsset: effectiveBgVideoLocalAsset ?? undefined,
         videoOpacity: bgVideoOpacity,
         bgColor,
         videoBlur: bgVideoBlur,
@@ -2163,11 +2197,16 @@ export default function Home() {
       cta2InFrame,
       logosInFrame,
       bgVideo,
+      bgVideoReadySrc,
       bgVideoStartSec,
       bgVideoDuration,
       bgVideoNeedsTrim,
       bgVideoOriginalName,
       bgVideoLocalAsset,
+      effectiveBgVideoStartSec,
+      effectiveBgVideoDuration,
+      effectiveBgVideoNeedsTrim,
+      effectiveBgVideoLocalAsset,
       bgVideoOpacity,
       bgColor,
       bgVideoBlur,
@@ -2374,8 +2413,8 @@ export default function Home() {
     previewNonce,
     showCover,
     bgVideo,
-    bgVideoDuration,
-    bgVideoNeedsTrim,
+    effectiveBgVideoDuration,
+    effectiveBgVideoNeedsTrim,
   ].join('|');
 
   // Pausa o player quando o usuário clica/arrasta a timeline depois de dar play.
@@ -2420,14 +2459,14 @@ export default function Home() {
   const focusedPreviewLoop = shouldUseFocusedPreviewLoop ? editPreviewLoop : null;
   const bgIsImage = Boolean(bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo));
   const bgClipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
-  const bgVideoRequiresOptimization = Boolean(bgVideoNeedsTrim && bgVideoLocalAsset?.requiresOptimization);
+  const bgVideoRequiresOptimization = Boolean(effectiveBgVideoNeedsTrim && effectiveBgVideoLocalAsset?.requiresOptimization);
   const bgVideoNeedsOnlyOptimization =
     bgVideoRequiresOptimization &&
-    bgVideoDuration > 0 &&
-    bgVideoDuration <= bgClipDuration + 0.5;
-  const bgVideoStartMax = bgVideoNeedsTrim
+    effectiveBgVideoDuration > 0 &&
+    effectiveBgVideoDuration <= bgClipDuration + 0.5;
+  const bgVideoStartMax = effectiveBgVideoNeedsTrim
     ? Math.max(0, bgVideoDuration - bgClipDuration)
-    : Math.max(0.1, bgVideoDuration);
+    : Math.max(0.1, effectiveBgVideoDuration);
   const bgTrimStartPct = bgVideoDuration > 0 ? Math.min(100, (bgVideoStartSec / bgVideoDuration) * 100) : 0;
   const bgTrimWidthPct = bgVideoDuration > 0
     ? Math.min(100 - bgTrimStartPct, (bgClipDuration / bgVideoDuration) * 100)
@@ -5680,8 +5719,32 @@ export default function Home() {
     return message;
   }
 
+  function readyBackgroundVideoPatch(): SharedBackgroundVideoPatch | null {
+    if (!bgVideoHasReadyClip || !bgVideoReadySrc) return null;
+    return {
+      bgVideo: bgVideoReadySrc,
+      bgVideoStartSec: 0,
+      bgVideoDuration: effectiveBgVideoDuration || durationSeconds,
+      bgVideoNeedsTrim: false,
+      bgVideoOriginalName: '',
+      bgVideoLocalAsset: effectiveBgVideoLocalAsset,
+      bgVideoOpacity,
+      bgVideoBlur,
+      bgVideoSaturation,
+      useVideoAudio,
+    };
+  }
+
   async function ensureBackgroundVideoReadyForExport(): Promise<SharedBackgroundVideoPatch | null | false> {
-    if (!bgVideoNeedsTrim) return null;
+    const readyPatch = readyBackgroundVideoPatch();
+    if (readyPatch && bgVideoNeedsTrim) {
+      applyBackgroundVideoPatchToState(readyPatch);
+      shareBackgroundVideoWithTemplates(readyPatch);
+      setVideoUploadMsg('Clip otimizado já pronto. Exportando sem processar o bruto de novo.');
+      return readyPatch;
+    }
+
+    if (!effectiveBgVideoNeedsTrim) return null;
 
     setRenderStatus('rendering');
     setRenderProgress(3);
@@ -5910,7 +5973,7 @@ export default function Home() {
   const [presetImportStatusV1, setPresetImportStatusV1] = React.useState('');
 
   const exportStudioPresetV1 = React.useCallback(() => {
-    if (bgVideoNeedsTrim) {
+    if (effectiveBgVideoNeedsTrim) {
       setPresetImportStatusV1(
         bgVideoRequiresOptimization
           ? 'Otimize o vídeo antes de exportar o preset.'
@@ -6017,7 +6080,7 @@ export default function Home() {
     posterHoldSec,
     posterOutroEnabled,
     motionWithStyles,
-    bgVideoNeedsTrim,
+    effectiveBgVideoNeedsTrim,
     bgVideoRequiresOptimization,
   ]);
 
@@ -7619,9 +7682,9 @@ return (
                   ? `Enviando bruto… ${videoUploadProgress}%`
                   : 'Enviando bruto…'
                 : bgVideo && !bgIsImage
-                  ? bgVideoNeedsTrim
+                  ? effectiveBgVideoNeedsTrim
                     ? `✓ Bruto (${bgVideoDuration.toFixed(1)}s)`
-                    : `✓ Clip otimizado (${bgVideoDuration.toFixed(1)}s)`
+                    : `✓ Clip otimizado (${(effectiveBgVideoDuration || durationSeconds).toFixed(1)}s)`
                   : bgIsImage
                     ? `✓ Imagem BG${bgVideoOriginalName ? ` · ${bgVideoOriginalName}` : ''}`
                   : '+ Carregar vídeo bruto pesado'}
@@ -8194,7 +8257,7 @@ return (
 
             {bgVideo && (
               <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                {!bgIsImage && !bgVideoNeedsTrim && bgVideoDuration > 0 && (
+                {!bgIsImage && !effectiveBgVideoNeedsTrim && effectiveBgVideoDuration > 0 && (
                   <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
                     onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
                 )}
@@ -8207,7 +8270,7 @@ return (
               </div>
             )}
 
-            {bgVideoNeedsTrim && (
+            {effectiveBgVideoNeedsTrim && (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                 <video
                   ref={bgTrimVideoRef}
