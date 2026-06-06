@@ -3161,45 +3161,17 @@ export default function Home() {
     }
   }
 
-  function uploadRawVideoWithProgress(file: File) {
-    return new Promise<any>((resolve, reject) => {
-      const uploadUrl = `/api/upload-video/raw?filename=${encodeURIComponent(file.name)}`;
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', uploadUrl);
-      xhr.responseType = 'json';
-      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+  async function uploadRawVideoWithProgress(file: File) {
+    const durationSec = await readVideoDuration(file);
+    setVideoUploadProgress(5);
+    setVideoUploadMsg('Enviando vídeo em chunks para evitar limite de body…');
 
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable || event.total <= 0) return;
-        const progress = Math.min(100, Math.round((event.loaded / event.total) * 100));
-        setVideoUploadProgress(progress);
-        if (progress >= 100) {
-          setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação…');
-        }
-      };
+    const data = await uploadOverlayVideoInChunks(file, 'background-video', durationSec);
 
-      xhr.onload = () => {
-        const data = xhr.response || (() => {
-          try {
-            return JSON.parse(xhr.responseText || '{}');
-          } catch {
-            return null;
-          }
-        })();
+    setVideoUploadProgress(100);
+    setVideoUploadMsg('Upload concluído. Preparando preview leve para navegação…');
 
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data);
-          return;
-        }
-
-        const detail = data?.detail ? ` (${String(data.detail).slice(0, 180)})` : '';
-        reject(new Error(data?.error ? `${data.error}${detail}` : `Upload falhou (${xhr.status}).`));
-      };
-
-      xhr.onerror = () => reject(new Error('Falha de rede durante o upload.'));
-      xhr.onabort = () => reject(new Error('Upload cancelado.'));
-      xhr.send(file);
-    });
+    return data;
   }
 
   async function handleVideoUpload(e: React.ChangeEvent<HTMLInputElement>) {
