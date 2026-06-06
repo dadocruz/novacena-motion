@@ -202,6 +202,30 @@ type LocalAssetRef = {
   requiresOptimization?: boolean;
 };
 
+type SharedBackgroundVideoPatch = {
+  bgVideo: string;
+  bgVideoStartSec: number;
+  bgVideoDuration: number;
+  bgVideoNeedsTrim: boolean;
+  bgVideoOriginalName: string;
+  bgVideoLocalAsset: LocalAssetRef | null;
+  bgVideoOpacity: number;
+  bgVideoBlur: number;
+  bgVideoSaturation: number;
+  useVideoAudio: boolean;
+};
+
+type SharedAudioPatch = {
+  audioSrc: string;
+  audioDuration: number;
+  audioOriginalName: string;
+  audioStartSec: number;
+  audioVolume: number;
+  audioFadeIn: number;
+  audioFadeOut: number;
+  useVideoAudio: boolean;
+};
+
 type SaasUserSummary = {
   email: string;
   name: string;
@@ -1260,6 +1284,8 @@ export default function Home() {
   // Cada template salva seu próprio snapshot quando o usuário troca.
   // Assim, alterar PRÉ-SAVE não afeta DISPONÍVEL e vice-versa.
   const templateConfigsRef = useRef<Partial<Record<TemplateId, EditorHistorySnapshot>>>({});
+  const sharedBackgroundVideoRef = useRef<SharedBackgroundVideoPatch | null>(null);
+  const sharedAudioRef = useRef<SharedAudioPatch | null>(null);
 
   function switchTemplate(nextId: TemplateId) {
     if (nextId === template) return;
@@ -1394,6 +1420,109 @@ export default function Home() {
     setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
+
+    if (sharedBackgroundVideoRef.current) {
+      applyBackgroundVideoPatchToState(sharedBackgroundVideoRef.current);
+    }
+    if (sharedAudioRef.current) {
+      applyAudioPatchToState(sharedAudioRef.current);
+    }
+  }
+
+  function backgroundVideoSnapshotPatch(patch: SharedBackgroundVideoPatch): EditorHistorySnapshot {
+    return {
+      bgVideo: patch.bgVideo,
+      bgVideoStartSec: patch.bgVideoStartSec,
+      bgVideoDuration: patch.bgVideoDuration,
+      bgVideoNeedsTrim: patch.bgVideoNeedsTrim,
+      bgVideoOriginalName: patch.bgVideoOriginalName,
+      bgVideoLocalAsset: cloneHistoryValue(patch.bgVideoLocalAsset),
+      bgVideoOpacity: patch.bgVideoOpacity,
+      bgVideoBlur: patch.bgVideoBlur,
+      bgVideoSaturation: patch.bgVideoSaturation,
+      useVideoAudio: patch.useVideoAudio,
+    };
+  }
+
+  function audioSnapshotPatch(patch: SharedAudioPatch): EditorHistorySnapshot {
+    return {
+      audioSrc: patch.audioSrc,
+      audioDuration: patch.audioDuration,
+      audioOriginalName: patch.audioOriginalName,
+      audioStartSec: patch.audioStartSec,
+      audioVolume: patch.audioVolume,
+      audioFadeIn: patch.audioFadeIn,
+      audioFadeOut: patch.audioFadeOut,
+      useVideoAudio: patch.useVideoAudio,
+    };
+  }
+
+  function patchSavedTemplateSnapshots(patch: EditorHistorySnapshot) {
+    for (const templateId of templateOrder) {
+      if (templateId === template) continue;
+      const saved = templateConfigsRef.current[templateId];
+      if (!saved) continue;
+      templateConfigsRef.current[templateId] = cloneHistoryValue({
+        ...saved,
+        ...patch,
+      });
+    }
+  }
+
+  function applyBackgroundVideoPatchToState(patch: SharedBackgroundVideoPatch) {
+    setBgVideo(patch.bgVideo);
+    setBgVideoStartSec(patch.bgVideoStartSec);
+    setBgTrimPreviewTime(patch.bgVideoStartSec);
+    setBgTrimTimecodeInput(formatTimecode(patch.bgVideoStartSec));
+    setBgVideoDuration(patch.bgVideoDuration);
+    setBgVideoNeedsTrim(patch.bgVideoNeedsTrim);
+    setBgVideoOriginalName(patch.bgVideoOriginalName);
+    setBgVideoLocalAsset(cloneHistoryValue(patch.bgVideoLocalAsset));
+    setBgVideoOpacity(patch.bgVideoOpacity);
+    setBgVideoBlur(patch.bgVideoBlur);
+    setBgVideoSaturation(patch.bgVideoSaturation);
+    setUseVideoAudio(patch.useVideoAudio);
+  }
+
+  function shareBackgroundVideoWithTemplates(patch: SharedBackgroundVideoPatch) {
+    const cleanPatch = cloneHistoryValue(patch);
+    sharedBackgroundVideoRef.current = cleanPatch;
+    patchSavedTemplateSnapshots(backgroundVideoSnapshotPatch(cleanPatch));
+  }
+
+  function applyAudioPatchToState(patch: SharedAudioPatch) {
+    setAudioSrc(patch.audioSrc);
+    setAudioDuration(patch.audioDuration);
+    setAudioOriginalName(patch.audioOriginalName);
+    setAudioStartSec(patch.audioStartSec);
+    setAudioPreviewTime(patch.audioStartSec);
+    setAudioStartTimecodeInput(formatTimecode(patch.audioStartSec));
+    setAudioVolume(patch.audioVolume);
+    setAudioFadeIn(patch.audioFadeIn);
+    setAudioFadeOut(patch.audioFadeOut);
+    setUseVideoAudio(patch.useVideoAudio);
+  }
+
+  function shareAudioWithTemplates(patch: SharedAudioPatch) {
+    const cleanPatch = cloneHistoryValue(patch);
+    sharedAudioRef.current = cleanPatch;
+    patchSavedTemplateSnapshots(audioSnapshotPatch(cleanPatch));
+  }
+
+  function backgroundOverrideFromPatch(patch: SharedBackgroundVideoPatch): Partial<NonNullable<MotionConfig['background']>> {
+    return {
+      videoSrc: patch.bgVideo || undefined,
+      mediaType: 'video',
+      videoStartFrame: Math.floor(patch.bgVideoStartSec * 30),
+      videoDurationSec: patch.bgVideoDuration || undefined,
+      videoNeedsTrim: patch.bgVideoNeedsTrim || undefined,
+      videoOriginalName: patch.bgVideoOriginalName || undefined,
+      localAsset: patch.bgVideoLocalAsset ?? undefined,
+      videoOpacity: patch.bgVideoOpacity,
+      videoBlur: patch.bgVideoBlur,
+      videoSaturation: patch.bgVideoSaturation,
+      useVideoAudio: patch.useVideoAudio,
+    };
   }
 
   function createEditorSnapshot(): EditorHistorySnapshot {
@@ -1476,6 +1605,9 @@ export default function Home() {
       bgVideo,
       bgVideoStartSec,
       bgVideoDuration,
+      bgVideoNeedsTrim,
+      bgVideoOriginalName,
+      bgVideoLocalAsset,
       bgVideoOpacity,
       bgColor,
       bgVideoBlur,
@@ -1903,6 +2035,7 @@ export default function Home() {
       bgVideoDuration,
       bgVideoNeedsTrim,
       bgVideoOriginalName,
+      bgVideoLocalAsset,
       bgVideoOpacity,
       bgColor,
       bgVideoBlur,
@@ -2072,6 +2205,9 @@ export default function Home() {
     const useLightPreview =
       backgroundNeedsLightPreview ||
       (hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40));
+    const suppressHeavyBackgroundVideo =
+      backgroundNeedsLightPreview &&
+      (Boolean(motionForPreview.background?.videoNeedsTrim) || Boolean(backgroundAsset?.requiresOptimization));
     const previewOverlays = useLightPreview
       ? (motionForPreview.overlays ?? []).map((overlay) => (
           overlay.type === 'video' ? { ...overlay, previewQuality: 'light' as const } : overlay
@@ -2085,6 +2221,7 @@ export default function Home() {
         ...motionWithStyles,
         background: {
           ...motionForPreview.background,
+          videoSrc: suppressHeavyBackgroundVideo ? undefined : motionForPreview.background?.videoSrc,
           previewQuality: useLightPreview ? ('light' as const) : ('full' as const),
         },
         overlays: previewOverlays,
@@ -2940,8 +3077,7 @@ export default function Home() {
         URL.revokeObjectURL(localPreviewUrl);
         localPreviewUrl = '';
       }
-      setBgVideo(previewSrc);
-      setBgVideoLocalAsset({
+      const uploadedAsset: LocalAssetRef = {
         id: `local-bg-${file.size}-${file.lastModified}`,
         kind: 'backgroundVideo',
         name: file.name,
@@ -2956,19 +3092,27 @@ export default function Home() {
         serverPreviewSrc,
         previewMode: d.previewMode,
         requiresOptimization: shouldOptimizeFullLength,
-      });
-      setBgVideoStartSec(0);
-      setBgTrimPreviewTime(0);
-      setBgTrimTimecodeInput(formatTimecode(0));
-      setBgVideoDuration(totalDuration);
-      setBgVideoNeedsTrim(shouldTrim);
-      setBgVideoOriginalName(file.name);
+      };
+      const videoPatch: SharedBackgroundVideoPatch = {
+        bgVideo: previewSrc,
+        bgVideoStartSec: 0,
+        bgVideoDuration: totalDuration,
+        bgVideoNeedsTrim: shouldTrim,
+        bgVideoOriginalName: file.name,
+        bgVideoLocalAsset: uploadedAsset,
+        bgVideoOpacity,
+        bgVideoBlur,
+        bgVideoSaturation,
+        useVideoAudio: audioSrc ? false : useVideoAudio,
+      };
+      applyBackgroundVideoPatchToState(videoPatch);
+      shareBackgroundVideoWithTemplates(videoPatch);
       setVideoUploadMsg(
         shouldTrim && needsOnlyOptimization
-          ? `Vídeo recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
+          ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
           : shouldTrim
-            ? `Bruto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
-          : `Vídeo pronto recebido (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
+            ? `Bruto recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Escolha o início, ajuste o visual ou use inteiro.`
+            : `Vídeo pronto aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s). Ajustes visuais liberados.`
       );
     } catch (error) {
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
@@ -2987,16 +3131,27 @@ export default function Home() {
       setVideoUploadMsg('Esse vídeo precisa ser otimizado antes de usar inteiro. Clique em otimizar para gerar o arquivo final leve.');
       return;
     }
-    setBgVideoNeedsTrim(false);
-    setBgVideoStartSec(0);
-    setBgVideoLocalAsset((asset) => asset ? { ...asset, trimStartSec: 0, trimDurationSec: bgVideoDuration || durationSeconds, renderReadySrc: bgVideo } : asset);
-    setBgTrimPreviewTime(0);
-    setBgTrimTimecodeInput(formatTimecode(0));
+    const wholePatch: SharedBackgroundVideoPatch = {
+      bgVideo,
+      bgVideoStartSec: 0,
+      bgVideoDuration: bgVideoDuration || durationSeconds,
+      bgVideoNeedsTrim: false,
+      bgVideoOriginalName,
+      bgVideoLocalAsset: bgVideoLocalAsset
+        ? { ...bgVideoLocalAsset, trimStartSec: 0, trimDurationSec: bgVideoDuration || durationSeconds, renderReadySrc: bgVideo }
+        : null,
+      bgVideoOpacity,
+      bgVideoBlur,
+      bgVideoSaturation,
+      useVideoAudio,
+    };
+    applyBackgroundVideoPatchToState(wholePatch);
+    shareBackgroundVideoWithTemplates(wholePatch);
     setVideoUploadMsg('Vídeo inteiro aplicado como fundo. Ajuste opacidade, blur e saturação abaixo.');
   }
 
-  async function processBgVideoClip() {
-    if (!bgVideo || !bgVideoNeedsTrim) return;
+  async function processBgVideoClip(): Promise<SharedBackgroundVideoPatch | null> {
+    if (!bgVideo || !bgVideoNeedsTrim) return null;
 
     const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
     setProcessingVideoClip(true);
@@ -3022,13 +3177,12 @@ export default function Home() {
 
       if (!d.ok) {
         setVideoUploadMsg(`Erro: ${d.error}`);
-        return;
+        return null;
       }
 
       const trimStartSec = bgVideoStartSec;
-      setBgVideo(d.videoSrc);
-      setBgVideoLocalAsset((asset) => asset ? {
-        ...asset,
+      const optimizedAsset = bgVideoLocalAsset ? {
+        ...bgVideoLocalAsset,
         trimStartSec,
         trimDurationSec: d.durationSec ?? clipDuration,
         renderReadySrc: d.videoSrc,
@@ -3036,19 +3190,29 @@ export default function Home() {
         previewSrc: d.videoSrc,
         serverPreviewSrc: d.videoSrc,
         requiresOptimization: false,
-      } : asset);
-      setBgVideoStartSec(0);
-      setBgTrimPreviewTime(0);
-      setBgTrimTimecodeInput(formatTimecode(0));
-      setBgVideoDuration(d.durationSec ?? clipDuration);
-      setBgVideoNeedsTrim(false);
-      setBgVideoOriginalName('');
+      } : null;
+      const optimizedPatch: SharedBackgroundVideoPatch = {
+        bgVideo: d.videoSrc,
+        bgVideoStartSec: 0,
+        bgVideoDuration: d.durationSec ?? clipDuration,
+        bgVideoNeedsTrim: false,
+        bgVideoOriginalName: '',
+        bgVideoLocalAsset: optimizedAsset,
+        bgVideoOpacity,
+        bgVideoBlur,
+        bgVideoSaturation,
+        useVideoAudio,
+      };
+      applyBackgroundVideoPatchToState(optimizedPatch);
+      shareBackgroundVideoWithTemplates(optimizedPatch);
       setVideoUploadMsg(
         `Trecho otimizado pronto (${(d.size / 1024 / 1024).toFixed(1)} MB). O bruto foi descartado.`
       );
+      return optimizedPatch;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'falha desconhecida';
       setVideoUploadMsg(`Erro: ${message}`);
+      return null;
     } finally {
       setProcessingVideoClip(false);
     }
@@ -3598,15 +3762,20 @@ export default function Home() {
       }
 
       const nextDuration = Number(d.durationSec || localDuration || 0);
-      setAudioSrc(d.audioSrc);
-      setAudioDuration(nextDuration);
-      setAudioOriginalName(d.originalName || file.name);
-      setAudioStartSec(0);
-      setAudioPreviewTime(0);
-      setAudioStartTimecodeInput(formatTimecode(0));
-      setUseVideoAudio(false);
+      const nextAudioPatch: SharedAudioPatch = {
+        audioSrc: d.audioSrc,
+        audioDuration: nextDuration,
+        audioOriginalName: d.originalName || file.name,
+        audioStartSec: 0,
+        audioVolume,
+        audioFadeIn,
+        audioFadeOut,
+        useVideoAudio: false,
+      };
+      applyAudioPatchToState(nextAudioPatch);
+      shareAudioWithTemplates(nextAudioPatch);
       setAudioUploadProgress(100);
-      setAudioUploadMsg(d.sourceKind === 'video' ? 'Áudio extraído do vídeo e pronto.' : 'Áudio pronto.');
+      setAudioUploadMsg(d.sourceKind === 'video' ? 'Áudio extraído do vídeo e aplicado aos templates.' : 'Áudio aplicado aos templates.');
     } catch (err) {
       alert(`Erro no upload/processamento do áudio: ${err instanceof Error ? err.message : 'Falha desconhecida.'}`);
     } finally {
@@ -5086,8 +5255,14 @@ export default function Home() {
     else setHeadline(value);
   }
 
-  function buildRenderInputProps() {
-    const motionSource = liveProject.motion ?? {};
+  function buildRenderInputProps(overrides?: {
+    background?: Partial<NonNullable<MotionConfig['background']>>;
+  }) {
+    const motionSource = motionWithStyles ?? {};
+    const renderBackground = {
+      ...(motionSource.background ?? {}),
+      ...(overrides?.background ?? {}),
+    };
     const activeFontIds = new Set(
       [
         motionSource.fontHeadline,
@@ -5102,12 +5277,15 @@ export default function Home() {
       : [];
 
     return {
-      ...liveProject,
+      ...project,
+      durationSeconds,
       motion: {
         ...motionSource,
+        background: renderBackground,
         customFonts: customFontsForRender,
         previewMode: false,
       },
+      renderTarget: target,
       posterFrame: {
         enabled: SAAS_EXPORT_MODE ? false : posterFrameEnabled,
         frameSec: posterFrameSec,
@@ -5173,22 +5351,17 @@ export default function Home() {
   }
 
   async function renderScript(script: string, label: string) {
-    if (bgVideoNeedsTrim) {
-      const pendingVideoMessage = bgVideoRequiresOptimization
-        ? 'Otimize o vídeo antes de renderizar.'
-        : 'Corte/otimize o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar.';
-      setRenderMessage(`⚠ ${pendingVideoMessage}`);
-      setRenderStatus('error');
-      alert(pendingVideoMessage);
-      return;
-    }
+    const optimizedPatch = await ensureBackgroundVideoReadyForExport();
+    if (optimizedPatch === false) return;
 
     setRendering(true);
     setRenderMessage(`Gerando ${label}…`);
     setRenderLog('');
     setLambdaOutputUrl(null);
     try {
-      const renderPropsForServer = buildRenderInputProps();
+      const renderPropsForServer = buildRenderInputProps(
+        optimizedPatch ? { background: backgroundOverrideFromPatch(optimizedPatch) } : undefined
+      );
 
       const response = await fetch('/api/render', {
         method: 'POST',
@@ -5234,6 +5407,23 @@ export default function Home() {
     return message;
   }
 
+  async function ensureBackgroundVideoReadyForExport(): Promise<SharedBackgroundVideoPatch | null | false> {
+    if (!bgVideoNeedsTrim) return null;
+
+    setRenderStatus('rendering');
+    setRenderProgress(3);
+    setRenderMessage('Otimizando o trecho do vídeo antes de exportar...');
+    const optimizedPatch = await processBgVideoClip();
+
+    if (!optimizedPatch) {
+      setRenderStatus('error');
+      setRenderMessage('Não consegui otimizar o vídeo. Confira o trecho e tente novamente.');
+      return false;
+    }
+
+    return optimizedPatch;
+  }
+
   function openUpgradeOffer(message = '') {
     setUpgradeMessage(message);
     setUpgradePixPayment(null);
@@ -5277,19 +5467,8 @@ export default function Home() {
   }
 
   async function renderLambda(label: string) {
-    if (bgVideoNeedsTrim) {
-      const pendingVideoMessage = bgVideoRequiresOptimization
-        ? (SAAS_EXPORT_MODE ? 'Otimize o vídeo antes de exportar.' : 'Otimize o vídeo antes de renderizar pelo Lambda.')
-        : (SAAS_EXPORT_MODE
-            ? 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de exportar.'
-            : 'Corte o trecho do vídeo ou clique "Usar vídeo inteiro" antes de renderizar pelo Lambda.');
-      setRenderMessage(
-        `⚠ ${pendingVideoMessage}`
-      );
-      setRenderStatus('error');
-      alert(pendingVideoMessage);
-      return;
-    }
+    const optimizedPatch = await ensureBackgroundVideoReadyForExport();
+    if (optimizedPatch === false) return;
 
     setRendering(true);
     setRenderMessage(SAAS_EXPORT_MODE ? `Preparando exportação de ${label}…` : `☁ Lambda: iniciando ${label}…`);
@@ -5299,7 +5478,9 @@ export default function Home() {
     setLambdaOutputUrl(null);
 
     try {
-      const inputProps = buildRenderInputProps();
+      const inputProps = buildRenderInputProps(
+        optimizedPatch ? { background: backgroundOverrideFromPatch(optimizedPatch) } : undefined
+      );
 
       const startRes = await fetch('/api/render/lambda', {
         method: 'POST',
@@ -6734,30 +6915,6 @@ return (
               })()}
               </div>
 
-              {overlays.length > 0 && (
-                <div
-                  style={{
-                    width: 304,
-                    flex: '0 0 304px',
-                    maxHeight: 'calc(100vh - 230px)',
-                    overflowY: 'auto',
-                    paddingRight: 2,
-                  }}
-                >
-                  {/* TIMELINE DE OVERLAYS */}
-                  <OverlayTimeline
-                    overlays={overlays}
-                    durationSeconds={durationSeconds}
-                    selectedId={selectedOverlayId}
-                    onSelect={(id) => {
-                      setSelectedOverlayId(id);
-                      selectStudioTool('overlay');
-                    }}
-                    onUpdate={updateOverlay}
-                    onRemove={removeOverlay}
-                  />
-                </div>
-              )}
             </div>
 
             <div style={renderBarStyle}>
@@ -7368,6 +7525,24 @@ return (
                       <button onClick={() => deleteOverlayAsset(ov.id)} style={tinyDelBtn} title="Remover da biblioteca">×</button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {overlays.length > 0 && (
+                <div data-right-panel-section="Layers de overlay" style={{ marginTop: 12 }}>
+                  <OverlayTimeline
+                    overlays={overlays}
+                    durationSeconds={durationSeconds}
+                    selectedId={selectedOverlayId}
+                    onSelect={(id) => {
+                      const overlay = overlays.find((item) => item.id === id);
+                      setSelectedOverlayId(id);
+                      selectStudioTool('overlay', { keepTimelineOpen: true });
+                      if (overlay) seekTimeline(overlay.startSec ?? 0);
+                    }}
+                    onUpdate={updateOverlay}
+                    onRemove={removeOverlay}
+                  />
                 </div>
               )}
 
