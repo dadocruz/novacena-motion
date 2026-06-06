@@ -78,6 +78,7 @@ jobs:
             echo "Updating service ${SERVICE}..."
             docker service update \
               --with-registry-auth \
+              --label-add traefik.swarm.network=automatizadoria \
               --image "${IMAGE_TAG}" \
               "${SERVICE}"
 
@@ -100,18 +101,6 @@ jobs:
 
             if [ "$HEALTHY" = true ]; then
               echo "Healthcheck OK (container $CID)"
-              echo "--- Edge diagnostics ---"
-              docker service inspect "${SERVICE}" \
-                --format "Labels={{json .Spec.Labels}} Networks={{json .Spec.TaskTemplate.Networks}} Ports={{json .Endpoint.Ports}}" \
-                2>/dev/null || true
-              curl -fsS --max-time 8 "http://127.0.0.1:3000/api/health" || true
-              TRAEFIK_SERVICE="$(docker service ls --format '{{.Name}}' | grep -Ei 'traefik' | head -1 || true)"
-              if [ -n "$TRAEFIK_SERVICE" ]; then
-                echo "Refreshing reverse proxy service: ${TRAEFIK_SERVICE}"
-                docker service update --force "$TRAEFIK_SERVICE" || true
-              else
-                echo "No Traefik service found to refresh."
-              fi
             else
               echo "WARNING: no healthy container after 120s"
               docker service logs "${SERVICE}" --tail 20 --no-trunc 2>&1 | tail -15
