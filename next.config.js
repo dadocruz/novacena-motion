@@ -38,6 +38,8 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '50mb',
     },
+    // Aumenta o buffer de body quando o Next faz proxy/clona a request
+    proxyClientMaxBodySize: '200mb',
   },
 
   async redirects() {
