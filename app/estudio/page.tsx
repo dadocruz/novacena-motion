@@ -3866,6 +3866,42 @@ export default function Home() {
     return finalData || { ok: false, error: 'Upload terminou sem retornar o overlay processado.' };
   }
 
+  async function pollOverlayProxyJob(statusUrl: string, label: string) {
+    setOverlayUploadMsg(`Upload de ${label} concluído. Proxy em processamento na VPS...`);
+
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      try {
+        const response = await fetch(statusUrl);
+        const data = await response.json().catch(() => null);
+
+        if (data?.status === 'ready' && data.overlay) {
+          setOverlayAssets((items) => [data.overlay, ...items]);
+          setOverlayUploadMsg(`Overlay proxy pronto: ${data.overlay.label || label}.`);
+          window.setTimeout(() => setOverlayUploadMsg(''), 2200);
+          return;
+        }
+
+        if (data?.status === 'failed') {
+          setOverlayUploadMsg(`Erro ao gerar proxy do overlay: ${data.error || 'falha desconhecida'}`);
+          alert(`Erro ao gerar proxy do overlay: ${data.error || 'falha desconhecida'}`);
+          return;
+        }
+
+        if (attempt === 0 || attempt % 8 === 0) {
+          setOverlayUploadMsg(`Proxy de ${label} ainda em processamento. Você pode continuar editando.`);
+        }
+      } catch {
+        if (attempt === 0 || attempt % 8 === 0) {
+          setOverlayUploadMsg(`Aguardando status do proxy de ${label}...`);
+        }
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 2500));
+    }
+
+    setOverlayUploadMsg(`Proxy de ${label} ainda não terminou. Recarregue a biblioteca em alguns minutos.`);
+  }
+
   async function uploadOverlay(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -3874,6 +3910,8 @@ export default function Home() {
     setUploadingOverlay(true);
     setOverlayUploadProgress(0);
     setOverlayUploadMsg('Preparando overlay...');
+
+    let keepOverlayMessage = false;
 
     try {
       const durationSec = await readVideoDuration(file);
@@ -3890,7 +3928,12 @@ export default function Home() {
           return r.json();
         })();
 
-      if (d.ok) {
+      if (d.ok && d.pending && d.statusUrl) {
+        keepOverlayMessage = true;
+        setOverlayUploadProgress(100);
+        setOverlayUploadMsg(d.message || `Upload de ${label} concluído. Proxy em processamento...`);
+        void pollOverlayProxyJob(d.statusUrl, label);
+      } else if (d.ok) {
         setOverlayAssets((o) => [d.overlay, ...o]);
         setOverlayUploadProgress(100);
         setOverlayUploadMsg('Overlay proxy pronto na biblioteca.');
@@ -3903,7 +3946,7 @@ export default function Home() {
       setUploadingOverlay(false);
       setTimeout(() => {
         setOverlayUploadProgress(null);
-        setOverlayUploadMsg('');
+        if (!keepOverlayMessage) setOverlayUploadMsg('');
       }, 900);
       if (overlayInputRef.current) overlayInputRef.current.value = '';
     }
@@ -4146,7 +4189,7 @@ export default function Home() {
 
       setAudioUploadMsg(
         isLastChunk
-          ? 'Enviando última parte. Depois vou gerar proxy AAC leve do áudio...'
+          ? 'Enviando última parte. Depois vou gerar MP3 320 kbps do áudio...'
           : `Enviando áudio/vídeo em partes (${chunkIndex + 1}/${totalChunks})...`
       );
 
@@ -4165,7 +4208,7 @@ export default function Home() {
       }
 
       if (isLastChunk) {
-        setAudioUploadMsg('Upload completo. Preparando proxy AAC na VPS...');
+        setAudioUploadMsg('Upload completo. Preparando MP3 320 kbps na VPS...');
       }
 
       if (data.audioSrc) {
@@ -4205,7 +4248,7 @@ export default function Home() {
       applyAudioPatchToState(nextAudioPatch);
       shareAudioWithTemplates(nextAudioPatch);
       setAudioUploadProgress(100);
-      setAudioUploadMsg(d.sourceKind === 'video' ? 'Proxy de áudio extraído do vídeo e aplicado aos templates.' : 'Proxy de áudio aplicado aos templates.');
+      setAudioUploadMsg(d.sourceKind === 'video' ? 'MP3 320 extraído do vídeo e aplicado aos templates.' : 'MP3 320 aplicado aos templates.');
     } catch (err) {
       alert(`Erro no upload/processamento do áudio: ${err instanceof Error ? err.message : 'Falha desconhecida.'}`);
     } finally {
@@ -8080,6 +8123,11 @@ return (
                   <div style={{ fontSize: 10, color: 'var(--text-2)', lineHeight: 1.35 }}>
                     {overlayUploadMsg || 'Enviando overlay...'}
                   </div>
+                </div>
+              )}
+              {!uploadingOverlay && overlayUploadMsg && (
+                <div style={{ marginTop: 8, fontSize: 10, color: 'var(--text-2)', lineHeight: 1.35 }}>
+                  {overlayUploadMsg}
                 </div>
               )}
               <input ref={overlayInputRef} type="file"

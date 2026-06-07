@@ -6,7 +6,8 @@ import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
 import { createReadStream, createWriteStream } from 'fs';
 import { existsSync } from 'fs';
-import { mkdir, rm, stat, unlink } from 'fs/promises';
+import { mkdir, readFile, rm, stat, unlink, writeFile } from 'fs/promises';
+import type { OverlayAsset } from '../../../lib/storage';
 import { addOverlay, deleteOverlay, listOverlays } from '../../../lib/storage';
 import { PUBLIC_UPLOADS, safeFileName, saveFile } from '../../../lib/uploadHelpers';
 
@@ -215,6 +216,77 @@ function cleanUploadId(value: string) {
   return value.replace(/[^a-zA-Z0-9-_]/g, '').slice(0, 80);
 }
 
+function createOverlayJobId(filename: string) {
+  const base = path.basename(filename, path.extname(filename)).replace(/[^a-zA-Z0-9-_]+/g, '-').slice(0, 42) || 'overlay';
+  return `${Date.now()}-${base}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function overlayStatusPath(dir: string, jobId: string) {
+  return path.join(dir, '.jobs', `${cleanUploadId(jobId)}.json`);
+}
+
+async function writeOverlayJobStatus(dir: string, jobId: string, status: Record<string, unknown>) {
+  const statusPath = overlayStatusPath(dir, jobId);
+  await mkdir(path.dirname(statusPath), { recursive: true });
+  await writeFile(statusPath, JSON.stringify({ updatedAt: Date.now(), ...status }));
+}
+
+async function readOverlayJobStatus(dir: string, jobId: string) {
+  const raw = await readFile(overlayStatusPath(dir, jobId), 'utf8').catch(() => '');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as {
+      status?: string;
+      error?: string;
+      overlay?: OverlayAsset;
+    };
+  } catch {
+    return null;
+  }
+}
+
+function startVideoOverlayProxyJob(params: {
+  dir: string;
+  filename: string;
+  durationSecRaw: number;
+  label: string;
+  blendMode: OverlayAsset['blendMode'];
+  jobId: string;
+}) {
+  const { dir, filename, durationSecRaw, label, blendMode, jobId } = params;
+
+  writeOverlayJobStatus(dir, jobId, {
+    status: 'processing',
+    label,
+  }).catch(() => {});
+
+  (async () => {
+    try {
+      const storedFilename = await prepareVideoOverlay(dir, filename);
+      const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
+      const overlay = await addOverlay({
+        label,
+        filename: storedFilename,
+        path: `/api/uploads/overlays/${storedFilename}`,
+        type: 'video',
+        blendMode,
+        durationSec: typeof storedDurationSec === 'number' && Number.isFinite(storedDurationSec) && storedDurationSec > 0 ? storedDurationSec : undefined,
+      });
+
+      await writeOverlayJobStatus(dir, jobId, {
+        status: 'ready',
+        overlay,
+      });
+    } catch (error) {
+      await unlink(path.join(dir, filename)).catch(() => {});
+      await writeOverlayJobStatus(dir, jobId, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Falha ao gerar proxy do overlay.',
+      }).catch(() => {});
+    }
+  })();
+}
+
 function chunkPartName(index: number) {
   return `${String(index).padStart(6, '0')}.part`;
 }
@@ -250,7 +322,15 @@ async function allChunksReady(chunkDir: string, totalChunks: number) {
   return true;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const jobId = cleanUploadId(req.nextUrl.searchParams.get('jobId') || '');
+  if (jobId) {
+    const dir = path.join(PUBLIC_UPLOADS, 'overlays');
+    const status = await readOverlayJobStatus(dir, jobId);
+    if (!status) return NextResponse.json({ ok: true, status: 'missing' });
+    return NextResponse.json({ ok: true, ...status });
+  }
+
   const overlays = await listOverlays();
   return NextResponse.json({ ok: true, overlays });
 }
@@ -354,9 +434,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const storedFilename = await prepareVideoOverlay(dir, filename);
-      const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
-
       const label = cleanLabel(req.nextUrl.searchParams.get('label') || '', path.basename(filenameParam || filename, extParam || '.mp4'));
       const blendMode = req.nextUrl.searchParams.get('blendMode') || 'screen';
       if (!ALLOWED_BLEND_MODES.has(blendMode)) {
@@ -366,16 +443,23 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const overlay = await addOverlay({
+      const jobId = createOverlayJobId(filename);
+      startVideoOverlayProxyJob({
+        dir,
+        filename,
+        durationSecRaw,
         label,
-        filename: storedFilename,
-        path: `/api/uploads/overlays/${storedFilename}`,
-        type: 'video',
         blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
-        durationSec: typeof storedDurationSec === 'number' && Number.isFinite(storedDurationSec) && storedDurationSec > 0 ? storedDurationSec : undefined,
+        jobId,
       });
 
-      return NextResponse.json({ ok: true, overlay });
+      return NextResponse.json({
+        ok: true,
+        pending: true,
+        jobId,
+        statusUrl: `/api/upload-overlay?jobId=${encodeURIComponent(jobId)}`,
+        message: 'Upload recebido. Proxy do overlay em processamento.',
+      });
     }
 
     if (req.body && contentType && !contentType.includes('multipart/form-data')) {
@@ -422,9 +506,6 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const storedFilename = await prepareVideoOverlay(dir, filename);
-      const storedDurationSec = await resolveVideoDuration(dir, storedFilename, durationSecRaw);
-
       const label = cleanLabel(req.nextUrl.searchParams.get('label') || '', path.basename(filenameParam || filename, extParam || '.mp4'));
       const blendMode = req.nextUrl.searchParams.get('blendMode') || 'screen';
       if (!ALLOWED_BLEND_MODES.has(blendMode)) {
@@ -434,15 +515,22 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const overlay = await addOverlay({
+      const jobId = createOverlayJobId(filename);
+      startVideoOverlayProxyJob({
+        dir,
+        filename,
+        durationSecRaw,
         label,
-        filename: storedFilename,
-        path: `/api/uploads/overlays/${storedFilename}`,
-        type: 'video',
         blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
-        durationSec: storedDurationSec,
+        jobId,
       });
-      return NextResponse.json({ ok: true, overlay });
+      return NextResponse.json({
+        ok: true,
+        pending: true,
+        jobId,
+        statusUrl: `/api/upload-overlay?jobId=${encodeURIComponent(jobId)}`,
+        message: 'Upload recebido. Proxy do overlay em processamento.',
+      });
     }
 
     const form = await req.formData();
@@ -481,8 +569,27 @@ export async function POST(req: NextRequest) {
     const dir = path.join(PUBLIC_UPLOADS, 'overlays');
     const buffer = Buffer.from(await file.arrayBuffer());
     await saveFile(dir, filename, buffer);
-    const storedFilename = isVideo ? await prepareVideoOverlay(dir, filename) : await prepareImageOverlay(dir, filename);
-    const storedDurationSec = isVideo ? await resolveVideoDuration(dir, storedFilename, durationSecRaw) : durationSecRaw;
+    if (isVideo) {
+      const jobId = createOverlayJobId(filename);
+      startVideoOverlayProxyJob({
+        dir,
+        filename,
+        durationSecRaw,
+        label: cleanLabel(label, path.basename(file.name, ext)),
+        blendMode: blendMode as 'screen' | 'overlay' | 'lighten' | 'soft-light' | 'normal',
+        jobId,
+      });
+      return NextResponse.json({
+        ok: true,
+        pending: true,
+        jobId,
+        statusUrl: `/api/upload-overlay?jobId=${encodeURIComponent(jobId)}`,
+        message: 'Upload recebido. Proxy do overlay em processamento.',
+      });
+    }
+
+    const storedFilename = await prepareImageOverlay(dir, filename);
+    const storedDurationSec = durationSecRaw;
     const overlay = await addOverlay({
       label: cleanLabel(label, path.basename(file.name, ext)),
       filename: storedFilename,

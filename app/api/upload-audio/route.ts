@@ -167,11 +167,9 @@ function runExtractAudio(input: string, output: string): Promise<{ ok: boolean; 
       '-ac',
       '2',
       '-c:a',
-      'aac',
+      'libmp3lame',
       '-b:a',
-      '160k',
-      '-movflags',
-      '+faststart',
+      '320k',
       '-y',
       output,
     ]);
@@ -190,7 +188,7 @@ function makeOutputName(sourceFilename: string) {
   const sourceExt = path.extname(sourceFilename) || '.bin';
   const safeSource = safeFileName(sourceFilename, sourceExt);
   const base = path.basename(safeSource, path.extname(safeSource));
-  return `${base}-audio.m4a`;
+  return `${base}-audio-320.mp3`;
 }
 
 async function normalizeAudio(sourcePath: string, originalName: string) {
