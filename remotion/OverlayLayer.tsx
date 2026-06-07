@@ -356,7 +356,8 @@ const FrameControlledVideo: React.FC<{
   loopEnabled: boolean;
   loopMode: 'normal' | 'pingpong';
   style: React.CSSProperties;
-}> = ({ src, sourceDurationInFrames, loopEnabled, loopMode, style }) => {
+  previewQuality?: 'full' | 'light';
+}> = ({ src, sourceDurationInFrames, loopEnabled, loopMode, style, previewQuality = 'full' }) => {
   const frame = useCurrentFrame();
   const lastFrame = Math.max(1, sourceDurationInFrames - 1);
 
@@ -364,7 +365,23 @@ const FrameControlledVideo: React.FC<{
   // força um seek por frame e TRAVA o editor. Aqui o vídeo toca em tempo real;
   // o pingpong vira loop normal só no preview (o render faz o pingpong exato).
   if (!getRemotionEnvironment().isRendering) {
-    const nativeVideo = <Video src={src} muted pauseWhenBuffering style={style} />;
+    const previewStyle = previewQuality === 'light'
+      ? {
+          ...style,
+          filter: undefined,
+          boxShadow: undefined,
+          willChange: 'auto',
+        }
+      : style;
+    const nativeVideo = (
+      <Video
+        src={src}
+        muted
+        pauseWhenBuffering={false}
+        onError={() => undefined}
+        style={previewStyle}
+      />
+    );
     return loopEnabled ? (
       <Loop durationInFrames={Math.max(2, sourceDurationInFrames)}>{nativeVideo}</Loop>
     ) : (
@@ -407,13 +424,17 @@ const CoverVideoTinted: React.FC<{
     sourceDurationInFrames,
     loopEnabled: overlay.loopEnabled === true,
     loopMode: overlay.loopMode ?? 'normal',
+    previewQuality: overlay.previewQuality ?? 'full',
   } as const;
 
-  if (!overlay.gradientEnabled) {
+  if (!overlay.gradientEnabled || (!getRemotionEnvironment().isRendering && overlay.previewQuality === 'light')) {
     return (
       <FrameControlledVideo
         {...common}
-        style={{ ...baseStyle, filter: coverMediaFilter(overlay) }}
+        style={{
+          ...baseStyle,
+          filter: overlay.previewQuality === 'light' ? undefined : coverMediaFilter(overlay),
+        }}
       />
     );
   }
@@ -452,10 +473,16 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
     .filter((item) => Boolean(item.src));
 
   if (normalized.length === 0) return null;
+  const lightPreviewVideoCount = normalized.filter((item) => item.type === 'video' && item.previewQuality === 'light').length;
 
   return (
     <AbsoluteFill style={{ pointerEvents: 'none' }}>
       {normalized.map((overlay, index) => {
+        const isRendering = getRemotionEnvironment().isRendering;
+        const lightPreviewVideoIndex = normalized
+          .slice(0, index)
+          .filter((item) => item.type === 'video' && item.previewQuality === 'light')
+          .length;
         const startFrame = Math.max(0, Math.round((overlay.startSec ?? 0) * fps));
 
         // Regra nova:
@@ -504,7 +531,15 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
             durationInFrames={sequenceDuration}
           >
             <AbsoluteFill style={overlay.layout === 'element' ? undefined : { transform: coverTransform }}>
-              {overlay.type === 'video' ? (
+              {overlay.type === 'video' && !isRendering && overlay.previewQuality === 'light' && lightPreviewVideoCount > 1 && lightPreviewVideoIndex > 0 ? (
+                <AbsoluteFill
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    opacity: Math.min(0.22, overlay.opacity ?? 0.2),
+                    mixBlendMode: normalizeBlendMode(overlay.blendMode),
+                  }}
+                />
+              ) : overlay.type === 'video' ? (
                 <CoverVideoTinted
                   overlay={overlay}
                   sourceDurationInFrames={sourceDurationInFrames}

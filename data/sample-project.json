@@ -422,7 +422,7 @@
         },
         "textOpacity": 1,
         "coverMotion": "zoom_bounce",
-        "coverSize": 1200,
+        "coverSize": 540,
         "coverY": -8.3,
         "coverX": -19.1,
         "coverInFrame": 15,

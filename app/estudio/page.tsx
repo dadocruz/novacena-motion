@@ -30,6 +30,11 @@ import {
 } from '../../remotion/project';
 import { DEFAULT_FONTS, userFontToFontDef, FONT_CATALOG, type FontDef } from '../../lib/fontCatalog';
 import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle } from '../../lib/saasPlans';
+import {
+  coverSizeBoundsForTemplate,
+  getWatchYouTubeGeometry,
+  normalizeCoverSizeForTemplate,
+} from '../../lib/templateGeometry';
 
 import {
   componentByTemplate,
@@ -519,6 +524,16 @@ export default function Home() {
   const [coverX, setCoverX] = useState<number>(factoryMotion.coverX ?? 0);
   const [coverMotion, setCoverMotion] = useState<CoverMotionId>(factoryMotion.coverMotion ?? 'zoom_bounce');
   const [coverInFrame, setCoverInFrame] = useState<number>(factoryMotion.coverInFrame ?? defaultCoverInFrameForTemplate('available_now'));
+  const activeCoverSizeBounds = useMemo(() => coverSizeBoundsForTemplate(template), [template]);
+  const normalizedCoverSize = useMemo(
+    () => normalizeCoverSizeForTemplate(template, coverSize),
+    [template, coverSize],
+  );
+
+  useEffect(() => {
+    const next = normalizeCoverSizeForTemplate(template, coverSize);
+    if (next !== coverSize) setCoverSize(next);
+  }, [template, coverSize]);
   // ─── Controles do Celular (template spotify_print) ──────
   const [phoneSize, setPhoneSize] = useState<number>(520);
   const [phoneX, setPhoneX] = useState<number>(0);
@@ -1768,7 +1783,7 @@ export default function Home() {
       fontCta,
       fontCta1,
       fontCta2,
-      coverSize,
+      coverSize: normalizedCoverSize,
       coverY,
       coverX,
       coverMotion,
@@ -2143,7 +2158,7 @@ export default function Home() {
       textOpacity,
       previewNonce,
       coverMotion,
-      coverSize,
+      coverSize: normalizedCoverSize,
       coverY,
       coverX,
       coverInFrame,
@@ -2242,7 +2257,7 @@ export default function Home() {
       textOpacity,
       previewNonce,
       coverMotion,
-      coverSize,
+      normalizedCoverSize,
       coverY,
       coverX,
       coverInFrame,
@@ -2453,9 +2468,16 @@ export default function Home() {
     const hasLongOverlay = (motionForPreview.overlays ?? []).some((overlay) => {
       return overlay.type === 'video' && Math.max(overlay.durationSec ?? 0, overlay.sourceDurationSec ?? 0) >= 20;
     });
+    const videoOverlayCount = (motionForPreview.overlays ?? []).filter((overlay) => {
+      const src = overlay.src || '';
+      return overlay.type === 'video' || /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(src);
+    }).length;
     const useLightPreview =
       backgroundNeedsLightPreview ||
-      (hasVideoOverlay && (hasVideoBackground || hasLongOverlay || durationSeconds >= 40));
+      hasVideoOverlay ||
+      videoOverlayCount > 0 ||
+      (hasVideoBackground && durationSeconds >= 20) ||
+      (hasLongOverlay && durationSeconds >= 8);
     const previewOverlays = useLightPreview
       ? (motionForPreview.overlays ?? []).map((overlay) => (
           overlay.type === 'video' ? { ...overlay, previewQuality: 'light' as const } : overlay
@@ -4686,7 +4708,7 @@ export default function Home() {
       // ─── Cover motion + size + Y ────────────────────────
       applyEnum('coverMotion', 'Cover motion', fm.coverMotion, validCoverMotions, setCoverMotion);
       if (typeof fm.coverSize === 'number') {
-        const v = Math.max(200, Math.min(900, fm.coverSize));
+        const v = normalizeCoverSizeForTemplate(template, fm.coverSize);
         setCoverSize(v);
         decisions.push({ field: 'coverSize', label: 'Tamanho da capa', chosen: `${v}px`, applied: true });
       }
@@ -5173,9 +5195,9 @@ export default function Home() {
       const headlineFont = String(headline || '').length > 14 ? 76 : 92;
       const headerHeight = headlineFont * 0.96 * headlineLines + 10 + (releaseDate ? 35 : 0);
       const ctaBlockBeforeLogos = 44 + 52 + 16;
-      const totalStackHeight = headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + maxLogoSize;
+      const totalStackHeight = headerHeight + stageGap + normalizedCoverSize + stageGap + ctaBlockBeforeLogos + maxLogoSize;
       const stackTop = stageTop + Math.max(0, (stageHeight - totalStackHeight) / 2);
-      const logoTopPx = stackTop + headerHeight + stageGap + coverSize + stageGap + ctaBlockBeforeLogos + 36;
+      const logoTopPx = stackTop + headerHeight + stageGap + normalizedCoverSize + stageGap + ctaBlockBeforeLogos + 36;
       const logoWidthPct = clamp(((totalLogoWidth + 56) / 1080) * 100, 24, 90);
       const logoHeightPct = clamp(((maxLogoSize + 20) / compositionHeight) * 100, 5.2, 14);
 
@@ -5223,8 +5245,8 @@ export default function Home() {
     }
 
     if (template === 'milestone') {
-      const coverPct = clamp((Math.min(coverSize, 460) / 1080) * 100, 22, 64);
-      const coverHeightPct = clamp((Math.min(coverSize, 460) / compositionHeight) * 100, 14, 38);
+      const coverPct = clamp((Math.min(normalizedCoverSize, 460) / 1080) * 100, 22, 64);
+      const coverHeightPct = clamp((Math.min(normalizedCoverSize, 460) / compositionHeight) * 100, 14, 38);
       const milestoneLogoPct = clamp((milestoneLogoSize / 1080) * 100, 4, 22);
       const milestoneLogoHeightPct = clamp((milestoneLogoSize / compositionHeight) * 100, 3, 16);
       return [
@@ -5237,26 +5259,31 @@ export default function Home() {
       ];
     }
 
-    const coverPct = clamp((coverSize / 1080) * 100, 18, 86);
-    const coverHeightPct = clamp((coverSize / compositionHeight) * 100, 12, 66);
+    const coverPct = clamp((normalizedCoverSize / 1080) * 100, 18, 86);
+    const coverHeightPct = clamp((normalizedCoverSize / compositionHeight) * 100, 12, 66);
 
     if (template === 'watch_youtube') {
-      const youtubeCoverSize = clamp(coverSize, 420, 660);
-      const youtubeCoverTopPx = clamp(620 + coverY, 285 + 230, 1635 - youtubeCoverSize - 250);
+      const youtubeGeometry = getWatchYouTubeGeometry({
+        coverSize: normalizedCoverSize,
+        coverX,
+        coverY,
+      });
+      const youtubeCoverSize = youtubeGeometry.coverSize;
+      const youtubeCoverTopPx = youtubeGeometry.coverTop;
       const youtubeCoverCenterY = (youtubeCoverTopPx + youtubeCoverSize / 2) / compositionHeight * 100;
-      const youtubeCoverWidthPct = clamp((youtubeCoverSize / 1080) * 100, 38, 62);
-      const youtubeCoverHeightPct = clamp((youtubeCoverSize / compositionHeight) * 100, 22, 36);
+      const youtubeCoverWidthPct = clamp((youtubeCoverSize / 1080) * 100, 32, 54);
+      const youtubeCoverHeightPct = clamp((youtubeCoverSize / compositionHeight) * 100, 18, 32);
       const channelText = String(channelName || 'CANAL OFICIAL');
       const channelChars = Math.max(16, channelText.replace(/\s+/g, '').length);
       const channelFont = clamp(640 / channelChars, 25, 36);
       const channelWidthPx = clamp(channelChars * channelFont * 0.82 + 76, 300, 720);
       const channelWidthPct = clamp((channelWidthPx / 1080) * 100, 28, 67);
-      const channelTopPct = clamp(((youtubeCoverTopPx + youtubeCoverSize + 34) / compositionHeight) * 100, 52, 75);
-      const ctaTopPct = clamp(((youtubeCoverTopPx + youtubeCoverSize + 118) / compositionHeight) * 100, 58, 80);
+      const channelTopPct = clamp((youtubeGeometry.channelTop / compositionHeight) * 100, 52, 75);
+      const ctaTopPct = clamp((youtubeGeometry.ctaTop / compositionHeight) * 100, 58, 80);
 
       return [
         { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: measuredRect('youtube-title', roleRect(12, 16, 76, 13, 'headline')) },
-        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, coverX, 0)) }] : []),
+        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, youtubeGeometry.coverLeftOffset, 0)) }] : []),
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: measuredRect('youtube-channel', roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date')) },
         ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) }] : []),
         ...elementHotspots,
@@ -5301,7 +5328,7 @@ export default function Home() {
       { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, normalizedCoverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   // ── TIMELINE: playhead sincronizado com o player (só roda com o painel aberto)
   React.useEffect(() => {
@@ -9192,7 +9219,7 @@ return (
               </div>
 
 
-          <SliderRow label="Tamanho / Escala" value={coverSize} min={120} max={1200} step={5}
+          <SliderRow label="Tamanho / Escala" value={normalizedCoverSize} min={activeCoverSizeBounds.min} max={activeCoverSizeBounds.max} step={5}
             onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setCoverSize(v); }} format={(v) => `${v}px`} />
           <SliderRow label="Posição Y da capa" value={coverY} min={-500} max={500} step={1}
             onChange={(v) => { stopTransitionPreviewLoopForManualEdit(); setCoverY(v); }} format={(v) => `${v > 0 ? '+' : ''}${Math.round(v)}px`} />

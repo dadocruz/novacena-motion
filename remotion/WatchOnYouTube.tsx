@@ -17,6 +17,7 @@ import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
 import { textStrokeStyle, textFillStyle } from './textStroke';
+import { getWatchYouTubeGeometry } from '../lib/templateGeometry';
 
 const HEADLINE_IN = 14;
 const COVER_IN = 50;
@@ -25,8 +26,6 @@ const CTA_IN = 124;
 const MID_HIT = 140;
 const FINAL_HIT_BASE = 208;
 const FINAL_POSTER_BASE = 222;
-const SAFE_TOP = 285;
-const SAFE_BOTTOM = 1635;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => {
   if (!style) return {};
@@ -87,12 +86,14 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const channel = props.channelName || 'CANAL OFICIAL';
   const channelCompactLength = channel.replace(/\s+/g, '').length;
   const channelFontSize = clamp(640 / Math.max(16, channelCompactLength), 25, 36);
-  const coverSize = clamp(props.motion?.coverSize ?? 520, 420, 660);
   const coverIn = Math.max(0, Math.round(props.motion?.coverInFrame ?? COVER_IN));
-  const coverTop = clamp(620 + (props.motion?.coverY ?? 0), SAFE_TOP + 230, SAFE_BOTTOM - coverSize - 250);
-  const coverLeftOffset = clamp(props.motion?.coverX ?? 0, -220, 220);
-  const channelTop = clamp(coverTop + coverSize + 34, SAFE_TOP + 720, SAFE_BOTTOM - 220);
-  const ctaTop = clamp(channelTop + 84, SAFE_TOP + 840, SAFE_BOTTOM - 110);
+  const {
+    coverSize,
+    coverTop,
+    coverLeftOffset,
+    channelTop,
+    ctaTop,
+  } = getWatchYouTubeGeometry(props.motion);
   const channelMaxWidth = clamp(channelCompactLength * channelFontSize * 1.08 + 168, 420, 860);
   const channelTextStyle = keepTextOnlyStyle(applyTextStyle(props.motion?.styleDate));
   const channelBoxOpacity = frame < channelIn ? 0 : 1;

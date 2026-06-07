@@ -177,6 +177,9 @@ export const CinematicBackground: React.FC<Props> = ({
   const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
   const lightPreviewBlur = Math.min(18, videoBlur * 0.32);
   const lightPreviewVideoFilter = `blur(${lightPreviewBlur}px) saturate(${videoSaturation}) brightness(0.94)`;
+  const stillPreviewFilter = lightPreview
+    ? `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.94)`
+    : `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
 
   // Light leak diagonal varrendo (loop infinito)
   const leakPhase = (frame % 200) / 200;
@@ -206,8 +209,10 @@ export const CinematicBackground: React.FC<Props> = ({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              filter: `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`,
-              transform: `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px)`,
+              filter: stillPreviewFilter,
+              transform: lightPreview
+                ? 'scale(1.05)'
+                : `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px)`,
             }}
           />
         </AbsoluteFill>
@@ -237,6 +242,7 @@ export const CinematicBackground: React.FC<Props> = ({
               muted={!useVideoAudio}
               volume={useVideoAudio ? (f) => calcVolume(f) : 0}
               pauseWhenBuffering={false}
+              onError={() => undefined}
               style={{
                 width: '100%',
                 height: '100%',
@@ -265,8 +271,12 @@ export const CinematicBackground: React.FC<Props> = ({
             height: '136%',
             objectFit: 'cover',
             objectPosition: 'center center',
-            transform: `translate(${drift.x * 1.2}px, ${drift.y * 1.2}px) scale(${bgZoom})`,
-            filter: 'blur(34px) saturate(1.22) contrast(1.12) brightness(0.92)',
+            transform: lightPreview
+              ? 'scale(1.08)'
+              : `translate(${drift.x * 1.2}px, ${drift.y * 1.2}px) scale(${bgZoom})`,
+            filter: lightPreview
+              ? 'blur(10px) saturate(1.12) contrast(1.05) brightness(0.94)'
+              : 'blur(34px) saturate(1.22) contrast(1.12) brightness(0.92)',
             opacity: 0.94,
           }}
         />
