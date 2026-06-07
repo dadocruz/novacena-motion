@@ -1661,6 +1661,14 @@ export default function Home() {
         if (cancelled || !data?.ok) return;
 
         if (data.status === 'ready' && typeof data.previewSrc === 'string') {
+          const previewSize = Number(data.previewSize || 0);
+          const previewDurationSec = Number(data.previewDurationSec || 0);
+          if (previewSize < 32 * 1024 || previewDurationSec <= 0) {
+            setBgVideoLocalAsset((current) => current?.id === pendingAsset.id ? { ...current, previewPending: false } : current);
+            setVideoUploadMsg('Proxy leve do preview veio inválido. Mantive o vídeo local/original no player.');
+            return;
+          }
+
           const updatedAsset: LocalAssetRef = {
             ...pendingAsset,
             previewSrc: data.previewSrc,
