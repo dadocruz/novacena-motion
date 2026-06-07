@@ -53,6 +53,37 @@ function lookupContentType(filePath: string) {
   return types[ext] || 'application/octet-stream';
 }
 
+function cleanUrlPath(value: string) {
+  return value.split('?')[0].split('#')[0];
+}
+
+function localAssetPathFromUrl(localRelativeUrl: string) {
+  const cleanPath = cleanUrlPath(localRelativeUrl);
+
+  if (cleanPath.startsWith('/api/uploads/')) {
+    return path.join(process.cwd(), 'public', 'uploads', cleanPath.replace(/^\/api\/uploads\//, ''));
+  }
+
+  if (cleanPath.startsWith('/uploads/')) {
+    return path.join(process.cwd(), 'public', cleanPath.replace(/^\/+/, ''));
+  }
+
+  if (/^\/(?:logos|fonts|images|backgrounds)\//.test(cleanPath)) {
+    return path.join(process.cwd(), 'public', cleanPath.replace(/^\/+/, ''));
+  }
+
+  return null;
+}
+
+function shouldUploadLocalAsset(value: string) {
+  const cleanPath = cleanUrlPath(value);
+  return (
+    cleanPath.startsWith('/api/uploads/') ||
+    cleanPath.startsWith('/uploads/') ||
+    /^\/(?:logos|fonts|images|backgrounds)\//.test(cleanPath)
+  );
+}
+
 /**
  * Upload local media file to S3 so Lambda workers can access it.
  * Returns the public S3 URL.
@@ -62,16 +93,14 @@ async function uploadLocalAssetToS3(
   bucketName: string,
   region: string,
 ): Promise<string> {
-  // Convert API URL to local file path
-  // e.g. "/api/uploads/videos/1234-file.mp4" → "public/uploads/videos/1234-file.mp4"
-  // e.g. "/api/uploads/video-sources/1234-file.mp4" → "public/uploads/video-sources/1234-file.mp4"
-  const urlPath = localRelativeUrl.replace(/^\/api\/uploads\//, '');
-  const localPath = path.join(process.cwd(), 'public', 'uploads', urlPath);
+  const localPath = localAssetPathFromUrl(localRelativeUrl);
+  if (!localPath) throw new Error(`Asset local não suportado: ${localRelativeUrl}`);
 
   await stat(localPath); // throws if file doesn't exist
 
   const fileBuffer = await readFile(localPath);
-  const s3Key = `render-assets/${Date.now()}-${path.basename(localPath)}`;
+  const safeName = localRelativeUrl.replace(/^\/+/, '').replace(/[^a-zA-Z0-9._-]+/g, '-');
+  const s3Key = `render-assets/${Date.now()}-${safeName || path.basename(localPath)}`;
   const contentType = lookupContentType(localPath);
 
   const s3 = new S3Client({
@@ -104,7 +133,7 @@ async function resolveLocalAssets(
   bucketName: string,
   region: string,
 ): Promise<unknown> {
-  if (typeof value === 'string' && value.startsWith('/api/uploads/')) {
+  if (typeof value === 'string' && shouldUploadLocalAsset(value)) {
     if (uploadCache.has(value)) return uploadCache.get(value)!;
     try {
       const s3Url = await uploadLocalAssetToS3(value, bucketName, region);

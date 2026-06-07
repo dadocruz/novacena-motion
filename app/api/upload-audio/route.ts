@@ -169,7 +169,7 @@ function runExtractAudio(input: string, output: string): Promise<{ ok: boolean; 
       '-c:a',
       'aac',
       '-b:a',
-      '192k',
+      '160k',
       '-movflags',
       '+faststart',
       '-y',

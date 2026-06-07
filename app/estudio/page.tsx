@@ -199,6 +199,8 @@ type LocalAssetRef = {
   serverPreviewSrc?: string;
   renderReadySrc?: string;
   previewMode?: string;
+  previewPending?: boolean;
+  previewPollUrl?: string;
   requiresOptimization?: boolean;
 };
 
@@ -1626,6 +1628,84 @@ export default function Home() {
     sharedBackgroundVideoRef.current = cleanPatch;
     patchSavedTemplateSnapshots(backgroundVideoSnapshotPatch(cleanPatch));
   }
+
+  React.useEffect(() => {
+    const asset = bgVideoLocalAsset;
+    const previewPollUrl = asset?.previewPollUrl ?? '';
+    if (!asset?.previewPending || !previewPollUrl) return;
+    const pendingAsset: LocalAssetRef = asset;
+
+    let cancelled = false;
+    let tries = 0;
+
+    async function pollPreviewProxy() {
+      tries += 1;
+      try {
+        const response = await fetch(previewPollUrl);
+        const data = await response.json().catch(() => null);
+        if (cancelled || !data?.ok) return;
+
+        if (data.status === 'ready' && typeof data.previewSrc === 'string') {
+          const updatedAsset: LocalAssetRef = {
+            ...pendingAsset,
+            previewSrc: data.previewSrc,
+            serverPreviewSrc: data.previewSrc,
+            previewMode: 'async-proxy',
+            previewPending: false,
+          };
+          const proxyPatch: SharedBackgroundVideoPatch = {
+            bgVideo: data.previewSrc,
+            bgVideoStartSec,
+            bgVideoDuration,
+            bgVideoNeedsTrim,
+            bgVideoOriginalName,
+            bgVideoLocalAsset: updatedAsset,
+            bgVideoOpacity,
+            bgVideoBlur,
+            bgVideoSaturation,
+            useVideoAudio,
+          };
+          if (bgVideo.startsWith('blob:')) URL.revokeObjectURL(bgVideo);
+          applyBackgroundVideoPatchToState(proxyPatch);
+          shareBackgroundVideoWithTemplates(proxyPatch);
+          setVideoUploadMsg(`Proxy leve do preview pronto (${data.previewSize ? `${(Number(data.previewSize) / 1024 / 1024).toFixed(1)} MB` : 'arquivo leve'}).`);
+          return;
+        }
+
+        if (data.status === 'failed') {
+          setBgVideoLocalAsset((current) => current?.id === pendingAsset.id ? { ...current, previewPending: false } : current);
+          setVideoUploadMsg(`Não consegui gerar o proxy leve do preview. ${data.error || 'Use Cortar/otimizar para gerar o trecho final leve.'}`);
+          return;
+        }
+
+        if (tries === 1) {
+          setVideoUploadMsg('Proxy leve do preview ainda em processamento. O editor troca automaticamente quando ficar pronto.');
+        }
+      } catch {
+        // Polling pode falhar momentaneamente durante deploy/restart. Tenta de novo no próximo ciclo.
+      }
+    }
+
+    pollPreviewProxy();
+    const timer = window.setInterval(pollPreviewProxy, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    bgVideoLocalAsset?.id,
+    bgVideoLocalAsset?.previewPending,
+    bgVideoLocalAsset?.previewPollUrl,
+    bgVideo,
+    bgVideoStartSec,
+    bgVideoDuration,
+    bgVideoNeedsTrim,
+    bgVideoOriginalName,
+    bgVideoOpacity,
+    bgVideoBlur,
+    bgVideoSaturation,
+    useVideoAudio,
+  ]);
 
   function applyAudioPatchToState(patch: SharedAudioPatch) {
     setAudioSrc(patch.audioSrc);
@@ -3296,6 +3376,8 @@ export default function Home() {
         previewSrc,
         serverPreviewSrc,
         previewMode: d.previewMode,
+        previewPending: Boolean(d.previewPending),
+        previewPollUrl: typeof d.previewPollUrl === 'string' ? d.previewPollUrl : undefined,
         requiresOptimization: shouldOptimizeFullLength,
       };
       localBackgroundFilesRef.current[uploadedAsset.id] = file;
@@ -3313,9 +3395,11 @@ export default function Home() {
       };
       applyBackgroundVideoPatchToState(videoPatch);
       shareBackgroundVideoWithTemplates(videoPatch);
-      const previewNotice = d.previewSkipped
-        ? ' Preview local em qualidade original ativado para o upload não travar.'
-        : '';
+      const previewNotice = d.previewPending
+        ? ' Proxy leve do preview sendo gerado em segundo plano.'
+        : d.previewSkipped
+          ? ' Preview local em qualidade original ativado para o upload não travar.'
+          : '';
       setVideoUploadMsg(
         shouldTrim && needsOnlyOptimization
           ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
@@ -3460,6 +3544,8 @@ export default function Home() {
         previewSrc,
         serverPreviewSrc,
         previewMode: data.previewMode,
+        previewPending: Boolean(data.previewPending),
+        previewPollUrl: typeof data.previewPollUrl === 'string' ? data.previewPollUrl : undefined,
         requiresOptimization: true,
       };
       localBackgroundFilesRef.current[id] = uploadFile;
@@ -3750,7 +3836,7 @@ export default function Home() {
 
       setOverlayUploadMsg(
         isLastChunk
-          ? 'Enviando ultima parte. Depois vou converter o alpha para o player...'
+          ? 'Enviando ultima parte. Depois vou gerar proxy leve do overlay...'
           : `Enviando overlay pesado em partes (${chunkIndex + 1}/${totalChunks})...`
       );
 
@@ -3769,7 +3855,7 @@ export default function Home() {
       }
 
       if (isLastChunk) {
-        setOverlayUploadMsg('Upload completo. Processando overlay alpha na VPS...');
+        setOverlayUploadMsg('Upload completo. Gerando proxy leve do overlay na VPS...');
       }
 
       if (data.overlay) {
@@ -3807,7 +3893,7 @@ export default function Home() {
       if (d.ok) {
         setOverlayAssets((o) => [d.overlay, ...o]);
         setOverlayUploadProgress(100);
-        setOverlayUploadMsg('Overlay pronto na biblioteca.');
+        setOverlayUploadMsg('Overlay proxy pronto na biblioteca.');
       } else {
         alert(`Erro: ${d.error}`);
       }
@@ -4060,7 +4146,7 @@ export default function Home() {
 
       setAudioUploadMsg(
         isLastChunk
-          ? 'Enviando última parte. Depois vou extrair e normalizar o áudio...'
+          ? 'Enviando última parte. Depois vou gerar proxy AAC leve do áudio...'
           : `Enviando áudio/vídeo em partes (${chunkIndex + 1}/${totalChunks})...`
       );
 
@@ -4079,7 +4165,7 @@ export default function Home() {
       }
 
       if (isLastChunk) {
-        setAudioUploadMsg('Upload completo. Preparando faixa de áudio na VPS...');
+        setAudioUploadMsg('Upload completo. Preparando proxy AAC na VPS...');
       }
 
       if (data.audioSrc) {
@@ -4119,7 +4205,7 @@ export default function Home() {
       applyAudioPatchToState(nextAudioPatch);
       shareAudioWithTemplates(nextAudioPatch);
       setAudioUploadProgress(100);
-      setAudioUploadMsg(d.sourceKind === 'video' ? 'Áudio extraído do vídeo e aplicado aos templates.' : 'Áudio aplicado aos templates.');
+      setAudioUploadMsg(d.sourceKind === 'video' ? 'Proxy de áudio extraído do vídeo e aplicado aos templates.' : 'Proxy de áudio aplicado aos templates.');
     } catch (err) {
       alert(`Erro no upload/processamento do áudio: ${err instanceof Error ? err.message : 'Falha desconhecida.'}`);
     } finally {
@@ -5748,7 +5834,13 @@ export default function Home() {
     if (/demonstração|tokens|planos|comprar|pacote/i.test(message)) {
       return 'Seu teste gratuito acabou. Escolha um pacote para continuar exportando.';
     }
-    if (/aws|lambda|concurrency|rate exceeded|quota|remotion|main function|chunk|timed out|timeout/i.test(message)) {
+    if (/loading image|cannot be decoded|source image|failed to load resource/i.test(message)) {
+      return 'Não consegui carregar um logo ou imagem do render. Recarregue a página e tente exportar novamente.';
+    }
+    if (/media playback|media_element_error|blob:|url safety check|error loading video/i.test(message)) {
+      return 'O vídeo do render ainda não está pronto para exportar. Clique em Cortar/otimizar e tente novamente.';
+    }
+    if (/concurrency|rate exceeded|quota|timed out|timeout|too many requests/i.test(message)) {
       return 'O serviço de exportação está ocupado no momento. Tente novamente em alguns minutos.';
     }
     return message;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mkdir, rm, stat, unlink } from 'fs/promises';
+import { mkdir, readFile, rm, stat, unlink, writeFile } from 'fs/promises';
 import { createReadStream, createWriteStream, existsSync } from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
@@ -17,6 +17,8 @@ const CHUNK_SIZE_LIMIT = 64 * 1024 * 1024;
 const PREVIEW_REQUIRED_SIZE = 100 * 1024 * 1024;
 const SERVER_PREVIEW_MAX_SIZE = 120 * 1024 * 1024;
 const SERVER_PREVIEW_MAX_SECONDS = 90;
+const ASYNC_PREVIEW_MAX_SIZE = 4 * 1024 * 1024 * 1024;
+const ASYNC_PREVIEW_MAX_SECONDS = 900;
 const MAX_BACKGROUND_CLIP_SECONDS = 60;
 const VERTICAL_PREVIEW_REQUIRED_SECONDS = 45;
 const ALLOWED_EXT = ['.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mpg', '.mkv', '.avi', '.3gp', '.3gpp'];
@@ -94,6 +96,99 @@ async function createPreviewProxy(input: string, output: string) {
     mode: 'silent' as const,
     error: result.error || audioError,
   };
+}
+
+function runAsyncPreviewFfmpeg(input: string, output: string): Promise<{ ok: boolean; error: string }> {
+  const args = [
+    '-v', 'error',
+    '-fflags', '+genpts+discardcorrupt',
+    '-err_detect', 'ignore_err',
+    '-analyzeduration', '100M',
+    '-probesize', '100M',
+    '-ignore_unknown',
+    '-i', input,
+    '-map', '0:v:0',
+    '-sn',
+    '-dn',
+    '-vf', 'scale=540:-2,fps=24,format=yuv420p',
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '28',
+    '-an',
+    '-movflags', '+faststart',
+    '-y', output,
+  ];
+
+  return new Promise((resolve) => {
+    const proc = spawn(FFMPEG_BIN, args);
+    let stderr = '';
+    proc.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+      if (stderr.length > 2500) stderr = stderr.slice(-2500);
+    });
+    proc.on('close', (code) => resolve({ ok: code === 0, error: stderr.trim() }));
+    proc.on('error', (error) => resolve({ ok: false, error: error.message }));
+  });
+}
+
+function previewStatusPath(previewPath: string) {
+  return `${previewPath}.status.json`;
+}
+
+async function writePreviewStatus(previewPath: string, status: Record<string, unknown>) {
+  await writeFile(previewStatusPath(previewPath), JSON.stringify({
+    updatedAt: Date.now(),
+    ...status,
+  }));
+}
+
+function safeStoredFilename(value: string) {
+  const clean = path.basename(value.split('?')[0].split('#')[0] || '');
+  if (!clean || clean === '.' || clean === '..') return '';
+  return clean.replace(/[^a-zA-Z0-9._-]/g, '');
+}
+
+function startAsyncPreviewProxy(input: string, output: string, expectedDuration: number) {
+  writePreviewStatus(output, { status: 'processing' }).catch(() => {});
+  runAsyncPreviewFfmpeg(input, output)
+    .then(async (result) => {
+      if (!result.ok || !existsSync(output)) {
+        await unlink(output).catch(() => {});
+        await writePreviewStatus(output, {
+          status: 'failed',
+          error: result.error || 'Falha ao gerar proxy do preview.',
+        });
+        return;
+      }
+
+      const outputStat = await stat(output).catch(() => null);
+      const outputProbe = await probeVideo(output).catch(() => null);
+      const outputDuration = Number(outputProbe?.durationSec || 0);
+
+      if (!outputStat || outputStat.size < 1024 || !outputProbe?.hasVideo || !durationLooksValid(outputDuration, expectedDuration)) {
+        await unlink(output).catch(() => {});
+        await writePreviewStatus(output, {
+          status: 'failed',
+          error: 'Proxy gerado inválido.',
+        });
+        return;
+      }
+
+      await writePreviewStatus(output, {
+        status: 'ready',
+        previewSrc: `/api/uploads/video-sources/${path.basename(output)}`,
+        previewFilename: path.basename(output),
+        previewSize: outputStat.size,
+        previewDurationSec: outputDuration,
+      });
+    })
+    .catch(async (error) => {
+      await unlink(output).catch(() => {});
+      await writePreviewStatus(output, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Falha ao gerar proxy do preview.',
+      }).catch(() => {});
+    });
 }
 
 function durationLooksValid(actualDuration: number, expectedDuration: number) {
@@ -209,6 +304,51 @@ async function probeVideo(filepath: string) {
     hasAudio: Boolean(audioStream),
     hasVideo: Boolean(videoStream),
   };
+}
+
+export async function GET(req: NextRequest) {
+  const previewFilename = safeStoredFilename(req.nextUrl.searchParams.get('previewFilename') || '');
+  if (!previewFilename) {
+    return NextResponse.json({ ok: false, error: 'previewFilename obrigatório.' }, { status: 400 });
+  }
+
+  const previewPath = path.join(SOURCES_DIR, previewFilename);
+  const statusPath = previewStatusPath(previewPath);
+  const statusRaw = await readFile(statusPath, 'utf8').catch(() => '');
+  let statusData: any = null;
+  if (statusRaw) {
+    try {
+      statusData = JSON.parse(statusRaw);
+    } catch {
+      statusData = null;
+    }
+  }
+
+  if (existsSync(previewPath)) {
+    const fileStat = await stat(previewPath).catch(() => null);
+    if (fileStat && fileStat.size > 1024) {
+      return NextResponse.json({
+        ok: true,
+        status: 'ready',
+        previewSrc: `/api/uploads/video-sources/${previewFilename}`,
+        previewFilename,
+        previewSize: fileStat.size,
+      });
+    }
+  }
+
+  if (statusData?.status === 'failed') {
+    return NextResponse.json({
+      ok: true,
+      status: 'failed',
+      error: statusData.error || 'Falha ao gerar proxy.',
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    status: statusData?.status === 'processing' ? 'processing' : 'missing',
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -402,19 +542,29 @@ export async function POST(req: NextRequest) {
     const publicPath = `/api/uploads/video-sources/${servedFilename}`;
     let previewFilename = servedFilename;
     let previewSize = servedSize;
+    const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
+    const previewCandidate = `${previewBaseName}-preview.mp4`;
+    const previewPath = path.join(SOURCES_DIR, previewCandidate);
 
     const shouldUseBrowserPreview =
       previewIsRequired &&
       (fileStat.size > SERVER_PREVIEW_MAX_SIZE || durationSec > SERVER_PREVIEW_MAX_SECONDS);
 
     if (shouldUseBrowserPreview) {
+      const canBuildAsyncPreview =
+        fileStat.size <= ASYNC_PREVIEW_MAX_SIZE &&
+        durationSec <= ASYNC_PREVIEW_MAX_SECONDS;
+
+      if (canBuildAsyncPreview) {
+        startAsyncPreviewProxy(localPath, previewPath, durationSec);
+      }
+
       return NextResponse.json({
         ok: true,
         sourcePath: publicPath,
         previewSrc: publicPath,
         videoSrc: publicPath,
         filename: servedFilename,
-        previewFilename,
         size: servedSize,
         previewSize,
         type: contentType,
@@ -422,15 +572,17 @@ export async function POST(req: NextRequest) {
         previewMode: 'local-original',
         previewFailed: true,
         previewSkipped: true,
+        previewPending: canBuildAsyncPreview,
+        previewFilename: canBuildAsyncPreview ? previewCandidate : previewFilename,
+        previewPollUrl: canBuildAsyncPreview ? `/api/upload-video/raw?previewFilename=${encodeURIComponent(previewCandidate)}` : undefined,
         requiresOptimization,
-        previewError: 'Preview remoto pulado para concluir o upload sem travar. O navegador usa o arquivo local em qualidade original até o corte.',
+        previewError: canBuildAsyncPreview
+          ? 'Proxy leve do preview sendo gerado em segundo plano. O navegador usa o arquivo local só até o proxy ficar pronto.'
+          : 'Preview remoto pulado para concluir o upload sem travar. O navegador usa o arquivo local em qualidade original até o corte.',
         ...probe,
       });
     }
 
-    const previewBaseName = path.basename(servedFilename, path.extname(servedFilename));
-    const previewCandidate = `${previewBaseName}-preview.mp4`;
-    const previewPath = path.join(SOURCES_DIR, previewCandidate);
     const previewResult = await createPreviewProxy(localPath, previewPath).catch((error) => ({
       ok: false,
       mode: 'failed' as const,

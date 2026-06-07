@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
+import sharp from 'sharp';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { spawn } from 'child_process';
@@ -19,6 +20,8 @@ export const maxDuration = 900;
 const MAX_SIZE = 500 * 1024 * 1024;
 const MAX_SIZE_LABEL = '500 MB';
 const CHUNK_SIZE_LIMIT = 12 * 1024 * 1024;
+const IMAGE_PROXY_THRESHOLD = 3 * 1024 * 1024;
+const MAX_IMAGE_PROXY_EDGE = 1800;
 const ALLOWED_BLEND_MODES = new Set(['screen', 'overlay', 'lighten', 'soft-light', 'normal']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.webm', '.m4v']);
 const FFMPEG_BIN = existsSync('/usr/local/bin/ffmpeg')
@@ -73,12 +76,9 @@ function probeDuration(filePath: string): Promise<number> {
   });
 }
 
-async function prepareVideoOverlay(dir: string, filename: string) {
-  const ext = path.extname(filename).toLowerCase();
-  if (!['.mov', '.m4v'].includes(ext)) return filename;
-
+async function transcodeAlphaOverlay(dir: string, filename: string) {
   const inputPath = path.join(dir, filename);
-  const outputName = filename.replace(/\.(mov|m4v)$/i, '-alpha.webm');
+  const outputName = filename.replace(/\.(mov|m4v|webm)$/i, '-alpha.webm');
   const outputPath = path.join(dir, outputName);
 
   const sourceDuration = await probeDuration(inputPath);
@@ -119,6 +119,86 @@ async function prepareVideoOverlay(dir: string, filename: string) {
       `O overlay alpha foi convertido só parcialmente (${outDuration.toFixed(1)}s de ${sourceDuration.toFixed(1)}s) — o servidor não terminou a tempo. ` +
       `Exporte o overlay mais leve (ex: 720p ou WebM) e tente de novo.`
     );
+  }
+
+  await unlink(inputPath).catch(() => {});
+  return outputName;
+}
+
+async function transcodeStandardOverlay(dir: string, filename: string) {
+  const inputPath = path.join(dir, filename);
+  const outputName = filename.replace(/\.(mp4|mov|m4v|webm)$/i, '-proxy.mp4');
+  const outputPath = path.join(dir, outputName);
+
+  const sourceDuration = await probeDuration(inputPath);
+
+  await runFfmpeg([
+    '-y',
+    '-fflags', '+genpts+discardcorrupt',
+    '-err_detect', 'ignore_err',
+    '-i', inputPath,
+    '-an',
+    '-vf', "scale='min(1080,iw)':-2,fps=24,format=yuv420p",
+    '-c:v', 'libx264',
+    '-preset', 'veryfast',
+    '-crf', '26',
+    '-movflags', '+faststart',
+    outputPath,
+  ]);
+
+  const outputStat = await stat(outputPath).catch(() => null);
+  if (!outputStat || outputStat.size < 1024) {
+    await unlink(outputPath).catch(() => {});
+    throw new Error('Falha ao gerar proxy leve do overlay. Tente um arquivo menor/mais curto.');
+  }
+
+  const outDuration = await probeDuration(outputPath);
+  if (sourceDuration > 1 && outDuration > 0 && outDuration < sourceDuration * 0.9) {
+    await unlink(outputPath).catch(() => {});
+    throw new Error(
+      `O proxy do overlay foi gerado só parcialmente (${outDuration.toFixed(1)}s de ${sourceDuration.toFixed(1)}s). ` +
+      `Exporte o overlay mais curto/leve e tente de novo.`
+    );
+  }
+
+  await unlink(inputPath).catch(() => {});
+  return outputName;
+}
+
+async function prepareVideoOverlay(dir: string, filename: string) {
+  const ext = path.extname(filename).toLowerCase();
+
+  if (ext === '.mov' || ext === '.m4v' || ext === '.webm') {
+    return transcodeAlphaOverlay(dir, filename);
+  }
+
+  return transcodeStandardOverlay(dir, filename);
+}
+
+async function prepareImageOverlay(dir: string, filename: string) {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.svg') return filename;
+
+  const inputPath = path.join(dir, filename);
+  const inputStat = await stat(inputPath).catch(() => null);
+  if (!inputStat || inputStat.size <= IMAGE_PROXY_THRESHOLD) return filename;
+
+  const outputName = filename.replace(/\.(png|jpe?g|webp)$/i, '-proxy.webp');
+  const outputPath = path.join(dir, outputName);
+
+  await sharp(inputPath, { animated: false })
+    .rotate()
+    .resize(MAX_IMAGE_PROXY_EDGE, MAX_IMAGE_PROXY_EDGE, {
+      fit: 'inside',
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 86, effort: 4 })
+    .toFile(outputPath);
+
+  const outputStat = await stat(outputPath).catch(() => null);
+  if (!outputStat || outputStat.size < 512) {
+    await unlink(outputPath).catch(() => {});
+    throw new Error('Falha ao gerar proxy leve da imagem de overlay.');
   }
 
   await unlink(inputPath).catch(() => {});
@@ -401,7 +481,7 @@ export async function POST(req: NextRequest) {
     const dir = path.join(PUBLIC_UPLOADS, 'overlays');
     const buffer = Buffer.from(await file.arrayBuffer());
     await saveFile(dir, filename, buffer);
-    const storedFilename = isVideo ? await prepareVideoOverlay(dir, filename) : filename;
+    const storedFilename = isVideo ? await prepareVideoOverlay(dir, filename) : await prepareImageOverlay(dir, filename);
     const storedDurationSec = isVideo ? await resolveVideoDuration(dir, storedFilename, durationSecRaw) : durationSecRaw;
     const overlay = await addOverlay({
       label: cleanLabel(label, path.basename(file.name, ext)),
