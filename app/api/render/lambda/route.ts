@@ -4,6 +4,11 @@ import path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { consumeUserTokens, getSaasUserById, SAAS_COOKIE_NAME, verifySessionToken } from '../../../../lib/saasUsers';
 import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
+import {
+  activateLambdaRenderSlot,
+  releaseLambdaRenderSlot,
+  reserveLambdaRenderSlot,
+} from '../../../../lib/lambdaRenderSlots';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -30,6 +35,52 @@ const COMPOSITION_MAP: Record<string, string> = {
   spotify_print: 'SpotifyPrint',
   'spotify_print:feed': 'SpotifyPrintFeed',
 };
+
+const LAMBDA_START_RETRY_DELAYS_MS = [2500, 7500, 15000];
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isLambdaCapacityError(message: string) {
+  return /rate exceeded|concurrency|quota|ConcurrentInvocationLimitExceeded|TooManyRequestsException|too many requests/i.test(message);
+}
+
+function maxWorkersPerRender(accountConcurrencyLimit: number) {
+  const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || 2);
+  const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - 2);
+  const appWorkerLimit = Math.max(1, Math.floor(Number.isFinite(configured) ? configured : 2));
+  return Math.max(1, Math.min(accountWorkerLimit, appWorkerLimit));
+}
+
+async function startRenderWithCapacityRetry(
+  renderMediaOnLambda: (options: any) => Promise<{ renderId: string; bucketName: string }>,
+  options: Record<string, unknown>,
+  totalFrames: number,
+  initialFramesPerLambda: number,
+) {
+  let framesPerLambda = initialFramesPerLambda;
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= LAMBDA_START_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      return await renderMediaOnLambda({
+        ...options,
+        framesPerLambda,
+      });
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      const canRetry = isLambdaCapacityError(message) && attempt < LAMBDA_START_RETRY_DELAYS_MS.length;
+      if (!canRetry) throw error;
+
+      framesPerLambda = Math.max(framesPerLambda, totalFrames);
+      await wait(LAMBDA_START_RETRY_DELAYS_MS[attempt]);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Falha ao iniciar render Lambda');
+}
 
 function lookupContentType(filePath: string) {
   const ext = path.extname(filePath).toLowerCase();
@@ -162,6 +213,8 @@ async function resolveLocalAssets(
 }
 
 export async function POST(req: NextRequest) {
+  let reservationId: string | null = null;
+
   try {
     cleanupTransientFiles().catch(() => {});
 
@@ -225,6 +278,27 @@ export async function POST(req: NextRequest) {
       saasUserId = user.id;
     }
 
+    const slot = await reserveLambdaRenderSlot();
+    if (!slot.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: 'RENDER_BUSY',
+          error: 'Há uma exportação em andamento. Esta exportação entrou em espera automática.',
+          retryAfterSec: slot.retryAfterSec,
+          activeRenders: slot.activeRenders,
+          maxActiveRenders: slot.maxActiveRenders,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(slot.retryAfterSec),
+          },
+        }
+      );
+    }
+    reservationId = slot.reservationId;
+
     // Upload local assets to S3 so Lambda workers can access them
     uploadCache.clear();
     const resolvedProps = inputProps
@@ -237,23 +311,28 @@ export async function POST(req: NextRequest) {
     );
     const totalFrames = Math.ceil(durationSec * 30);
     const concurrencyLimit = Number(process.env.REMOTION_LAMBDA_CONCURRENCY ?? 10);
-    // Reserve 2 slots for orchestrator + encoding, rest for render workers
-    const maxWorkers = Math.max(2, concurrencyLimit - 2);
+    const maxWorkers = maxWorkersPerRender(concurrencyLimit);
     const optimalFramesPerLambda = Math.max(20, Math.ceil(totalFrames / maxWorkers));
 
     const { renderMediaOnLambda } = await import('@remotion/lambda/client');
 
-    const result = await renderMediaOnLambda({
-      region: region as 'us-east-1',
-      functionName,
-      serveUrl,
-      composition,
-      codec: 'h264',
-      inputProps: resolvedProps,
-      forceBucketName: bucketName,
-      maxRetries: 2,
-      framesPerLambda: optimalFramesPerLambda,
-    });
+    const result = await startRenderWithCapacityRetry(
+      renderMediaOnLambda,
+      {
+        region: region as 'us-east-1',
+        functionName,
+        serveUrl,
+        composition,
+        codec: 'h264',
+        inputProps: resolvedProps,
+        forceBucketName: bucketName,
+        maxRetries: 2,
+      },
+      totalFrames,
+      optimalFramesPerLambda,
+    );
+
+    await activateLambdaRenderSlot(reservationId, result.renderId, result.bucketName);
 
     if (saasUserId) {
       await consumeUserTokens(saasUserId, 1);
@@ -268,6 +347,9 @@ export async function POST(req: NextRequest) {
       composition,
     });
   } catch (err) {
+    if (reservationId) {
+      await releaseLambdaRenderSlot({ reservationId }).catch(() => {});
+    }
     const message = err instanceof Error ? err.message : 'Erro ao iniciar render Lambda';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }

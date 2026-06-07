@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { heartbeatLambdaRenderSlot, releaseLambdaRenderSlot } from '../../../../../lib/lambdaRenderSlots';
 
 export const runtime = 'nodejs';
 
@@ -33,6 +34,12 @@ export async function GET(req: NextRequest) {
       functionName,
       region: region as 'us-east-1',
     });
+
+    if (progress.done || progress.fatalErrorEncountered) {
+      await releaseLambdaRenderSlot({ renderId, bucketName: bucket }).catch(() => {});
+    } else {
+      await heartbeatLambdaRenderSlot(renderId, bucket).catch(() => {});
+    }
 
     return NextResponse.json({
       ok: true,

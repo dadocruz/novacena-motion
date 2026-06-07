@@ -25,11 +25,20 @@ export interface TimelineTool {
   onClick: () => void;
 }
 
+export interface TimelineRawSelection {
+  label: string;
+  color: string;
+  durationSec: number;
+  startSec: number;
+  endSec: number;
+}
+
 interface TimelinePanelProps {
   durationSec: number;
   currentSec: number;
   tracks: TimelineTrack[];
   tools?: TimelineTool[];
+  rawSelection?: TimelineRawSelection | null;
   onSeek: (sec: number) => void;
   onClose: () => void;
 }
@@ -53,6 +62,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   currentSec,
   tracks,
   tools = [],
+  rawSelection,
   onSeek,
   onClose,
 }) => {
@@ -199,6 +209,20 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
         }),
     [tracks]
   );
+  const rawSelectionMeta = React.useMemo(() => {
+    if (!rawSelection || rawSelection.durationSec <= 0) return null;
+    const rawDur = Math.max(0.1, rawSelection.durationSec);
+    const start = Math.max(0, Math.min(rawDur, rawSelection.startSec));
+    const end = Math.max(start, Math.min(rawDur, rawSelection.endSec));
+    return {
+      ...rawSelection,
+      rawDur,
+      start,
+      end,
+      leftPct: (start / rawDur) * 100,
+      widthPct: Math.max(1.4, ((end - start) / rawDur) * 100),
+    };
+  }, [rawSelection]);
 
   return (
     <div
@@ -416,8 +440,86 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
             </div>
           </div>
 
-          {/* Faixas */}
-          {tracks.length === 0 ? (
+          {rawSelectionMeta && (
+            <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  height: ROW_H + 2,
+                  marginBottom: 3,
+                  borderRadius: 7,
+                  background: `linear-gradient(90deg, ${rawSelectionMeta.color}24, rgba(255,255,255,0.04) 42%, transparent)`,
+                  boxShadow: `inset 3px 0 0 ${rawSelectionMeta.color}`,
+                }}
+              >
+                <div
+                  title={rawSelectionMeta.label}
+                  style={{
+                    width: LABEL_W,
+                    flex: '0 0 auto',
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 8,
+                    borderRadius: 7,
+                    background: 'rgba(255,255,255,0.09)',
+                    color: '#fff',
+                    fontSize: 10,
+                    fontWeight: 900,
+                    paddingRight: 6,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  <span style={{ color: rawSelectionMeta.color, marginRight: 5 }}>●</span>
+                  {rawSelectionMeta.label}
+                </div>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: timeAreaWidth,
+                    flex: '0 0 auto',
+                    height: ROW_H - 6,
+                    borderRadius: 5,
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${rawSelectionMeta.color}66`,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: `${rawSelectionMeta.leftPct}%`,
+                      width: `${rawSelectionMeta.widthPct}%`,
+                      minWidth: 10,
+                      borderRadius: 4,
+                      background: `linear-gradient(180deg, ${rawSelectionMeta.color}, ${rawSelectionMeta.color}cc)`,
+                      boxShadow: `0 0 0 2px rgba(255,255,255,0.72), 0 0 14px ${rawSelectionMeta.color}aa`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 8.5,
+                        fontWeight: 900,
+                        color: 'rgba(0,0,0,0.78)',
+                        padding: '0 4px',
+                      }}
+                    >
+                      {round1(rawSelectionMeta.start)}s → {round1(rawSelectionMeta.end)}s
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Faixas */}
+            {tracks.length === 0 ? (
             <div style={{ padding: '12px 4px', fontSize: 11, color: 'rgba(255,255,255,0.5)', textAlign: 'center' }}>
               Nenhuma layer com tempo ajustável neste template.
             </div>

@@ -714,6 +714,7 @@ export default function Home() {
   const [overlayUploadProgress, setOverlayUploadProgress] = useState<number | null>(null);
   const [overlayUploadMsg, setOverlayUploadMsg] = useState('');
   const [processingVideoClip, setProcessingVideoClip] = useState(false);
+  const [videoClipProgress, setVideoClipProgress] = useState<number | null>(null);
   const [videoUploadMsg, setVideoUploadMsg] = useState('');
   const [bgTrimPreviewTime, setBgTrimPreviewTime] = useState(0);
   const [bgTrimTimecodeInput, setBgTrimTimecodeInput] = useState('00:00.0');
@@ -945,6 +946,15 @@ export default function Home() {
       if (e.code === 'Backslash' || e.key === '\\') {
         e.preventDefault();
         restartPlayerFromZero();
+        return;
+      }
+
+      if (e.key === '3' || e.code === 'Digit3' || e.code === 'Numpad3') {
+        e.preventDefault();
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLElement) activeElement.blur();
+        setActiveStudioTool('timeline');
+        setShowTimeline((open) => !open);
         return;
       }
 
@@ -2148,6 +2158,14 @@ export default function Home() {
         requiresOptimization: false,
       } satisfies LocalAssetRef)
     : bgVideoLocalAsset;
+  const bgTrimVideoSrc =
+    effectiveBgVideoNeedsTrim && effectiveBgVideoLocalAsset?.sourcePath
+      ? effectiveBgVideoLocalAsset.sourcePath
+      : bgVideo;
+  const effectivePreviewBgVideoSrc =
+    effectiveBgVideoNeedsTrim && bgTrimVideoSrc
+      ? bgTrimVideoSrc
+      : (bgVideoReadySrc || bgVideo);
 
   const motion: MotionConfig = useMemo(
     () => ({
@@ -2213,7 +2231,7 @@ export default function Home() {
       cta2InFrame: effectiveTextInFrames.cta2,
       logosInFrame,
       background: {
-        videoSrc: (bgVideoReadySrc || bgVideo) || undefined,
+        videoSrc: effectivePreviewBgVideoSrc || undefined,
         mediaType: bgVideo && /\.(png|jpe?g|webp|gif)(\?|#|$)/i.test(bgVideo) ? 'image' : 'video',
         videoStartFrame: Math.floor(effectiveBgVideoStartSec * 30),
         videoDurationSec: effectiveBgVideoDuration || undefined,
@@ -2301,6 +2319,7 @@ export default function Home() {
       logosInFrame,
       bgVideo,
       bgVideoReadySrc,
+      effectivePreviewBgVideoSrc,
       bgVideoStartSec,
       bgVideoDuration,
       bgVideoNeedsTrim,
@@ -2451,6 +2470,9 @@ export default function Home() {
       background?: NonNullable<MotionConfig['background']> & { previewQuality?: 'full' | 'light' };
       overlays?: OverlayPlacement[];
     };
+    const previewVideoStartFrame = effectiveBgVideoNeedsTrim
+      ? Math.floor(Math.max(0, bgTrimPreviewTime) * 30)
+      : motionForPreview.background?.videoStartFrame;
     const hasVideoBackground = Boolean(
       motionForPreview.background?.videoSrc &&
       motionForPreview.background.mediaType !== 'image'
@@ -2500,6 +2522,7 @@ export default function Home() {
         background: {
           ...motionForPreview.background,
           videoSrc: motionForPreview.background?.videoSrc,
+          videoStartFrame: previewVideoStartFrame,
           previewQuality: useLightPreview ? ('light' as const) : ('full' as const),
         },
         overlays: previewOverlays,
@@ -2509,7 +2532,7 @@ export default function Home() {
       },
       renderTarget: target,
     };
-  }, [project, durationSeconds, motionWithStyles, target]);
+  }, [project, durationSeconds, motionWithStyles, target, effectiveBgVideoNeedsTrim, bgTrimPreviewTime]);
 
 
   // O player só REMONTA (volta pra frame 0) em mudanças ESTRUTURAIS: troca de
@@ -2522,7 +2545,7 @@ export default function Home() {
     target,
     previewNonce,
     showCover,
-    bgVideo,
+    effectivePreviewBgVideoSrc,
     effectiveBgVideoDuration,
     effectiveBgVideoNeedsTrim,
   ].join('|');
@@ -2611,6 +2634,12 @@ export default function Home() {
     return null;
   }
 
+  function applyDurationSecondsInput(value: string) {
+    const parsed = parseTimecode(value);
+    if (parsed === null || parsed <= 0) return;
+    setDurationSeconds(Math.max(1, Math.min(MAX_BACKGROUND_CLIP_SECONDS, Math.round(parsed * 10) / 10)));
+  }
+
   function setBgVideoStartAndPreview(value: number, shouldSeek = true) {
     const next = clampBgVideoStart(value);
     bgTrimPreviewCursorRef.current = next;
@@ -2630,6 +2659,7 @@ export default function Home() {
     bgTrimPreviewCursorRef.current = next;
     setBgTrimPreviewTime(next);
     if (bgTrimVideoRef.current) {
+      bgTrimProgrammaticSeekRef.current = true;
       bgTrimVideoRef.current.currentTime = next;
     }
   }
@@ -2646,12 +2676,25 @@ export default function Home() {
 
   function playBgTrimSelection() {
     const video = bgTrimVideoRef.current;
-    if (!video) return;
-    const current = Number.isFinite(video.currentTime) ? video.currentTime : bgTrimPreviewCursorRef.current;
+    const videoTime = video ? video.currentTime : NaN;
+    const current = Number.isFinite(videoTime) ? videoTime : bgTrimPreviewCursorRef.current;
     const start = Math.max(0, Math.min(bgVideoDuration || current, current));
     bgTrimSelectionEndRef.current = Math.min(bgVideoDuration || start + bgClipDuration, start + bgClipDuration);
     bgTrimPreviewCursorRef.current = start;
     setBgTrimPreviewTime(start);
+    setBgVideoStartAndPreview(start, Boolean(video));
+
+    requestAnimationFrame(() => {
+      try {
+        programmaticSeekRef.current = true;
+        playerRef.current?.seekTo?.(0);
+        playerRef.current?.play?.();
+      } catch {
+        // preview central pode ainda não estar montado.
+      }
+    });
+
+    if (!video) return;
 
     const play = () => {
       setBgTrimPreviewTime(video.currentTime || start);
@@ -3611,8 +3654,18 @@ export default function Home() {
 
     const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
     setProcessingVideoClip(true);
+    setVideoClipProgress(6);
     lastVideoClipErrorRef.current = '';
     setVideoUploadMsg(`Cortando ${clipDuration}s e convertendo para ${target === 'story' ? '1080×1920' : '1080×1350'}...`);
+    const progressTimer = window.setInterval(() => {
+      setVideoClipProgress((current) => {
+        const value = current ?? 6;
+        if (value < 42) return value + 6;
+        if (value < 76) return value + 3;
+        if (value < 92) return value + 1;
+        return value;
+      });
+    }, 700);
 
     try {
       let assetForTrim = bgVideoLocalAsset;
@@ -3622,6 +3675,7 @@ export default function Home() {
         const refreshedAsset = await reuploadBackgroundSourceForTrim(assetForTrim);
         if (refreshedAsset) {
           assetForTrim = refreshedAsset;
+          setVideoClipProgress((current) => Math.max(current ?? 0, 45));
           setVideoUploadMsg('Bruto reenviado. Cortando o trecho otimizado agora...');
           data = await requestBackgroundVideoTrim(refreshedAsset, clipDuration);
         }
@@ -3660,6 +3714,7 @@ export default function Home() {
       };
       applyBackgroundVideoPatchToState(optimizedPatch);
       shareBackgroundVideoWithTemplates(optimizedPatch);
+      setVideoClipProgress(100);
       const sizeLabel = data.size ? `${(data.size / 1024 / 1024).toFixed(1)} MB` : 'arquivo leve';
       const audioMessage =
         data.audioWarning ||
@@ -3674,7 +3729,9 @@ export default function Home() {
       setVideoUploadMsg(`Erro: ${message}`);
       return null;
     } finally {
+      window.clearInterval(progressTimer);
       setProcessingVideoClip(false);
+      window.setTimeout(() => setVideoClipProgress(null), 900);
     }
   }
 
@@ -5924,6 +5981,44 @@ export default function Home() {
     return message;
   }
 
+  async function startLambdaExportRequest(payload: Record<string, unknown>, label: string) {
+    const maxAttempts = 20;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const response = await fetch('/api/render/lambda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({
+        ok: false,
+        error: `HTTP ${response.status}`,
+      }));
+
+      if (data.ok || data.code !== 'RENDER_BUSY') {
+        return { response, data };
+      }
+
+      const retryAfterSec = Math.max(5, Math.min(30, Number(data.retryAfterSec) || 15));
+      setRenderStatus('rendering');
+      setRenderProgress(Math.max(1, Math.min(18, Math.round(((attempt + 1) / maxAttempts) * 18))));
+      setRenderMessage(
+        SAAS_EXPORT_MODE
+          ? `Exportação de ${label} na fila. Tentando automaticamente em ${retryAfterSec}s...`
+          : `Lambda ocupado. Tentando novamente em ${retryAfterSec}s...`
+      );
+      await new Promise((resolve) => window.setTimeout(resolve, retryAfterSec * 1000));
+    }
+
+    return {
+      response: null,
+      data: {
+        ok: false,
+        error: 'A fila de exportação demorou demais. Tente novamente em instantes.',
+      },
+    };
+  }
+
   function readyBackgroundVideoPatch(): SharedBackgroundVideoPatch | null {
     if (!bgVideoHasReadyClip || !bgVideoReadySrc) return null;
     return {
@@ -6028,14 +6123,12 @@ export default function Home() {
         optimizedPatch ? { background: backgroundOverrideFromPatch(optimizedPatch) } : undefined
       );
 
-      const startRes = await fetch('/api/render/lambda', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template, target, inputProps }),
-      });
-      const startData = await startRes.json();
+      const { response: startRes, data: startData } = await startLambdaExportRequest(
+        { template, target, inputProps },
+        label
+      );
       if (!startData.ok) {
-        if (SAAS_EXPORT_MODE && startRes.status === 402) {
+        if (SAAS_EXPORT_MODE && startRes?.status === 402) {
           setShowUpgradeModal(true);
           fetch('/api/auth/me')
             .then((response) => response.json())
@@ -8495,10 +8588,10 @@ return (
               <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
                 <video
                   ref={bgTrimVideoRef}
-                  src={bgVideo}
-                  controls
+                  src={bgTrimVideoSrc}
                   preload="auto"
                   playsInline
+                  muted
                   onLoadedMetadata={(event) => {
                     const duration = event.currentTarget.duration;
                     if (Number.isFinite(duration) && duration > 0) {
@@ -8516,6 +8609,7 @@ return (
                     if (selectionEnd !== null && current >= selectionEnd) {
                       bgTrimSelectionEndRef.current = null;
                       event.currentTarget.pause();
+                      try { playerRef.current?.pause?.(); } catch { /* noop */ }
                     }
                   }}
                   onSeeked={(event) => {
@@ -8533,13 +8627,11 @@ return (
                     }
                   }}
                   style={{
-                    width: '100%',
-                    aspectRatio: target === 'story' ? '9 / 16' : '4 / 5',
-                    maxHeight: 260,
-                    borderRadius: 10,
-                    background: '#000',
-                    objectFit: 'contain',
-                    border: '1px solid var(--border-1)',
+                    position: 'absolute',
+                    width: 1,
+                    height: 1,
+                    opacity: 0,
+                    pointerEvents: 'none',
                   }}
                 />
 
@@ -8652,7 +8744,21 @@ return (
                   </label>
                   <label style={{ display: 'grid', gap: 5 }}>
                     <span style={miniInputLabel}>Duração final</span>
-                    <input readOnly value={`${bgClipDuration}s`} style={{ ...fieldInputStyle, opacity: 0.78 }} />
+                    <input
+                      type="number"
+                      min={1}
+                      max={MAX_BACKGROUND_CLIP_SECONDS}
+                      step={0.1}
+                      value={bgClipDuration}
+                      onChange={(event) => applyDurationSecondsInput(event.target.value)}
+                      onBlur={(event) => applyDurationSecondsInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          applyDurationSecondsInput(event.currentTarget.value);
+                        }
+                      }}
+                      style={fieldInputStyle}
+                    />
                   </label>
                 </div>
 
@@ -8678,6 +8784,26 @@ return (
                       ? `Otimizar ${bgClipDuration}s`
                       : `Cortar/otimizar ${bgClipDuration}s`}
                 </button>
+                {videoClipProgress !== null && (
+                  <div>
+                    <div style={{ height: 7, borderRadius: 999, background: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${Math.max(0, Math.min(100, videoClipProgress))}%`,
+                          height: '100%',
+                          borderRadius: 999,
+                          background: videoClipProgress >= 100
+                            ? '#22c55e'
+                            : 'linear-gradient(90deg, rgba(168,85,247,0.95), rgba(249,115,22,0.95))',
+                          transition: 'width 220ms ease',
+                        }}
+                      />
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text-3)' }}>
+                      {videoClipProgress >= 100 ? '100% pronto' : `${Math.round(videoClipProgress)}% otimizando`}
+                    </div>
+                  </div>
+                )}
                 {!bgVideoRequiresOptimization ? (
                   <button
                     type="button"
@@ -9651,6 +9777,17 @@ return (
           currentSec={timelineSec}
           tracks={timelineTracks}
           tools={timelineTools}
+          rawSelection={
+            effectiveBgVideoNeedsTrim && bgVideoDuration > 0
+              ? {
+                  label: 'Trecho bruto',
+                  color: '#c084fc',
+                  durationSec: bgVideoDuration,
+                  startSec: bgVideoStartSec,
+                  endSec: Math.min(bgVideoDuration, bgVideoStartSec + bgClipDuration),
+                }
+              : null
+          }
           onSeek={seekTimeline}
           onClose={() => setShowTimeline(false)}
         />
