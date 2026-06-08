@@ -495,6 +495,8 @@ export default function Home() {
 
   const [releaseDate, setReleaseDate] = useState(factoryAvailableNow.releaseDate ?? '');
   const [coverImage, setCoverImage] = useState(factoryAvailableNow.coverImage);
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [headline, setHeadline] = useState(factoryAvailableNow.headline);
   const [cta, setCta] = useState(factoryAvailableNow.cta);
   const [cta2, setCta2] = useState(factoryAvailableNow.cta2 ?? factoryAvailableNow.cta);
@@ -1622,6 +1624,29 @@ export default function Home() {
         ? 'Print do celular aplicado neste template.'
         : 'Capa aplicada aos templates compatíveis.'
     );
+  }
+
+  async function fetchSpotifyCover() {
+    const url = spotifyUrl.trim();
+    if (!url) return;
+    setSpotifyLoading(true);
+    try {
+      const d = await fetch('/api/spotify-cover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      }).then((r) => r.json());
+      if (!d.ok || !d.coverSrc) throw new Error(d.error || 'Falha ao buscar capa.');
+      applyCoverForCurrentTemplate(d.coverSrc);
+      setSpotifyUrl('');
+      setSaveMessage(
+        d.title ? `Capa do Spotify aplicada: ${d.title}${d.artist ? ' — ' + d.artist : ''}.` : 'Capa do Spotify aplicada.'
+      );
+    } catch (e) {
+      alert('Erro ao buscar capa do Spotify: ' + (e instanceof Error ? e.message : 'desconhecido'));
+    } finally {
+      setSpotifyLoading(false);
+    }
   }
 
   function removeCoverFromCurrentTemplate() {
@@ -7032,6 +7057,30 @@ return (
             }}
             style={{ display: 'none' }}
           />
+
+          {/* Capa via link do Spotify (opcional). Conveniência — qualidade até ~640px. */}
+          <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              value={spotifyUrl}
+              onChange={(e) => setSpotifyUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') fetchSpotifyCover(); }}
+              placeholder="Colar link do Spotify (música/álbum)"
+              style={{ flex: 1, minWidth: 0, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border-1)', background: 'rgba(255,255,255,0.04)', color: 'var(--text-1)', fontSize: 12 }}
+            />
+            <button
+              type="button"
+              onClick={fetchSpotifyCover}
+              disabled={spotifyLoading || !spotifyUrl.trim()}
+              style={{ ...tinyAddBtn, whiteSpace: 'nowrap', opacity: spotifyLoading || !spotifyUrl.trim() ? 0.6 : 1 }}
+            >
+              {spotifyLoading ? 'Buscando…' : 'Puxar capa'}
+            </button>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4, lineHeight: 1.35 }}>
+            Pega a capa direto do link do Spotify (até ~640px). Pra qualidade máxima, use o PNG acima.
+          </div>
+
           {template === 'watch_youtube' && (
             <ToggleRow
               label="Mostrar capa no vídeo"
