@@ -151,6 +151,7 @@ import {
   ToggleRow,
   FontPicker,
 } from '../../components/editor';
+import { trackMarketingEvent } from '../../lib/marketingEvents';
 
 type RenderEngine = 'desktop' | 'local' | 'lambda';
 
@@ -866,6 +867,21 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [renderJobId]);
 
+  // ── Conversão de COMPRA (Meta Pixel + GTM/Google Ads) ──────────────
+  // Dispara Purchase com valor quando o checkout volta com sucesso. Limpa os
+  // params logo em seguida pra não disparar de novo num refresh.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') !== 'success') return;
+    const value = Number(params.get('value') || 0) || undefined;
+    const currency = params.get('currency') || 'BRL';
+    const plan = params.get('plan') || undefined;
+    trackMarketingEvent('Purchase', { value, currency, content_name: plan, content_type: 'product' });
+    const url = new URL(window.location.href);
+    ['checkout', 'value', 'currency', 'plan'].forEach((k) => url.searchParams.delete(k));
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
   // ── Drag & drop na capa ────────────────────────────────────
   const [isCoverDragging, setIsCoverDragging] = React.useState(false);

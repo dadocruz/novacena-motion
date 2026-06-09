@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
           cycle,
           userId: user.id,
           userEmail: user.email,
-          successUrl: `${appOrigin}/estudio?checkout=success`,
+          successUrl: `${appOrigin}/estudio?checkout=success&value=${totalBRL}&currency=BRL&plan=${encodeURIComponent(plan.id)}`,
           cancelUrl: `${appOrigin}/billing?status=cancelled`,
         });
         return NextResponse.json({ ok: true, checkoutUrl });
