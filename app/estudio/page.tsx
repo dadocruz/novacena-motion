@@ -7255,7 +7255,9 @@ return (
           )}
         </Section>
 
-            {!SAAS_EXPORT_MODE && (
+            {/* Poster/capa do vídeo: visível também no modo SaaS — o render
+                (Lambda e local) suporta intro/outro com o still do frame. */}
+            {(
               <div
                 style={{
                   marginTop: 14,
