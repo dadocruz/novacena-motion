@@ -6,6 +6,8 @@ import { readFile, writeFile, mkdir, unlink } from 'fs/promises';
 import {join, basename} from 'path';
 import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
+import sharp from 'sharp';
+import { updateOverlayPreset } from '../../../lib/storage';
 
 const execAsync = promisify(exec);
 const DEFAULT_APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
@@ -313,6 +315,46 @@ export async function POST(request: NextRequest) {
         // O macOS limita argumentos da linha de comando a ~262KB, base64 estoura isso.
         const tmpFile = join(tmpdir(), `novacena-render-${randomBytes(8).toString('hex')}.json`);
         await writeFile(tmpFile, JSON.stringify(renderProps), 'utf-8');
+
+        // ── THUMBNAIL COMPOSTA (preset de overlay) ──────────────────────────
+        // Reaproveita TODA a normalização de assets + a composition acima e roda
+        // apenas 1 still no frame escolhido. Retorna cedo, sem tocar no fluxo de
+        // render de vídeo. Usado pela biblioteca de overlays (job em background).
+        if (body?.stillOnly) {
+          try {
+            const fps = 30;
+            const durSec = Number(renderProps?.durationSeconds ?? 8) || 8;
+            const maxFrame = Math.max(0, Math.round(durSec * fps) - 1);
+            const reqFrame = Math.round(Number(body.stillFrameSec ?? 0) * fps);
+            const frame = Math.max(0, Math.min(maxFrame, Number.isFinite(reqFrame) ? reqFrame : 0));
+
+            const pngPath = join(tmpdir(), `novacena-thumb-${randomBytes(6).toString('hex')}.png`);
+            const stillCmd = `npx remotion still remotion-entry/index.ts ${comp.id} ${pngPath} --props=${tmpFile} --frame=${frame}`;
+            await execAsync(stillCmd, { cwd: process.cwd(), maxBuffer: 1024 * 1024 * 100 });
+
+            const thumbsDir = join(process.cwd(), 'public', 'uploads', 'overlay-thumbs');
+            await mkdir(thumbsDir, { recursive: true });
+            const safeId = String(body.stillPresetId || randomBytes(6).toString('hex')).replace(/[^a-z0-9_-]/gi, '');
+            const thumbName = `${safeId}-${Date.now()}.jpg`;
+            const pngBuf = await readFile(pngPath);
+            const jpg = await sharp(pngBuf).resize({ width: 420 }).jpeg({ quality: 80 }).toBuffer();
+            await writeFile(join(thumbsDir, thumbName), jpg);
+            await unlink(pngPath).catch(() => {});
+            await unlink(tmpFile).catch(() => {});
+
+            const thumbnail = `/api/uploads/overlay-thumbs/${thumbName}`;
+            if (body.stillPresetId) {
+              await updateOverlayPreset(String(body.stillPresetId), { thumbnail }).catch(() => {});
+            }
+            return NextResponse.json({ ok: true, thumbnail });
+          } catch (err) {
+            await unlink(tmpFile).catch(() => {});
+            return NextResponse.json(
+              { ok: false, error: err instanceof Error ? err.message : 'Falha ao gerar thumbnail.' },
+              { status: 500 }
+            );
+          }
+        }
 
         const outputFileForRender = comp.out.replace(/\.mp4$/, `-${Date.now()}.mp4`);
 

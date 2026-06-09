@@ -351,6 +351,18 @@ export async function deleteOverlayPreset(id: string): Promise<boolean> {
   return true;
 }
 
+export async function updateOverlayPreset(
+  id: string,
+  patch: Partial<Omit<OverlayPreset, 'id' | 'createdAt'>>
+): Promise<OverlayPreset | null> {
+  const all = await readJson<OverlayPreset[]>(OVERLAY_PRESETS_FILE, []);
+  const idx = all.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  all[idx] = { ...all[idx], ...patch, id: all[idx].id, createdAt: all[idx].createdAt };
+  await writeJson(OVERLAY_PRESETS_FILE, all);
+  return all[idx];
+}
+
 // ============================================================
 // CUSTOM PLATFORM LOGOS
 // ============================================================

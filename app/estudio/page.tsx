@@ -4198,6 +4198,33 @@ export default function Home() {
       }).then((x) => x.json());
       if (!r.ok) throw new Error(r.error || 'Falha ao salvar.');
       setOverlayPresets((prev) => [r.preset, ...prev]);
+
+      // Background (não bloqueia): gera a thumbnail COMPOSTA (textos + BG +
+      // overlay) no frame atual da timeline via render no servidor (~40s) e
+      // troca a thumb quando ficar pronta. Se falhar, mantém a thumb client.
+      try {
+        const presetId = r.preset.id as string;
+        const script = renderScriptFor(template, target);
+        const props = buildRenderInputProps();
+        setSaveMessage('Preset salvo. Gerando capa composta (textos + BG) em segundo plano…');
+        fetch('/api/render', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ script, props, stillOnly: true, stillFrameSec: timelineSec, stillPresetId: presetId }),
+        })
+          .then((x) => x.json())
+          .then((res) => {
+            if (res?.ok && res.thumbnail) {
+              setOverlayPresets((prev) => prev.map((p) => (p.id === presetId ? { ...p, thumbnail: res.thumbnail } : p)));
+              setSaveMessage('Capa composta do preset pronta.');
+            }
+          })
+          .catch(() => {
+            /* mantém a thumbnail client-side */
+          });
+      } catch {
+        /* noop */
+      }
     } catch (e) {
       alert('Erro ao salvar preset: ' + (e instanceof Error ? e.message : 'desconhecido'));
     } finally {
