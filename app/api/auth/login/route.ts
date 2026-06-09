@@ -7,6 +7,7 @@ import {
   verifyPassword,
 } from '../../../../lib/saasUsers';
 import { rateLimit, clientIp } from '../../../../lib/rateLimit';
+import { audit } from '../../../../lib/auditLog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Rate limit anti brute-force / criação em massa (8 tentativas/min por IP).
-  const rl = rateLimit(`login:${clientIp(req)}`, 8, 60_000);
+  const ip = clientIp(req);
+  const rl = rateLimit(`login:${ip}`, 8, 60_000);
   if (!rl.ok) {
     return NextResponse.json(
       { ok: false, error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' },
@@ -61,14 +63,18 @@ export async function POST(req: NextRequest) {
       : await getSaasUserByEmail(email);
 
     if (!user) {
+      void audit('login_fail', { email, ip });
       return NextResponse.json({ ok: false, error: 'Conta não encontrada.' }, { status: 401 });
     }
 
     if (mode === 'login') {
       if (!user.passwordHash || !user.passwordSalt || !verifyPassword(password, user.passwordHash, user.passwordSalt)) {
+        void audit('login_fail', { email, ip });
         return NextResponse.json({ ok: false, error: 'Email ou senha inválidos.' }, { status: 401 });
       }
     }
+
+    void audit(mode === 'signup' ? 'signup' : 'login_success', { email, ip });
 
     const response = NextResponse.json({
       ok: true,

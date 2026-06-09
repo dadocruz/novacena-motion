@@ -13,6 +13,13 @@ const nextConfig = {
   // Reduz drasticamente o tamanho da imagem Docker final.
   output: 'standalone',
 
+  // Segurança: NÃO enviar source maps do browser em produção — assim o código
+  // legível não fica disponível (só o bundle minificado). Dificulta cópia.
+  productionBrowserSourceMaps: false,
+
+  // Remove o header "X-Powered-By: Next.js" (menos fingerprinting do stack).
+  poweredByHeader: false,
+
   // Inclui assets apenas nas rotas que realmente precisam deles.
   // Evita o Turbopack interpretar que toda rota /api depende do projeto inteiro.
   outputFileTracingIncludes: {

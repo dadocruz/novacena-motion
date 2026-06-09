@@ -3,6 +3,7 @@ import './globals.css';
 import './fonts.css';
 import CookieConsent from './components/CookieConsent';
 import MarketingTags from './components/MarketingTags';
+import AntiInspect from './components/AntiInspect';
 
 const BASE_URL = 'https://www.estudionovacena.com';
 
@@ -101,6 +102,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <MarketingTags />
+        <AntiInspect />
         {children}
         <CookieConsent />
       </body>
