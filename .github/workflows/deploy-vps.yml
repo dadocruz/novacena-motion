@@ -49,6 +49,8 @@ jobs:
             NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID=${{ vars.NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID || vars.MOTION_GOOGLE_ADS_ID }}
 
       - name: Deploy to VPS
+        id: deploy1
+        continue-on-error: true
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -60,6 +62,70 @@ jobs:
           # timeout maior evita o "dial tcp i/o timeout" intermitente que
           # fazia o deploy falhar com o build OK.
           timeout: 90s
+          command_timeout: 15m
+          script: |
+            set -e
+            if [ -n "${{ secrets.GHCR_TOKEN }}" ]; then
+              echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER || github.actor }}" --password-stdin
+            else
+              echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            fi
+
+            IMAGE_TAG="${IMAGE}:${{ github.sha }}"
+            PREVIOUS_IMAGE="$(docker service inspect "${SERVICE}" --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}' 2>/dev/null || true)"
+
+            echo "Pulling ${IMAGE_TAG}..."
+            docker pull "${IMAGE_TAG}"
+
+            echo "Updating service ${SERVICE}..."
+            docker service update \
+              --with-registry-auth \
+              --label-add traefik.swarm.network=automatizadoria \
+              --image "${IMAGE_TAG}" \
+              "${SERVICE}"
+
+            echo "Waiting for container to be healthy..."
+            HEALTHY=false
+            for i in $(seq 1 12); do
+              sleep 10
+              CID=$(docker ps -q --filter "name=${SERVICE}" --filter "health=healthy" 2>/dev/null | head -1)
+              if [ -n "$CID" ]; then
+                HEALTHY=true
+                break
+              fi
+              echo "  attempt $i/12 — not healthy yet"
+            done
+
+            echo "--- Service status ---"
+            docker service ps "${SERVICE}" \
+              --format "table {{.Name}}\t{{.CurrentState}}\t{{.Error}}" \
+              --filter "desired-state=running"
+
+            if [ "$HEALTHY" = true ]; then
+              echo "Healthcheck OK (container $CID)"
+            else
+              echo "WARNING: no healthy container after 120s"
+              docker service logs "${SERVICE}" --tail 20 --no-trunc 2>&1 | tail -15
+              if [ -n "${PREVIOUS_IMAGE}" ]; then
+                echo "Rolling back to ${PREVIOUS_IMAGE}..."
+                docker service update --with-registry-auth --image "${PREVIOUS_IMAGE}" "${SERVICE}" || true
+              fi
+              exit 1
+            fi
+
+      # 2ª tentativa automática: o passo acima usa continue-on-error, então se
+      # ele falhar (tipicamente "dial tcp i/o timeout" do SSH, com a imagem já
+      # no GHCR), esta tentativa roda de novo. Se ESTA falhar, o job falha.
+      - name: Deploy to VPS (retry após timeout de SSH)
+        if: steps.deploy1.outcome == 'failure'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          envs: IMAGE,SERVICE
+          timeout: 120s
           command_timeout: 15m
           script: |
             set -e
