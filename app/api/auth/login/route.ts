@@ -6,6 +6,7 @@ import {
   SAAS_COOKIE_NAME,
   verifyPassword,
 } from '../../../../lib/saasUsers';
+import { rateLimit, clientIp } from '../../../../lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,13 +24,22 @@ function setSessionCookie(response: NextResponse, token: string) {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24 * 7,
   });
 }
 
 export async function POST(req: NextRequest) {
   if (!isSaasMode()) {
     return NextResponse.json({ ok: true });
+  }
+
+  // Rate limit anti brute-force / criação em massa (8 tentativas/min por IP).
+  const rl = rateLimit(`login:${clientIp(req)}`, 8, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } }
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -73,9 +83,12 @@ export async function POST(req: NextRequest) {
     setSessionCookie(response, createSessionToken(user));
     return response;
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : 'Não foi possível entrar.' },
-      { status: 400 }
-    );
+    // Só repassa mensagens seguras conhecidas; o resto vira genérico pra não
+    // vazar detalhes internos (caminhos, stack, estrutura).
+    const msg = error instanceof Error ? error.message : '';
+    const known = new Set(['Este email já possui uma conta.']);
+    const safe = known.has(msg) ? msg : 'Não foi possível entrar. Tente novamente.';
+    if (!known.has(msg)) console.error('[auth/login] erro inesperado:', error);
+    return NextResponse.json({ ok: false, error: safe }, { status: 400 });
   }
 }

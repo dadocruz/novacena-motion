@@ -8,6 +8,12 @@ import { tmpdir } from 'os';
 import { randomBytes } from 'crypto';
 import sharp from 'sharp';
 import { updateOverlayPreset } from '../../../lib/storage';
+import { verifySessionToken, SAAS_COOKIE_NAME } from '../../../lib/saasUsers';
+
+function isSaasModeRender() {
+  return process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === '1' ||
+    process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE === 'true';
+}
 
 const execAsync = promisify(exec);
 const DEFAULT_APP_ORIGIN = process.env.NOVACENA_APP_ORIGIN || 'http://localhost:3000';
@@ -161,6 +167,15 @@ async function pathToDataUrl(urlPath: string): Promise<string | null> {
 
 export async function POST(request: NextRequest) {
   try {
+    // Em modo SaaS, exige sessão válida: evita abuso de render/CPU por quem não
+    // está logado (a thumbnail composta e o export sempre vêm de usuário logado).
+    if (isSaasModeRender()) {
+      const session = verifySessionToken(request.cookies.get(SAAS_COOKIE_NAME)?.value);
+      if (!session) {
+        return NextResponse.json({ ok: false, error: 'Acesso não autorizado.' }, { status: 401 });
+      }
+    }
+
     const body = await request.json();
     const appOrigin = process.env.NOVACENA_APP_ORIGIN || request.nextUrl.origin || DEFAULT_APP_ORIGIN;
 

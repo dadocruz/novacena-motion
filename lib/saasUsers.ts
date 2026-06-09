@@ -35,8 +35,28 @@ function base64url(input: Buffer | string) {
   return Buffer.from(input).toString('base64url');
 }
 
+// Segredo de assinatura da sessão. NUNCA cair num valor público em produção
+// (qualquer um forjaria a sessão de qualquer usuário). Se nenhum env estiver
+// configurado em prod, geramos um segredo aleatório POR PROCESSO: não é
+// forjável, mas invalida sessões a cada restart — é o empurrão pra configurar
+// NOVACENA_AUTH_SECRET na VPS.
+let runtimeRandomSecret: string | null = null;
 function authSecret() {
-  return process.env.NOVACENA_AUTH_SECRET || process.env.NOVACENA_SAAS_PASSWORD || 'novacena-dev-secret';
+  const explicit = process.env.NOVACENA_AUTH_SECRET || process.env.NOVACENA_SAAS_PASSWORD;
+  if (explicit) return explicit;
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!runtimeRandomSecret) {
+      runtimeRandomSecret = randomBytes(32).toString('hex');
+      console.error(
+        '[SECURITY] NOVACENA_AUTH_SECRET ausente/curto em produção — usando segredo aleatório por processo. ' +
+        'Configure NOVACENA_AUTH_SECRET (>=32 chars) na VPS para as sessões persistirem e serem seguras.'
+      );
+    }
+    return runtimeRandomSecret;
+  }
+
+  return 'novacena-dev-secret-DEV-ONLY';
 }
 
 function normalizeEmail(email: string) {

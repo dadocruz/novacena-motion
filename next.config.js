@@ -42,6 +42,21 @@ const nextConfig = {
     proxyClientMaxBodySize: '200mb',
   },
 
+  async headers() {
+    // Headers de segurança seguros (não quebram analytics/Stripe/Google/Remotion).
+    // CSP completo de script-src fica como follow-up (precisa allowlist por domínio
+    // + teste); aqui já travamos clickjacking via X-Frame-Options + frame-ancestors.
+    const securityHeaders = [
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+      { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+    ];
+    return [{ source: '/:path*', headers: securityHeaders }];
+  },
+
   async redirects() {
     return [
       { source: '/vendas', destination: '/motion', permanent: true },
