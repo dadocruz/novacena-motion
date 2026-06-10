@@ -46,12 +46,18 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
   const cycleInfo = BILLING_CYCLES.find((c) => c.id === params.cycle);
   const isRecurring = params.cycle !== 'monthly'; // all cycles are recurring in this model
 
+  // successUrl pode já ter query string (?checkout=success&value=...) — usar & nesse caso.
+  const successSep = params.successUrl.includes('?') ? '&' : '?';
+
   const session = await stripe.checkout.sessions.create({
     mode: isRecurring ? 'subscription' : 'subscription',
     payment_method_types: ['card'],
     customer_email: params.userEmail,
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${params.successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+    // Campo "Adicionar código promocional" no checkout — cupons criados no
+    // dashboard do Stripe (ex.: PRIMEIRACOMPRA) funcionam sem mudar código.
+    allow_promotion_codes: true,
+    success_url: `${params.successUrl}${successSep}session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: params.cancelUrl,
     metadata: {
       novacena_user_id: params.userId,

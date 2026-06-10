@@ -24,16 +24,42 @@ export interface SiteFaq {
   a: string;
 }
 
+/** Vídeo demo do produto (showcase). src aceita: caminho local (/uploads/site/demo.mp4),
+ *  URL .mp4/.webm, ou link/ID do YouTube. */
+export interface SiteShowcaseVideo {
+  src: string;
+  label: string;
+}
+
+/** Barra de cupom fixa no topo (estilo "USE O CUPOM X E GANHE Y OFF"). */
+export interface SiteCouponBar {
+  enabled: boolean;
+  code: string;
+  discount: string;
+}
+
 export interface SiteContent {
   heroVideoId: string;
   logos: SiteLogo[];
   testimonialVideos: SiteTestimonialVideo[];
+  showcaseVideos: SiteShowcaseVideo[];
+  couponBar: SiteCouponBar;
+  usersLine: string;
   reviews: SiteReview[];
   faqs: SiteFaq[];
   heroTagline: string;
   heroTitle: string;
   heroSubtitle: string;
   trustLine: string;
+}
+
+/** Detecta se o src do showcase é arquivo de vídeo direto ou referência YouTube. */
+export function showcaseKind(src: string): 'file' | 'youtube' {
+  const value = src.trim().toLowerCase();
+  if (value.startsWith('/') || value.endsWith('.mp4') || value.endsWith('.webm') || value.endsWith('.mov')) {
+    return 'file';
+  }
+  return 'youtube';
 }
 
 export function extractYouTubeVideoId(input: string): string {
@@ -83,10 +109,17 @@ export function normalizeSiteContent(content: SiteContent): SiteContent {
 export const DEFAULT_CONTENT: SiteContent = {
   heroVideoId: '',
   heroTagline: '// MOTION PARA LANÇAMENTOS MUSICAIS',
-  heroTitle: 'NovaCena cria o motion do seu lançamento. Você fica com o crédito.',
+  heroTitle: 'Crie o motion do seu lançamento em menos de 5 minutos.',
   heroSubtitle:
-    'Templates profissionais de motion para divulgação musical. Troque a capa, ajuste o texto, exporte na nuvem em minutos. Sem instalar nada. Sem contratar ninguém.',
+    'Templates profissionais de pré-save, lançamento e marcos de streams. Troque a capa, ajuste o texto, exporte em Full HD. Sem After Effects. Sem designer. Sem perder horas.',
   trustLine: '✓  1 render de demonstração grátis · Sem cartão de crédito',
+  usersLine: 'Produtores e artistas independentes já lançam com a NovaCena',
+  couponBar: {
+    enabled: false,
+    code: 'PRIMEIRACOMPRA',
+    discount: '20% OFF',
+  },
+  showcaseVideos: [],
   logos: [],
   testimonialVideos: [],
   reviews: [
@@ -104,6 +137,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   faqs: [
     { q: 'O que é a NovaCena?', a: 'Uma ferramenta online para criar motion graphics de divulgação musical. Você escolhe um template, personaliza com sua capa e texto, e exporta o vídeo na nuvem. Tudo no navegador.' },
     { q: 'Preciso instalar algum software?', a: 'Não. A NovaCena funciona 100% no navegador. Chrome, Safari, Edge. Qualquer computador com internet.' },
+    { q: 'Funciona no celular?', a: 'Você pode criar sua conta e assinar agora mesmo pelo celular. O editor é otimizado para o navegador do computador — seus projetos ficam salvos na nuvem, prontos pra quando você abrir no desktop.' },
     { q: 'Quanto tempo leva pra exportar um vídeo?', a: 'Entre 2 e 5 minutos. A renderização é feita na nuvem — seu computador não trava e não precisa ficar aberto.' },
     { q: 'Posso usar minha própria capa e vídeo de fundo?', a: 'Sim. Você faz upload da arte do lançamento, vídeo de fundo, e ajusta texto, cor, opacidade, blur e saturação no editor visual.' },
     { q: 'O que é um render?', a: 'Um render é uma exportação de vídeo. Cada vez que você exporta um motion, consome 1 render do seu saldo. Você compra pacotes de renders nos planos.' },

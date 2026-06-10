@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { extractYouTubeVideoId } from '../../../../lib/siteContentTypes';
-import type { SiteContent, SiteLogo, SiteTestimonialVideo, SiteReview, SiteFaq } from '../../../../lib/siteContentTypes';
+import type { SiteContent, SiteLogo, SiteTestimonialVideo, SiteReview, SiteFaq, SiteShowcaseVideo } from '../../../../lib/siteContentTypes';
 
 const EMPTY_CONTENT: SiteContent = {
   heroVideoId: '',
@@ -11,6 +11,9 @@ const EMPTY_CONTENT: SiteContent = {
   heroTitle: '',
   heroSubtitle: '',
   trustLine: '',
+  usersLine: '',
+  couponBar: { enabled: false, code: '', discount: '' },
+  showcaseVideos: [],
   logos: [],
   testimonialVideos: [],
   reviews: [],
@@ -18,7 +21,7 @@ const EMPTY_CONTENT: SiteContent = {
 };
 
 /* ── Section IDs for collapse state ── */
-type SectionId = 'hero' | 'logos' | 'videos' | 'reviews' | 'faqs';
+type SectionId = 'hero' | 'coupon' | 'showcase' | 'logos' | 'videos' | 'reviews' | 'faqs';
 
 export default function ConteudoPage() {
   const [token, setToken] = useState('');
@@ -30,6 +33,8 @@ export default function ConteudoPage() {
   const [messageKind, setMessageKind] = useState<'success' | 'error'>('success');
   const [collapsed, setCollapsed] = useState<Record<SectionId, boolean>>({
     hero: false,
+    coupon: true,
+    showcase: true,
     logos: true,
     videos: true,
     reviews: true,
@@ -130,6 +135,24 @@ export default function ConteudoPage() {
   }
   function removeLogo(i: number) {
     updateField('logos', content.logos.filter((_, idx) => idx !== i));
+  }
+
+  /* ── Showcase video helpers ── */
+  function addShowcase() {
+    updateField('showcaseVideos', [...content.showcaseVideos, { src: '', label: '' }]);
+  }
+  function updateShowcase(i: number, field: keyof SiteShowcaseVideo, value: string) {
+    const next = [...content.showcaseVideos];
+    next[i] = { ...next[i], [field]: value };
+    updateField('showcaseVideos', next);
+  }
+  function removeShowcase(i: number) {
+    updateField('showcaseVideos', content.showcaseVideos.filter((_, idx) => idx !== i));
+  }
+
+  /* ── Coupon helpers ── */
+  function updateCoupon(field: 'enabled' | 'code' | 'discount', value: boolean | string) {
+    updateField('couponBar', { ...content.couponBar, [field]: value });
   }
 
   /* ── Testimonial video helpers ── */
@@ -328,6 +351,101 @@ export default function ConteudoPage() {
                       onChange={(e) => updateField('trustLine', e.target.value)}
                     />
                   </div>
+                  <div style={fieldGroup}>
+                    <label style={label}>Prova social (linha com estrelas no hero)</label>
+                    <input
+                      style={input}
+                      placeholder="Ex: +120 produtores e artistas ja lancam com a NovaCena"
+                      value={content.usersLine}
+                      onChange={(e) => updateField('usersLine', e.target.value)}
+                    />
+                    <p style={fieldHint}>Deixe vazio para esconder a linha de prova social.</p>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* ═══ CUPOM ═══ */}
+            <section style={sectionCard}>
+              <SectionHeader id="coupon" tag="// CUPOM" title="Barra de Cupom (topo do site)" />
+              {!collapsed.coupon && (
+                <div style={sectionBody}>
+                  <label style={checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={content.couponBar.enabled}
+                      onChange={(e) => updateCoupon('enabled', e.target.checked)}
+                      style={checkbox}
+                    />
+                    Exibir barra de cupom no topo da pagina
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={fieldGroup}>
+                      <label style={labelSm}>Codigo do cupom</label>
+                      <input
+                        style={inputSm}
+                        placeholder="Ex: PRIMEIRACOMPRA"
+                        value={content.couponBar.code}
+                        onChange={(e) => updateCoupon('code', e.target.value.toUpperCase())}
+                      />
+                    </div>
+                    <div style={fieldGroup}>
+                      <label style={labelSm}>Desconto</label>
+                      <input
+                        style={inputSm}
+                        placeholder="Ex: 20% OFF"
+                        value={content.couponBar.discount}
+                        onChange={(e) => updateCoupon('discount', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <p style={fieldHint}>
+                    Importante: crie o cupom correspondente no painel do Stripe antes de ativar a barra,
+                    senao o codigo nao vai funcionar no checkout.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {/* ═══ SHOWCASE ═══ */}
+            <section style={sectionCard}>
+              <SectionHeader
+                id="showcase"
+                tag="// DEMOS DO PRODUTO"
+                title="Showcase de Motions (carrossel apos o hero)"
+                count={content.showcaseVideos.length}
+              />
+              {!collapsed.showcase && (
+                <div style={sectionBody}>
+                  <p style={fieldHint}>
+                    Videos verticais (9:16) dos templates rodando. Aceita: caminho de arquivo no servidor
+                    (ex: /uploads/site/presave.mp4), URL direta .mp4/.webm, ou link do YouTube.
+                    Arquivos .mp4 ficam em autoplay mudo em loop — igual galeria de anuncio.
+                  </p>
+                  {content.showcaseVideos.map((vid, i) => (
+                    <div key={i} style={itemRow}>
+                      <div style={itemFields}>
+                        <input
+                          style={inputSm}
+                          placeholder="/uploads/site/demo.mp4 ou link do YouTube"
+                          value={vid.src}
+                          onChange={(e) => updateShowcase(i, 'src', e.target.value)}
+                        />
+                        <input
+                          style={inputSm}
+                          placeholder="Legenda (ex: PRE-SAVE)"
+                          value={vid.label}
+                          onChange={(e) => updateShowcase(i, 'label', e.target.value)}
+                        />
+                      </div>
+                      <button style={btnRemove} onClick={() => removeShowcase(i)}>
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  <button style={btnAdd} onClick={addShowcase}>
+                    + Adicionar video demo
+                  </button>
                 </div>
               )}
             </section>

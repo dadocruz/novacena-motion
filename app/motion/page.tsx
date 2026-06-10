@@ -24,7 +24,7 @@ function useIsMobile(breakpoint = 768) {
 /* ── Data ─────────────────────────────────────────────── */
 
 import type { SiteContent, SiteReview, SiteFaq } from '../../lib/siteContentTypes';
-import { DEFAULT_CONTENT } from '../../lib/siteContentTypes';
+import { DEFAULT_CONTENT, showcaseKind, extractYouTubeVideoId } from '../../lib/siteContentTypes';
 
 const painPoints = [
   'Abrir o editor, importar assets, animar quadro a quadro, exportar, converter…',
@@ -41,6 +41,17 @@ const steps = [
 
 const CTA_URL = '/login?mode=signup&next=/estudio';
 const CTA_BILLING = `/login?mode=signup&next=${encodeURIComponent('/billing')}`;
+
+// Slots de demo exibidos enquanto os vídeos reais não são preenchidos no admin.
+const SHOWCASE_PLACEHOLDERS = [
+  { src: '', label: 'PRÉ-SAVE' },
+  { src: '', label: 'DISPONÍVEL AGORA' },
+  { src: '', label: 'ASSISTA NO YOUTUBE' },
+  { src: '', label: 'MARCO DE STREAMS' },
+  { src: '', label: 'SPOTIFY PRINT' },
+];
+
+const AVATAR_COLORS = ['#7B93FF', '#E06C6C', '#5BBF8A', '#F5A55B', '#B07BFF'];
 
 function trackTrialClick() {
   trackMarketingEvent('Lead', {
@@ -121,6 +132,7 @@ export default function SalesPage() {
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const { topRef, bottomRef } = useDualScroll(0.4);
   const videoCarouselRef = useAutoScroll(0.4);
+  const showcaseRef = useAutoScroll(0.55);
   const isMobile = useIsMobile();
 
   // Fetch CMS content
@@ -143,25 +155,49 @@ export default function SalesPage() {
   );
   const months = selectedCycle.multiplier;
 
+  // Menor custo por render entre os planos (gatilho "faça as contas").
+  const bestPerRender = useMemo(
+    () => Math.min(...SAAS_PLANS.map((p) => planPrice(p, 'monthly') / p.includedTokens)),
+    [],
+  );
+
+  const coupon = content.couponBar;
+  const showCoupon = Boolean(coupon?.enabled && coupon.code);
+
   return (
     <main style={page}>
-      {/* ── Nav ────────────────────────────────────── */}
-      <nav style={nav}>
-        <a href="/motion" style={navLogo}>NovaCena</a>
-        {!isMobile && (
-          <div style={navPill}>
-            <a href="#como" style={navItem}>Como funciona</a>
-            <a href="#planos" style={navItem}>Planos</a>
-            <a href="/login" style={navItem}>Entrar</a>
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {isMobile && <a href="/login" style={navItemMobile}>Entrar</a>}
-          <a href={CTA_URL} onClick={trackTrialClick} style={isMobile ? navCtaMobile : navCta}>
-            {isMobile ? 'Teste grátis ↗' : 'Teste gratuitamente ↗'}
-          </a>
+      {/* ── Coupon bar (gatilho de oferta, fixa no topo) ── */}
+      {showCoupon && (
+        <div style={couponBarStyle}>
+          <span style={couponFire}>🔥</span>
+          <span style={couponText}>
+            USE O CUPOM <strong style={couponCode}>{coupon.code}</strong> E GANHE <strong>{coupon.discount}</strong>
+          </span>
+          <span style={couponFire}>🔥</span>
         </div>
-      </nav>
+      )}
+
+      {/* ── Nav (fixed: body overflow:auto quebra sticky) ── */}
+      <div style={showCoupon ? { ...navWrap, top: 36 } : navWrap}>
+        <nav style={nav}>
+          <a href="/motion" style={navLogo}>NovaCena</a>
+          {!isMobile && (
+            <div style={navPill}>
+              <a href="#como" style={navItem}>Como funciona</a>
+              <a href="#planos" style={navItem}>Planos</a>
+              <a href="/login" style={navItem}>Entrar</a>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {isMobile && <a href="/login" style={navItemMobile}>Entrar</a>}
+            <a href={CTA_URL} onClick={trackTrialClick} style={isMobile ? navCtaMobile : navCta}>
+              {isMobile ? 'Teste grátis ↗' : 'Teste gratuitamente ↗'}
+            </a>
+          </div>
+        </nav>
+      </div>
+      {/* Spacer: nav/cupom são fixed e saem do fluxo */}
+      <div style={{ height: showCoupon ? 100 : 64 }} />
 
       {/* ── Grid background overlay ─────────────── */}
       <div style={gridBg} />
@@ -171,17 +207,28 @@ export default function SalesPage() {
         <div style={heroText}>
           <div style={tag}>{content.heroTagline}</div>
           <h1 style={h1}>
-            NovaCena cria<br />
-            o motion do seu<br />
-            lançamento.<br />
-            Você fica com <em style={emCyan}>o crédito</em>.
+            Crie o motion do<br />
+            seu lançamento em<br />
+            <em style={emCyan}>menos de 5 minutos</em>.
           </h1>
           <p style={heroSub}>{content.heroSubtitle}</p>
           <div style={heroBtns}>
-            <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
-            <a href="#como" style={btnGhost}>Veja como funciona</a>
+            <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
+            <a href="#planos" style={btnGhost}>Ver planos</a>
           </div>
           <p style={trustLine}>{content.trustLine}</p>
+          {content.usersLine && (
+            <div style={socialProofRow}>
+              <div style={avatarStack}>
+                {['LM', 'CR', 'PG', 'RD', 'AS'].map((ini, i) => (
+                  <div key={ini} style={{ ...avatarChip, marginLeft: i === 0 ? 0 : -10, background: AVATAR_COLORS[i % AVATAR_COLORS.length] }}>{ini}</div>
+                ))}
+              </div>
+              <span style={socialProofText}>
+                <span style={{ color: '#f59e0b' }}>★★★★★</span> {content.usersLine}
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={heroVisual}>
@@ -201,6 +248,58 @@ export default function SalesPage() {
               </div>
             )}
             <span style={videoLabel}>VEJA EM AÇÃO · 2 MIN</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Showcase: motions demo (slots preenchidos via /admin/conteudo/motion) ── */}
+      <section style={showcaseSect}>
+        <div style={tagCenter}>{'// FEITO NA NOVACENA'}</div>
+        <h2 style={h2Center}>
+          Seu lançamento pode ficar{' '}
+          <em style={emCyan}>assim</em>.
+        </h2>
+        <p style={subCenter}>Motions reais criados na plataforma. Toque para ver com som.</p>
+        <div ref={showcaseRef} style={showcaseCarousel}>
+          <div style={showcaseTrack}>
+            {(content.showcaseVideos.length > 0
+              ? [...content.showcaseVideos, ...content.showcaseVideos]
+              : SHOWCASE_PLACEHOLDERS
+            ).map((v, i) =>
+              v.src ? (
+                showcaseKind(v.src) === 'file' ? (
+                  <div key={`sc-${i}`} style={showcaseCard}>
+                    <video
+                      src={v.src}
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      preload="metadata"
+                      style={showcaseVideo}
+                    />
+                    {v.label && <div style={showcaseLabel}>{v.label}</div>}
+                  </div>
+                ) : (
+                  <div key={`sc-${i}`} style={showcaseCard}>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${extractYouTubeVideoId(v.src)}?autoplay=1&mute=1&loop=1&playlist=${extractYouTubeVideoId(v.src)}&controls=0&playsinline=1`}
+                      title={v.label || 'Motion demo'}
+                      allow="autoplay; encrypted-media"
+                      style={showcaseVideo}
+                    />
+                    {v.label && <div style={showcaseLabel}>{v.label}</div>}
+                  </div>
+                )
+              ) : (
+                <div key={`scph-${i}`} style={showcaseCard}>
+                  <div style={showcasePlaceholder}>
+                    <div style={videoPlayBtn}>▶</div>
+                    <span style={showcasePhText}>{v.label}</span>
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </div>
       </section>
@@ -236,6 +335,41 @@ export default function SalesPage() {
         <p style={painClose}>
           E se a ferramenta <em style={emCyan}>fizesse isso por você</em>?
         </p>
+      </section>
+
+      {/* ── Comparação de custo ─────────────────────── */}
+      <section style={sect}>
+        <div style={tag}>{'// FAÇA AS CONTAS'}</div>
+        <h2 style={h2}>
+          Quanto você paga por{' '}
+          <em style={emRed}>um único motion</em> hoje?
+        </h2>
+        <div style={costGrid}>
+          <div style={costCard}>
+            <div style={costX}>✗</div>
+            <div style={costTitle}>Motion designer freelancer</div>
+            <div style={costValue}>R$300–800</div>
+            <div style={costPer}>por vídeo</div>
+          </div>
+          <div style={costCard}>
+            <div style={costX}>✗</div>
+            <div style={costTitle}>Agência de motion</div>
+            <div style={costValue}>R$1.500+</div>
+            <div style={costPer}>por campanha</div>
+          </div>
+          <div style={costCard}>
+            <div style={costX}>✗</div>
+            <div style={costTitle}>Fazer no After Effects</div>
+            <div style={costValue}>Horas</div>
+            <div style={costPer}>de trabalho por vídeo (se você souber usar)</div>
+          </div>
+          <div style={costCardHero}>
+            <div style={costCheck}>✓</div>
+            <div style={costTitleHero}>NovaCena Motion</div>
+            <div style={costValueHero}>{formatBRL(bestPerRender)}</div>
+            <div style={costPerHero}>por motion profissional, no plano com renders inclusos</div>
+          </div>
+        </div>
       </section>
 
       {/* ── CTA Banner 1 ──────────────────────────── */}
@@ -498,6 +632,9 @@ export default function SalesPage() {
                 <div style={planTokenBadge}>
                   {plan.includedTokens * months} renders no ciclo
                 </div>
+                <div style={planPerRender}>
+                  ≈ {formatBRL(price / (plan.includedTokens * months))} por motion
+                </div>
                 <ul style={planFeatures}>
                   {plan.features.map((f) => (
                     <li key={f} style={planFeatureItem}>
@@ -513,12 +650,15 @@ export default function SalesPage() {
                   onClick={() => trackPlanClick(plan, cycle)}
                   style={featured ? planBtnFeat : planBtnNorm}
                 >
-                  Começar com {plan.name}
+                  Quero esse →
                 </a>
               </article>
             );
           })}
         </div>
+        <p style={guaranteeLine}>
+          {'✓ Cancele quando quiser  ·  ✓ Sem fidelidade  ·  ✓ Comece pelo celular, edite no computador'}
+        </p>
       </section>
 
       {/* ── FAQ ────────────────────────────────────── */}
@@ -545,6 +685,36 @@ export default function SalesPage() {
         </div>
       </section>
 
+      {/* ── Duas opções ─────────────────────────────── */}
+      <section style={sect}>
+        <div style={tagCenter}>{'// A ESCOLHA'}</div>
+        <h2 style={h2Center}>
+          Duas opções.{' '}
+          <em style={emCyan}>Você escolhe</em>.
+        </h2>
+        <div style={choiceGrid}>
+          <div style={choiceCardBad}>
+            <div style={choiceTitle}>Continuar como está</div>
+            <ul style={choiceList}>
+              <li style={choiceItemBad}>✗ Pagar R$300+ por cada vídeo de lançamento</li>
+              <li style={choiceItemBad}>✗ Depender do prazo (e do humor) do freelancer</li>
+              <li style={choiceItemBad}>✗ Perder horas no After Effects</li>
+              <li style={choiceItemBad}>✗ Lançar sem motion e parecer amador</li>
+            </ul>
+          </div>
+          <div style={choiceCardGood}>
+            <div style={choiceTitleGood}>Criar com a NovaCena</div>
+            <ul style={choiceList}>
+              <li style={choiceItemGood}>✓ Motion pronto em minutos, no navegador</li>
+              <li style={choiceItemGood}>✓ A partir de {formatBRL(bestPerRender)} por motion</li>
+              <li style={choiceItemGood}>✓ Templates profissionais de lançamento musical</li>
+              <li style={choiceItemGood}>✓ Teste grátis antes de pagar qualquer coisa</li>
+            </ul>
+            <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ──────────────────────────────── */}
       <section style={finalSect}>
         <h2 style={h2Center}>
@@ -552,7 +722,7 @@ export default function SalesPage() {
           <em style={emCyan}>Exporte na nuvem</em>.
         </h2>
         <p style={subCenter}>Teste grátis com 1 render de demonstração. Sem cartão.</p>
-        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
+        <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
         <p style={trustLineCenter}>{'✓  Comece em 30 segundos'}</p>
       </section>
 
@@ -589,6 +759,18 @@ export default function SalesPage() {
           <span style={footerBuilt}>Feito para produtores musicais.</span>
         </div>
       </footer>
+
+      {/* ── CTA fixo mobile (quem vem do anúncio) ───── */}
+      {isMobile && <div style={{ height: 84 }} />}
+      {isMobile && (
+        <div style={stickyCtaBar}>
+          <div style={stickyCtaInfo}>
+            <span style={stickyCtaTitle}>Teste grátis</span>
+            <span style={stickyCtaSub}>1 render de demonstração · sem cartão</span>
+          </div>
+          <a href={CTA_URL} onClick={trackTrialClick} style={stickyCtaBtn}>Começar →</a>
+        </div>
+      )}
     </main>
   );
 }
@@ -603,11 +785,14 @@ const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans
 const ACCENT = '#7B93FF';
 const W = 'min(1200px, calc(100% - 48px))';
 
-const page: CSSProperties = { height: '100%', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS, position: 'relative' };
+// minHeight (e não height+overflow): o documento é o scroller real — com
+// overflow:auto aqui os position:sticky (nav/cupom) nunca grudavam no scroll.
+const page: CSSProperties = { minHeight: '100vh', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS, position: 'relative' };
 const gridBg: CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(123,147,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(123,147,255,0.04) 1px, transparent 1px)', backgroundSize: '48px 48px', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)' };
 
 /* ── Nav ── */
-const nav: CSSProperties = { position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, margin: '0 auto', height: 64, padding: '0 24px', background: 'rgba(8,10,15,0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
+const navWrap: CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(8,10,15,0.85)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' };
+const nav: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, margin: '0 auto', height: 64, padding: '0 24px' };
 const sectionZ: CSSProperties = { position: 'relative', zIndex: 1 };
 const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' };
 const navPill: CSSProperties = { display: 'flex', gap: 2, padding: '5px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
@@ -776,3 +961,59 @@ const footerColTitle: CSSProperties = { fontFamily: MONO, fontSize: 11, fontWeig
 const footerLink: CSSProperties = { color: 'rgba(255,255,255,0.35)', textDecoration: 'none', fontSize: 13 };
 const footerBottom: CSSProperties = { display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, color: 'rgba(255,255,255,0.15)', fontSize: 12, borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 20 };
 const footerBuilt: CSSProperties = { color: 'rgba(255,255,255,0.15)' };
+
+/* ── Coupon bar ── */
+const couponBarStyle: CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, zIndex: 101, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: `linear-gradient(90deg, #5B43D6, ${ACCENT}, #5B43D6)`, padding: '0 12px' };
+const couponFire: CSSProperties = { fontSize: 12 };
+const couponText: CSSProperties = { fontSize: 11, fontWeight: 600, color: '#fff', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const couponCode: CSSProperties = { background: 'rgba(255,255,255,0.18)', borderRadius: 5, padding: '2px 6px', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.02em' };
+
+/* ── Social proof (hero) ── */
+const socialProofRow: CSSProperties = { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' };
+const avatarStack: CSSProperties = { display: 'flex', alignItems: 'center' };
+const avatarChip: CSSProperties = { width: 30, height: 30, borderRadius: '50%', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, color: '#000', border: '2px solid #080a0f', flexShrink: 0 };
+const socialProofText: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: 500 };
+
+/* ── Showcase (demos do produto) ── */
+const showcaseSect: CSSProperties = { width: '100%', padding: '72px 0', display: 'grid', gap: 20, borderTop: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' };
+const showcaseCarousel: CSSProperties = { width: '100%', overflow: 'hidden', marginTop: 8 };
+const showcaseTrack: CSSProperties = { display: 'flex', gap: 16, width: 'max-content', padding: '0 24px' };
+const showcaseCard: CSSProperties = { position: 'relative', width: 210, aspectRatio: '9 / 16', flexShrink: 0, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#0c0e14' };
+const showcaseVideo: CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', border: 'none' };
+const showcaseLabel: CSSProperties = { position: 'absolute', bottom: 10, left: 10, right: 10, fontFamily: MONO, fontSize: 10, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', textShadow: '0 1px 8px rgba(0,0,0,0.8)' };
+const showcasePlaceholder: CSSProperties = { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', alignContent: 'center', gap: 14, background: 'linear-gradient(160deg, rgba(123,147,255,0.10), rgba(123,147,255,0.02))' };
+const showcasePhText: CSSProperties = { fontFamily: MONO, fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textAlign: 'center', padding: '0 14px' };
+
+/* ── Comparação de custo ── */
+const costGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginTop: 16 };
+const costCard: CSSProperties = { display: 'grid', gap: 8, padding: '28px 24px', borderRadius: 16, background: 'rgba(224,108,108,0.03)', border: '1px solid rgba(224,108,108,0.12)', alignContent: 'start' };
+const costCardHero: CSSProperties = { display: 'grid', gap: 8, padding: '28px 24px', borderRadius: 16, background: 'rgba(123,147,255,0.06)', border: `1px solid rgba(123,147,255,0.35)`, boxShadow: '0 0 60px rgba(123,147,255,0.08)', alignContent: 'start' };
+const costX: CSSProperties = { fontSize: 18, color: '#e06c6c', fontWeight: 700 };
+const costCheck: CSSProperties = { fontSize: 18, color: ACCENT, fontWeight: 700 };
+const costTitle: CSSProperties = { fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.6)' };
+const costTitleHero: CSSProperties = { fontSize: 15, fontWeight: 700, color: '#fff' };
+const costValue: CSSProperties = { fontSize: 30, fontWeight: 900, color: '#e06c6c', letterSpacing: '-0.02em' };
+const costValueHero: CSSProperties = { fontSize: 30, fontWeight: 900, color: ACCENT, letterSpacing: '-0.02em' };
+const costPer: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 };
+const costPerHero: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 };
+
+/* ── Pricing extras ── */
+const planPerRender: CSSProperties = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.45)' };
+const guaranteeLine: CSSProperties = { margin: '8px 0 0', textAlign: 'center', fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.02em' };
+
+/* ── Duas opções ── */
+const choiceGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginTop: 16 };
+const choiceCardBad: CSSProperties = { display: 'grid', gap: 18, padding: '32px 28px', borderRadius: 16, background: 'rgba(224,108,108,0.03)', border: '1px solid rgba(224,108,108,0.15)', alignContent: 'start' };
+const choiceCardGood: CSSProperties = { display: 'grid', gap: 18, padding: '32px 28px', borderRadius: 16, background: 'rgba(123,147,255,0.05)', border: `1px solid rgba(123,147,255,0.35)`, boxShadow: '0 0 80px rgba(123,147,255,0.07)', alignContent: 'start', justifyItems: 'start' };
+const choiceTitle: CSSProperties = { fontSize: 20, fontWeight: 800, color: '#e06c6c' };
+const choiceTitleGood: CSSProperties = { fontSize: 20, fontWeight: 800, color: '#fff' };
+const choiceList: CSSProperties = { margin: 0, padding: 0, listStyle: 'none', display: 'grid', gap: 12 };
+const choiceItemBad: CSSProperties = { fontSize: 15, color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 };
+const choiceItemGood: CSSProperties = { fontSize: 15, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 };
+
+/* ── Sticky mobile CTA ── */
+const stickyCtaBar: CSSProperties = { position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 150, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 16px calc(12px + env(safe-area-inset-bottom))', background: 'rgba(8,10,15,0.92)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid rgba(255,255,255,0.08)' };
+const stickyCtaInfo: CSSProperties = { display: 'grid', gap: 1, minWidth: 0 };
+const stickyCtaTitle: CSSProperties = { fontSize: 14, fontWeight: 800, color: '#fff' };
+const stickyCtaSub: CSSProperties = { fontSize: 11, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+const stickyCtaBtn: CSSProperties = { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 46, padding: '0 24px', borderRadius: 999, background: ACCENT, color: '#000', textDecoration: 'none', fontWeight: 800, fontSize: 15 };
