@@ -2681,6 +2681,20 @@ export default function Home() {
     setDurationSeconds(Math.max(1, Math.min(MAX_BACKGROUND_CLIP_SECONDS, Math.round(parsed * 10) / 10)));
   }
 
+  // No modo de corte, o player central mostra o bruto com offset
+  // bgTrimPreviewTime (via videoStartFrame). Pausar e voltar pro frame 0 faz o
+  // player exibir EXATAMENTE o ponto escolhido — sem isso, com o playhead no
+  // meio do vídeo, o frame visível ficava deslocado (escolha "às cegas").
+  function syncPlayerToTrimPreview() {
+    try {
+      programmaticSeekRef.current = true;
+      playerRef.current?.pause?.();
+      playerRef.current?.seekTo?.(0);
+    } catch {
+      /* preview central pode ainda não estar montado */
+    }
+  }
+
   function setBgVideoStartAndPreview(value: number, shouldSeek = true) {
     const next = clampBgVideoStart(value);
     bgTrimPreviewCursorRef.current = next;
@@ -2691,6 +2705,7 @@ export default function Home() {
       bgTrimProgrammaticSeekRef.current = true;
       bgTrimVideoRef.current.currentTime = next;
     }
+    syncPlayerToTrimPreview();
   }
 
   function seekBgTrimPreview(value: number) {
@@ -2703,6 +2718,7 @@ export default function Home() {
       bgTrimProgrammaticSeekRef.current = true;
       bgTrimVideoRef.current.currentTime = next;
     }
+    syncPlayerToTrimPreview();
   }
 
   function nudgeBgVideoStart(delta: number) {
@@ -5545,6 +5561,21 @@ export default function Home() {
     const dur = durationSeconds;
     const tracks: TimelineTrack[] = [];
 
+    // O vídeo de fundo cobre o motion inteiro (0 → fim). O trecho do bruto é
+    // escolhido no painel lateral — aqui ele aparece como camada cheia.
+    if (bgVideo && !bgIsImage) {
+      tracks.push({
+        id: 'bg-video',
+        label: effectiveBgVideoNeedsTrim ? '🎬 Vídeo (escolhendo trecho)' : '🎬 Vídeo de fundo',
+        color: '#a78bfa',
+        startSec: 0,
+        endSec: null,
+        resizable: false,
+        selected: false,
+        onChangeStart: () => {},
+      });
+    }
+
     for (const layer of previewLayerHotspots) {
       if (layer.kind === 'text' && layer.role) {
         const role = (layer.role === 'cta' ? 'cta1' : layer.role) as TextPreviewRole;
@@ -5647,6 +5678,9 @@ export default function Home() {
     activeStudioTool,
     activeTextRole,
     selectedOverlayId,
+    bgVideo,
+    bgIsImage,
+    effectiveBgVideoNeedsTrim,
   ]);
 
   const timelineTools: TimelineTool[] = [
@@ -8923,7 +8957,7 @@ return (
                 <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
                   {bgVideoNeedsOnlyOptimization
                     ? `Esse vídeo já tem a duração final. O sistema só vai otimizar em ${target === 'story' ? '1080×1920' : '1080×1350'} para o preview e o render não travarem.`
-                    : `Escolha ouvindo/vendo o bruto. Depois o sistema corta só esse trecho, centraliza em ${target === 'story' ? '1080×1920' : '1080×1350'} e exclui o restante.`}
+                    : `O player central mostra o frame do ponto escolhido. Use "Play daqui" pra ver o trecho rodando. Depois o sistema corta só esse trecho em ${target === 'story' ? '1080×1920' : '1080×1350'} e exclui o restante.`}
                 </div>
                 <button
                   type="button"
@@ -9935,17 +9969,6 @@ return (
           currentSec={timelineSec}
           tracks={timelineTracks}
           tools={timelineTools}
-          rawSelection={
-            effectiveBgVideoNeedsTrim && bgVideoDuration > 0
-              ? {
-                  label: 'Trecho bruto',
-                  color: '#c084fc',
-                  durationSec: bgVideoDuration,
-                  startSec: bgVideoStartSec,
-                  endSec: Math.min(bgVideoDuration, bgVideoStartSec + bgClipDuration),
-                }
-              : null
-          }
           onSeek={seekTimeline}
           onClose={() => setShowTimeline(false)}
         />
