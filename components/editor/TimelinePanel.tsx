@@ -11,6 +11,13 @@ export interface TimelineTrack {
   endSec: number | null;
   /** overlays podem mudar a duração (arrastar a borda direita) */
   resizable: boolean;
+  /** estilo After Effects: clipe maior que a comp pode começar antes de 0.
+   *  Define o limite inferior do arrasto (ex.: dur - duraçãoDoBruto). */
+  minStartSec?: number;
+  /** limite superior do arrasto (ex.: 0 para o clipe sempre cobrir o início) */
+  maxStartSec?: number;
+  /** texto custom dentro da barra (ex.: janela do bruto) */
+  barLabel?: string;
   onChangeStart: (sec: number) => void;
   onChangeEnd?: (sec: number) => void;
   onSelect?: () => void;
@@ -40,6 +47,7 @@ interface TimelinePanelProps {
   tools?: TimelineTool[];
   rawSelection?: TimelineRawSelection | null;
   onSeek: (sec: number) => void;
+  onTogglePlay?: () => void;
   onClose: () => void;
 }
 
@@ -64,6 +72,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   tools = [],
   rawSelection,
   onSeek,
+  onTogglePlay,
   onClose,
 }) => {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
@@ -116,8 +125,9 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       }
       if (d.mode === 'move') {
         const delta = sec - d.grabSec;
-        const maxStart = d.span !== null ? Math.max(0, dur - d.span) : Math.max(0, dur - 0.1);
-        const ns = Math.max(0, Math.min(maxStart, d.startStart + delta));
+        const minStart = d.track.minStartSec ?? 0;
+        const maxStart = d.track.maxStartSec ?? (d.span !== null ? Math.max(minStart, dur - d.span) : Math.max(minStart, dur - 0.1));
+        const ns = Math.max(minStart, Math.min(maxStart, d.startStart + delta));
         d.track.onChangeStart(round1(ns));
       } else if (d.mode === 'resize' && d.track.onChangeEnd) {
         const ne = Math.max(d.startStart + 0.2, Math.min(dur, sec));
@@ -160,15 +170,21 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       );
       const pressedZoomIn = event.key === '2' || event.code === 'Digit2' || event.code === 'Numpad2';
       const pressedZoomOut = event.key === '1' || event.code === 'Digit1' || event.code === 'Numpad1';
-      if (!pressedZoomIn && !pressedZoomOut) return;
+      const pressedPlay = event.key === ' ' || event.code === 'Space';
+      if (!pressedZoomIn && !pressedZoomOut && !pressedPlay) return;
 
       const panel = panelRef.current;
       const targetIsInsideTimeline = Boolean(panel && target && panel.contains(target));
       if (!timelineKeyboardActiveRef.current && !targetIsInsideTimeline) return;
       if (isTypingTarget && !timelineKeyboardActiveRef.current) return;
+      if (isTypingTarget) return; // nunca sequestra espaço/dígitos enquanto digita
 
       event.preventDefault();
       event.stopPropagation();
+      if (pressedPlay) {
+        onTogglePlay?.();
+        return;
+      }
       changeZoom(pressedZoomIn ? 'in' : 'out');
     };
 
@@ -184,7 +200,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       window.removeEventListener('keydown', onKeyDown, true);
       window.removeEventListener('pointerdown', onPointerDown, true);
     };
-  }, [changeZoom]);
+  }, [changeZoom, onTogglePlay]);
 
   const startScrub = (clientX: number) => {
     dragRef.current = { mode: 'seek' };
@@ -525,10 +541,16 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
             </div>
           ) : (
             displayedTracks.map(({ track }) => {
-              const start = Math.max(0, Math.min(dur, track.startSec));
-              const end = track.endSec === null ? dur : Math.max(start, Math.min(dur, track.endSec));
+              // Faixas "overflow" (estilo After Effects): o clipe pode começar
+              // antes de 0 e terminar depois de dur — desliza sob a janela da
+              // comp (a lane tem overflow:hidden). Faixas normais são clampadas.
+              const isOverflow = track.minStartSec !== undefined || track.maxStartSec !== undefined;
+              const rawStart = track.startSec;
+              const rawEnd = track.endSec === null ? dur : track.endSec;
+              const start = isOverflow ? rawStart : Math.max(0, Math.min(dur, track.startSec));
+              const end = isOverflow ? rawEnd : Math.max(start, Math.min(dur, rawEnd));
               const leftPct = (start / dur) * 100;
-              const widthPct = Math.max(2, ((end - start) / dur) * 100);
+              const widthPct = isOverflow ? ((end - start) / dur) * 100 : Math.max(2, ((end - start) / dur) * 100);
               const span = track.endSec === null ? null : end - start;
               const selected = Boolean(track.selected);
 
@@ -585,6 +607,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                       borderRadius: 5,
                       background: selected ? `${track.color}16` : 'rgba(255,255,255,0.05)',
                       border: selected ? `1px solid ${track.color}90` : '1px solid rgba(255,255,255,0.06)',
+                      overflow: 'hidden',
                     }}
                   >
                     <div
@@ -606,11 +629,14 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                         left: `${leftPct}%`,
                         width: `${widthPct}%`,
                         borderRadius: 4,
-                        background: `linear-gradient(180deg, ${track.color}, ${track.color}cc)`,
+                        background: isOverflow
+                          ? `repeating-linear-gradient(115deg, ${track.color}, ${track.color} 9px, ${track.color}bb 9px, ${track.color}bb 18px)`
+                          : `linear-gradient(180deg, ${track.color}, ${track.color}cc)`,
                         boxShadow: selected ? `0 0 0 2px rgba(255,255,255,0.9), 0 0 14px ${track.color}aa` : undefined,
-                        cursor: 'grab',
+                        cursor: (isOverflow || track.resizable || track.onSelect) ? 'grab' : 'default',
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: isOverflow ? 'center' : 'flex-start',
                         overflow: 'hidden',
                         whiteSpace: 'nowrap',
                       }}
@@ -624,7 +650,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                           pointerEvents: 'none',
                         }}
                       >
-                        {round1(start)}s
+                        {track.barLabel ?? `${round1(start)}s`}
                       </span>
                       {track.resizable && track.onChangeEnd && (
                         <div

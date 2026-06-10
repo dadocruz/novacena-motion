@@ -943,6 +943,17 @@ export default function Home() {
     });
   }
 
+  const togglePlayerPlayback = React.useCallback(() => {
+    if (editPreviewLoop) {
+      releaseEditPreviewLoopAndPlayFull();
+      return;
+    }
+    const player = playerRef.current as any;
+    if (!player) return;
+    if (player.isPlaying?.()) player.pause?.();
+    else player.play?.();
+  }, [editPreviewLoop, releaseEditPreviewLoopAndPlayFull]);
+
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
@@ -978,23 +989,12 @@ export default function Home() {
 
       if (e.code === 'Space') {
         e.preventDefault();
-        if (editPreviewLoop) {
-          releaseEditPreviewLoopAndPlayFull();
-          return;
-        }
-
-        const player = playerRef.current as any;
-        if (!player) return;
-        if (player.isPlaying?.()) {
-          player.pause?.();
-        } else {
-          player.play?.();
-        }
+        togglePlayerPlayback();
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [editPreviewLoop, releaseEditPreviewLoopAndPlayFull]);
+  }, [togglePlayerPlayback]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -5561,19 +5561,39 @@ export default function Home() {
     const dur = durationSeconds;
     const tracks: TimelineTrack[] = [];
 
-    // O vídeo de fundo cobre o motion inteiro (0 → fim). O trecho do bruto é
-    // escolhido no painel lateral — aqui ele aparece como camada cheia.
+    // Vídeo de fundo na timeline (estilo After Effects). Em modo de seleção de
+    // trecho, o clipe do bruto desliza sob a janela da comp: arraste pros lados
+    // pra escolher onde ele começa na música. Fora desse modo, é só uma faixa
+    // cheia (0 → fim) indicando que o vídeo cobre o motion inteiro.
     if (bgVideo && !bgIsImage) {
-      tracks.push({
-        id: 'bg-video',
-        label: effectiveBgVideoNeedsTrim ? '🎬 Vídeo (escolhendo trecho)' : '🎬 Vídeo de fundo',
-        color: '#a78bfa',
-        startSec: 0,
-        endSec: null,
-        resizable: false,
-        selected: false,
-        onChangeStart: () => {},
-      });
+      if (effectiveBgVideoNeedsTrim && bgVideoDuration > 0) {
+        // comp-time = source-time − bgVideoStartSec. Clipe inteiro vira a barra,
+        // que estende além de [0,dur] (overflow) e desliza ao arrastar.
+        tracks.push({
+          id: 'bg-video',
+          label: '🎬 Vídeo — arraste',
+          color: '#a78bfa',
+          startSec: -bgVideoStartSec,
+          endSec: bgVideoDuration - bgVideoStartSec,
+          resizable: false,
+          minStartSec: Math.min(0, durationSeconds - bgVideoDuration),
+          maxStartSec: 0,
+          barLabel: `◀ início ${formatTimecode(bgVideoStartSec)} ▶`,
+          selected: true,
+          onChangeStart: (sec) => setBgVideoStartAndPreview(-sec),
+        });
+      } else {
+        tracks.push({
+          id: 'bg-video',
+          label: '🎬 Vídeo de fundo',
+          color: '#a78bfa',
+          startSec: 0,
+          endSec: null,
+          resizable: false,
+          selected: false,
+          onChangeStart: () => {},
+        });
+      }
     }
 
     for (const layer of previewLayerHotspots) {
@@ -5681,6 +5701,8 @@ export default function Home() {
     bgVideo,
     bgIsImage,
     effectiveBgVideoNeedsTrim,
+    bgVideoStartSec,
+    bgVideoDuration,
   ]);
 
   const timelineTools: TimelineTool[] = [
@@ -8827,6 +8849,31 @@ return (
                   }}
                 />
 
+                <button
+                  type="button"
+                  onClick={() => { setActiveStudioTool('timeline'); setShowTimeline(true); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '9px 11px',
+                    borderRadius: 9,
+                    border: '1px solid rgba(168,85,247,0.45)',
+                    background: 'linear-gradient(135deg, rgba(168,85,247,0.18), rgba(249,115,22,0.12))',
+                    color: '#fff',
+                    fontSize: 10.5,
+                    lineHeight: 1.35,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ fontSize: 15 }}>🎬</span>
+                  <span>
+                    <strong>Arraste o vídeo direto na Timeline</strong> pra escolher o trecho —
+                    igual ao After. <strong>Espaço</strong> toca/pausa. Abrir Timeline ↓
+                  </span>
+                </button>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.35 }}>
                     {bgVideoOriginalName ? `${bgVideoOriginalName} · ` : ''}
@@ -9970,6 +10017,7 @@ return (
           tracks={timelineTracks}
           tools={timelineTools}
           onSeek={seekTimeline}
+          onTogglePlay={togglePlayerPlayback}
           onClose={() => setShowTimeline(false)}
         />
       )}
