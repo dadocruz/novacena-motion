@@ -628,6 +628,10 @@ export default function Home() {
   );
   const [bgVideoDuration, setBgVideoDuration] = useState<number>(factoryBackground.videoDurationSec ?? 0);
   const [bgVideoNeedsTrim, setBgVideoNeedsTrim] = useState<boolean>(factoryBackground.videoNeedsTrim ?? false);
+  // Espelho em ref: o drag da timeline dispara callbacks de um render antigo,
+  // então o estado capturado fica velho — o ref sempre tem o valor atual.
+  const bgVideoNeedsTrimRef = useRef(factoryBackground.videoNeedsTrim ?? false);
+  useEffect(() => { bgVideoNeedsTrimRef.current = bgVideoNeedsTrim; }, [bgVideoNeedsTrim]);
   const [bgVideoOriginalName, setBgVideoOriginalName] = useState<string>(factoryBackground.videoOriginalName ?? '');
   const [bgVideoOpacity, setBgVideoOpacity] = useState<number>(factoryBackground.videoOpacity ?? 1);
   const [bgColor, setBgColor] = useState<string>(factoryBackground.bgColor ?? '#030205');
@@ -3548,14 +3552,14 @@ export default function Home() {
     }
   }
 
-  function reopenBgTrimSelection() {
+  function reopenBgTrimSelection(): boolean {
     const asset = bgVideoLocalAsset;
     const cachedFile = asset?.id ? localBackgroundFilesRef.current[asset.id] : null;
     if (!cachedFile) {
       setVideoUploadMsg(
         'O bruto não fica no servidor depois da otimização e esta aba não tem o arquivo. Reenvie o vídeo em "Trocar vídeo" para escolher outro trecho.'
       );
-      return;
+      return false;
     }
     const blobUrl = URL.createObjectURL(cachedFile);
     const fullDuration = asset?.durationSec || bgVideoDuration || 0;
@@ -3584,7 +3588,21 @@ export default function Home() {
     };
     applyBackgroundVideoPatchToState(reopenPatch);
     shareBackgroundVideoWithTemplates(reopenPatch);
-    setVideoUploadMsg('Modo de corte reaberto: escolha o novo início e clique em Cortar/otimizar.');
+    // O ref precisa virar true JÁ: o drag em curso na timeline consulta ele
+    // antes do React re-renderizar (senão reabriria o corte várias vezes).
+    bgVideoNeedsTrimRef.current = true;
+    setVideoUploadMsg('Modo de corte reaberto: arraste o vídeo na timeline ou ajuste aqui, depois clique em Cortar/otimizar.');
+    return true;
+  }
+
+  // Arrasto da camada de vídeo na timeline (estilo After Effects). Funciona em
+  // qualquer estado: se o clip já foi otimizado, reabre o corte com o bruto da
+  // aba no primeiro movimento e segue arrastando sem soltar o mouse.
+  function dragBgVideoOnTimeline(sec: number) {
+    if (!bgVideoNeedsTrimRef.current) {
+      if (!reopenBgTrimSelection()) return;
+    }
+    setBgVideoStartAndPreview(Math.max(0, -sec));
   }
 
   function useBgVideoWithoutTrim() {
@@ -5561,26 +5579,33 @@ export default function Home() {
     const dur = durationSeconds;
     const tracks: TimelineTrack[] = [];
 
-    // Vídeo de fundo na timeline (estilo After Effects). Em modo de seleção de
-    // trecho, o clipe do bruto desliza sob a janela da comp: arraste pros lados
-    // pra escolher onde ele começa na música. Fora desse modo, é só uma faixa
-    // cheia (0 → fim) indicando que o vídeo cobre o motion inteiro.
+    // Vídeo de fundo na timeline (estilo After Effects): o clipe do bruto
+    // desliza sob a janela da comp — arraste pros lados pra escolher onde ele
+    // começa na música. Vale em QUALQUER estado: com o clip já otimizado, o
+    // primeiro arrasto reabre o corte com o bruto da aba e segue arrastando.
+    // comp-time = source-time − início; a barra estende além de [0,dur].
     if (bgVideo && !bgIsImage) {
-      if (effectiveBgVideoNeedsTrim && bgVideoDuration > 0) {
-        // comp-time = source-time − bgVideoStartSec. Clipe inteiro vira a barra,
-        // que estende além de [0,dur] (overflow) e desliza ao arrastar.
+      const clipDur = Math.min(dur, MAX_BACKGROUND_CLIP_SECONDS);
+      const rawDur = effectiveBgVideoNeedsTrim
+        ? (bgVideoDuration || 0)
+        : (bgVideoLocalAsset?.durationSec || 0);
+      const startInRaw = effectiveBgVideoNeedsTrim
+        ? bgVideoStartSec
+        : (bgVideoLocalAsset?.trimStartSec ?? 0);
+      const canSlide = rawDur > clipDur + 0.05;
+      if (canSlide) {
         tracks.push({
           id: 'bg-video',
           label: '🎬 Vídeo — arraste',
           color: '#a78bfa',
-          startSec: -bgVideoStartSec,
-          endSec: bgVideoDuration - bgVideoStartSec,
+          startSec: -startInRaw,
+          endSec: rawDur - startInRaw,
           resizable: false,
-          minStartSec: Math.min(0, durationSeconds - bgVideoDuration),
+          minStartSec: Math.min(0, dur - rawDur),
           maxStartSec: 0,
-          barLabel: `◀ início ${formatTimecode(bgVideoStartSec)} ▶`,
-          selected: true,
-          onChangeStart: (sec) => setBgVideoStartAndPreview(-sec),
+          barLabel: `◀ início ${formatTimecode(startInRaw)} ▶`,
+          selected: effectiveBgVideoNeedsTrim,
+          onChangeStart: dragBgVideoOnTimeline,
         });
       } else {
         tracks.push({
@@ -5703,6 +5728,7 @@ export default function Home() {
     effectiveBgVideoNeedsTrim,
     bgVideoStartSec,
     bgVideoDuration,
+    bgVideoLocalAsset,
   ]);
 
   const timelineTools: TimelineTool[] = [
