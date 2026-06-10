@@ -16,9 +16,11 @@ function isMotionMarketingPath(pathname: string) {
     pathname === '/vendas' ||
     pathname === '/login' ||
     pathname === '/billing' ||
+    pathname === '/estudio' ||
     pathname.startsWith('/motion/') ||
     pathname.startsWith('/login/') ||
-    pathname.startsWith('/billing/')
+    pathname.startsWith('/billing/') ||
+    pathname.startsWith('/estudio/')
   );
 }
 
