@@ -3532,6 +3532,45 @@ export default function Home() {
     }
   }
 
+  function reopenBgTrimSelection() {
+    const asset = bgVideoLocalAsset;
+    const cachedFile = asset?.id ? localBackgroundFilesRef.current[asset.id] : null;
+    if (!cachedFile) {
+      setVideoUploadMsg(
+        'O bruto não fica no servidor depois da otimização e esta aba não tem o arquivo. Reenvie o vídeo em "Trocar vídeo" para escolher outro trecho.'
+      );
+      return;
+    }
+    const blobUrl = URL.createObjectURL(cachedFile);
+    const fullDuration = asset?.durationSec || bgVideoDuration || 0;
+    const reopenPatch: SharedBackgroundVideoPatch = {
+      bgVideo: blobUrl,
+      bgVideoStartSec: asset?.trimStartSec ?? 0,
+      bgVideoDuration: fullDuration,
+      bgVideoNeedsTrim: true,
+      bgVideoOriginalName: asset?.name || bgVideoOriginalName,
+      bgVideoLocalAsset: asset
+        ? {
+            ...asset,
+            renderReadySrc: undefined,
+            requiresOptimization: true,
+            sourcePath: undefined,
+            previewSrc: blobUrl,
+            serverPreviewSrc: '',
+            previewPending: false,
+            previewPollUrl: undefined,
+          }
+        : null,
+      bgVideoOpacity,
+      bgVideoBlur,
+      bgVideoSaturation,
+      useVideoAudio,
+    };
+    applyBackgroundVideoPatchToState(reopenPatch);
+    shareBackgroundVideoWithTemplates(reopenPatch);
+    setVideoUploadMsg('Modo de corte reaberto: escolha o novo início e clique em Cortar/otimizar.');
+  }
+
   function useBgVideoWithoutTrim() {
     if (!bgVideo) return;
     if (bgVideoLocalAsset?.requiresOptimization) {
@@ -3710,7 +3749,13 @@ export default function Home() {
 
     try {
       let assetForTrim = bgVideoLocalAsset;
-      let data = await requestBackgroundVideoTrim(assetForTrim, clipDuration);
+      // blob:/data: não existem no servidor — vai direto pro reupload do bruto.
+      // Cortar "dentro" do clip já otimizado também não vale: precisa do bruto.
+      const trimSource = assetForTrim?.sourcePath || bgVideo;
+      const sourceIsOptimizedClip = Boolean(assetForTrim?.renderReadySrc && trimSource === assetForTrim.renderReadySrc);
+      let data: TrimVideoResponse = trimSource.startsWith('/api/') && !sourceIsOptimizedClip
+        ? await requestBackgroundVideoTrim(assetForTrim, clipDuration)
+        : { ok: false, canRetryWithReupload: true };
 
       if (!data.ok && shouldRetryTrimWithReupload(data)) {
         const refreshedAsset = await reuploadBackgroundSourceForTrim(assetForTrim);
@@ -3761,7 +3806,7 @@ export default function Home() {
         data.audioWarning ||
         (data.sourceHasAudio && data.hasAudio === false ? 'Atenção: o trecho otimizado saiu sem áudio detectável.' : '');
       setVideoUploadMsg(
-        `Trecho otimizado pronto (${sizeLabel}). O bruto foi descartado.${audioMessage ? ` ${audioMessage}` : ''}`
+        `Trecho otimizado pronto (${sizeLabel}). Pra mudar o trecho depois, use "Escolher outro trecho do vídeo".${audioMessage ? ` ${audioMessage}` : ''}`
       );
       return optimizedPatch;
     } catch (error) {
@@ -6105,14 +6150,21 @@ export default function Home() {
 
   async function ensureBackgroundVideoReadyForExport(): Promise<SharedBackgroundVideoPatch | null | false> {
     const readyPatch = readyBackgroundVideoPatch();
+    let forceReprocess = false;
     if (readyPatch && bgVideoNeedsTrim) {
-      applyBackgroundVideoPatchToState(readyPatch);
-      shareBackgroundVideoWithTemplates(readyPatch);
-      setVideoUploadMsg('Clip otimizado já pronto. Exportando sem processar o bruto de novo.');
-      return readyPatch;
+      // Só reusa o clip pronto se ele foi cortado NO MESMO início escolhido —
+      // senão o export ignoraria a seleção do usuário (trecho errado silencioso).
+      const clipStart = bgVideoLocalAsset?.trimStartSec ?? 0;
+      if (Math.abs(clipStart - bgVideoStartSec) < 0.075) {
+        applyBackgroundVideoPatchToState(readyPatch);
+        shareBackgroundVideoWithTemplates(readyPatch);
+        setVideoUploadMsg('Clip otimizado já pronto. Exportando sem processar o bruto de novo.');
+        return readyPatch;
+      }
+      forceReprocess = true;
     }
 
-    if (!effectiveBgVideoNeedsTrim) return null;
+    if (!effectiveBgVideoNeedsTrim && !forceReprocess) return null;
 
     setRenderStatus('rendering');
     setRenderProgress(3);
@@ -8665,7 +8717,19 @@ return (
 
             {bgVideo && (
               <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                {!bgIsImage && !effectiveBgVideoNeedsTrim && effectiveBgVideoDuration > 0 && (
+                {/* Com clip otimizado o início é fixo (o trecho JÁ foi cortado): o
+                    slider não teria efeito no render. Oferece reabrir a seleção. */}
+                {!bgIsImage && bgVideoHasReadyClip && (
+                  <button
+                    type="button"
+                    onClick={reopenBgTrimSelection}
+                    disabled={processingVideoClip || uploadingVideo}
+                    style={{ ...smallBtn, justifySelf: 'start' }}
+                  >
+                    ✂️ Escolher outro trecho do vídeo
+                  </button>
+                )}
+                {!bgIsImage && !effectiveBgVideoNeedsTrim && !bgVideoHasReadyClip && effectiveBgVideoDuration > 0 && (
                   <SliderRow label="Início (refrão)" value={bgVideoStartSec} min={0} max={bgVideoStartMax} step={0.1}
                     onChange={setBgVideoStartSec} format={(v) => `${v.toFixed(1)}s`} />
                 )}
