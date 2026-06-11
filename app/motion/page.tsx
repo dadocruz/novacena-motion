@@ -424,7 +424,7 @@ export default function SalesPage() {
       {/* ── CTA Banner 1 ──────────────────────────── */}
       <section style={ctaBanner}>
         <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
-        <p style={trustLineCenter}>{'✓  1 render grátis · Sem cartão · Sem instalar nada'}</p>
+        <p style={trustLineCenter}>{'✓  Conta grátis · Sem cartão · Monte e assista o preview na hora'}</p>
       </section>
 
       {/* ── How it works ───────────────────────────── */}
@@ -636,7 +636,7 @@ export default function SalesPage() {
           <em style={emCyan}>primeiro motion</em>?
         </h2>
         <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Teste gratuitamente ↗</a>
-        <p style={trustLineCenter}>{'✓  1 render grátis · Sem cartão de crédito'}</p>
+        <p style={trustLineCenter}>{'✓  Conta grátis · Preview ilimitado · Exporte ao assinar'}</p>
       </section>
 
       {/* ── Pricing ────────────────────────────────── */}
@@ -757,7 +757,7 @@ export default function SalesPage() {
               <li style={choiceItemGood}>✓ Motion pronto em minutos, no navegador</li>
               <li style={choiceItemGood}>✓ A partir de {formatBRL(bestPerRender)} por motion</li>
               <li style={choiceItemGood}>✓ Templates profissionais de lançamento musical</li>
-              <li style={choiceItemGood}>✓ Teste grátis antes de pagar qualquer coisa</li>
+              <li style={choiceItemGood}>✓ Monte e veja o preview grátis antes de pagar</li>
             </ul>
             <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
           </div>
@@ -770,7 +770,7 @@ export default function SalesPage() {
           Escolha o template. Troque a capa.{' '}
           <em style={emCyan}>Exporte na nuvem</em>.
         </h2>
-        <p style={subCenter}>Teste grátis com 1 render de demonstração. Sem cartão.</p>
+        <p style={subCenter}>Crie a conta grátis, monte seu motion e assista o preview. Exporte quando assinar.</p>
         <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
         <p style={trustLineCenter}>{'✓  Comece em 30 segundos'}</p>
       </section>
@@ -815,7 +815,7 @@ export default function SalesPage() {
         <div style={stickyCtaBar}>
           <div style={stickyCtaInfo}>
             <span style={stickyCtaTitle}>Teste grátis</span>
-            <span style={stickyCtaSub}>1 render de demonstração · sem cartão</span>
+            <span style={stickyCtaSub}>monte grátis · exporte ao assinar</span>
           </div>
           <a href={CTA_URL} onClick={trackTrialClick} style={stickyCtaBtn}>Começar →</a>
         </div>

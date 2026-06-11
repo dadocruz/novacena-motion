@@ -69,7 +69,7 @@ export default function LoginPage() {
             <p style={sub}>
               {mode === 'login'
                 ? 'Acesse o editor de motion para seus lançamentos.'
-                : 'Crie sua conta e teste com 1 render de demonstração gratuito.'}
+                : 'Crie sua conta grátis e monte seu motion no navegador.'}
             </p>
           </div>
 
@@ -133,7 +133,7 @@ export default function LoginPage() {
         </form>
 
         {/* ── Trust ── */}
-        <p style={trustLine}>{'✓  1 render de demonstração grátis ao criar conta'}</p>
+        <p style={trustLine}>{'✓  Conta grátis · Monte e assista o preview · Exporte ao assinar'}</p>
       </div>
     </main>
   );

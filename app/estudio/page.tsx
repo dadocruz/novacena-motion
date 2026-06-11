@@ -6161,8 +6161,8 @@ export default function Home() {
 
   function formatSaasExportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error ?? 'falha');
-    if (/demonstração|tokens|planos|comprar|pacote/i.test(message)) {
-      return 'Seu teste gratuito acabou. Escolha um pacote para continuar exportando.';
+    if (/demonstração|tokens|renders|planos|comprar|pacote/i.test(message)) {
+      return 'Sua conta não tem renders disponíveis. Assine um plano pra exportar — montar e ver o preview continua liberado.';
     }
     if (/loading image|cannot be decoded|source image|failed to load resource/i.test(message)) {
       return 'Não consegui carregar um logo ou imagem do render. Recarregue a página e tente exportar novamente.';

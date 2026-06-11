@@ -36,9 +36,9 @@ export default function TermsPage() {
         <h2 style={h2}>3. Renders e créditos</h2>
         <p style={p}>
           A Plataforma opera com um sistema de créditos chamados &ldquo;renders&rdquo;.
-          Cada exportação de vídeo consome 1 render. Ao criar sua conta, você recebe
-          1 render de demonstração gratuito. Renders adicionais são adquiridos através
-          dos planos disponíveis.
+          Cada exportação de vídeo consome 1 render. Contas gratuitas têm acesso
+          completo ao editor e à pré-visualização; renders para exportação são
+          adquiridos através dos planos disponíveis ou concedidos pela equipe NovaCena.
         </p>
         <p style={p}>
           Renders adquiridos não são reembolsáveis após o uso. Renders não utilizados

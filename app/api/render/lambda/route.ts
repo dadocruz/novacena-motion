@@ -271,7 +271,7 @@ export async function POST(req: NextRequest) {
       }
       if (user.tokens < 1) {
         return NextResponse.json(
-          { ok: false, error: 'Seu render de demonstração já foi usado. Compre um pacote em Planos e Renders para continuar exportando.' },
+          { ok: false, error: 'Sua conta ainda não tem renders. Assine um plano em Planos e Renders para exportar — montar e assistir o preview continua grátis.' },
           { status: 402 }
         );
       }

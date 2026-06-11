@@ -114,7 +114,7 @@ export const DEFAULT_CONTENT: SiteContent = {
   heroTitle: 'Crie o motion do seu lançamento em menos de 5 minutos.',
   heroSubtitle:
     'Templates profissionais de pré-save, lançamento e marcos de streams. Troque a capa, ajuste o texto, exporte em Full HD. Sem After Effects. Sem designer. Sem perder horas.',
-  trustLine: '✓  1 render de demonstração grátis · Sem cartão de crédito',
+  trustLine: '✓  Conta grátis · Monte e assista o preview · Sem cartão de crédito',
   usersLine: 'Produtores e artistas independentes já lançam com a NovaCena',
   couponBar: {
     enabled: false,
@@ -144,6 +144,6 @@ export const DEFAULT_CONTENT: SiteContent = {
     { q: 'Quanto tempo leva pra exportar um vídeo?', a: 'Entre 2 e 5 minutos. A renderização é feita na nuvem — seu computador não trava e não precisa ficar aberto.' },
     { q: 'Posso usar minha própria capa e vídeo de fundo?', a: 'Sim. Você faz upload da arte do lançamento, vídeo de fundo, e ajusta texto, cor, opacidade, blur e saturação no editor visual.' },
     { q: 'O que é um render?', a: 'Um render é uma exportação de vídeo. Cada vez que você exporta um motion, consome 1 render do seu saldo. Você compra pacotes de renders nos planos.' },
-    { q: 'Como funciona o teste grátis?', a: 'Ao criar sua conta, você recebe 1 render de demonstração gratuito. Personalize qualquer template e exporte pra ver a qualidade antes de comprar.' },
+    { q: 'Como funciona o teste grátis?', a: 'Você cria a conta grátis e usa o estúdio completo: monta o motion com sua capa, textos e vídeo, e assiste o preview na hora. Pra exportar o MP4 em Full HD, é só assinar um plano.' },
   ],
 };

@@ -5,7 +5,10 @@ import { DATA_DIR, uid } from './storage';
 import type { BillingCycle } from './saasPlans';
 
 export const SAAS_COOKIE_NAME = 'novacena_session';
-export const TRIAL_RENDER_TOKENS = 1;
+// 0 = conta nova NÃO ganha render (anti-abuso: contas descartáveis queimavam
+// Lambda). Usuário monta e assiste o preview grátis; exportar exige assinar um
+// plano ou liberação manual no /admin-motion (CRM).
+export const TRIAL_RENDER_TOKENS = 0;
 
 const USERS_FILE = path.join(DATA_DIR, 'users', 'saas-users.json');
 
