@@ -217,6 +217,30 @@ export default function AdminPage() {
     event.currentTarget.reset();
   }
 
+  async function zeroTokens(userId: string) {
+    const target = users.find((u) => u.id === userId);
+    const ok = window.confirm(`Zerar o saldo de renders de ${target?.name ?? 'este cliente'}? (${target?.tokens ?? 0} → 0)`);
+    if (!ok) return;
+    setMessage('');
+    const response = await fetch(`/api/admin/users/${userId}/tokens`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-novacena-admin-token': token,
+      },
+      body: JSON.stringify({ mode: 'set', amount: 0 }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      setMessageKind('error');
+      setMessage(data.error || 'Não foi possível zerar o saldo.');
+      return;
+    }
+    setUsers((current) => current.map((user) => user.id === userId ? data.user : user));
+    setMessageKind('success');
+    setMessage(`Saldo de ${target?.name ?? 'cliente'} zerado.`);
+  }
+
   return (
     <main style={page}>
       {/* ── Nav ── */}
@@ -381,6 +405,16 @@ export default function AdminPage() {
                       </select>
                       <button style={btnAction}>+ Renders</button>
                     </form>
+                    {user.tokens > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => zeroTokens(user.id)}
+                        title="Zera o saldo de renders deste cliente (ex.: trial antigo não usado)"
+                        style={btnDanger}
+                      >
+                        Zerar
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}
@@ -430,6 +464,7 @@ const inputSm: CSSProperties = { ...input, height: 38, fontSize: 13, minWidth: 0
 const btnPrimary: CSSProperties = { height: 44, borderRadius: 10, border: 'none', background: '#fff', color: '#000', fontWeight: 700, fontSize: 14, padding: '0 22px', cursor: 'pointer', fontFamily: 'inherit' };
 const btnAction: CSSProperties = { height: 38, borderRadius: 10, border: 'none', background: ACCENT, color: '#000', fontWeight: 700, fontSize: 13, padding: '0 16px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' };
 const btnGhost: CSSProperties = { height: 38, borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.72)', fontWeight: 700, fontSize: 13, padding: '0 16px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' };
+const btnDanger: CSSProperties = { height: 38, borderRadius: 10, border: '1px solid rgba(248,113,113,0.25)', background: 'rgba(248,113,113,0.08)', color: '#f87171', fontWeight: 700, fontSize: 13, padding: '0 14px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', flexShrink: 0 };
 
 /* ── Notices ── */
 const noticeBase: CSSProperties = { padding: '12px 16px', borderRadius: 10, fontSize: 14, fontWeight: 500 };

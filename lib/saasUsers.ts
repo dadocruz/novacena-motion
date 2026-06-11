@@ -192,6 +192,21 @@ export async function addUserTokens(userId: string, amount: number, patch?: { pl
   return users[index];
 }
 
+/** Define o saldo ABSOLUTO de renders (>= 0). Usado pelo CRM pra zerar trials
+ *  antigos ou corrigir saldos — diferente de addUserTokens, que só soma. */
+export async function setUserTokens(userId: string, amount: number) {
+  const users = await readUsers();
+  const index = users.findIndex((user) => user.id === userId);
+  if (index < 0) return null;
+  users[index] = {
+    ...users[index],
+    tokens: Math.max(0, Math.floor(amount)),
+    updatedAt: new Date().toISOString(),
+  };
+  await writeUsers(users);
+  return users[index];
+}
+
 export async function consumeUserTokens(userId: string, amount = 1) {
   const users = await readUsers();
   const index = users.findIndex((user) => user.id === userId);

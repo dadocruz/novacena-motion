@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../../../../../../lib/adminAuth';
 import { SAAS_PLANS, type BillingCycle } from '../../../../../../lib/saasPlans';
-import { addUserTokens } from '../../../../../../lib/saasUsers';
+import { addUserTokens, setUserTokens } from '../../../../../../lib/saasUsers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,18 +20,26 @@ export async function POST(
   const { id } = await context.params;
   const body = await req.json().catch(() => ({}));
   const amount = Number(body.amount);
+  // mode 'set' define o saldo absoluto (aceita 0, pra zerar trials antigos);
+  // default 'add' soma — comportamento original do CRM.
+  const mode = body.mode === 'set' ? 'set' : 'add';
   const planId = typeof body.planId === 'string' ? body.planId : undefined;
   const billingCycle = isBillingCycle(body.billingCycle) ? body.billingCycle : undefined;
 
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ ok: false, error: 'Informe uma quantidade de renders maior que zero.' }, { status: 400 });
+  if (!Number.isFinite(amount) || (mode === 'add' ? amount <= 0 : amount < 0)) {
+    return NextResponse.json(
+      { ok: false, error: mode === 'set' ? 'Informe um saldo de renders (0 ou mais).' : 'Informe uma quantidade de renders maior que zero.' },
+      { status: 400 }
+    );
   }
 
   if (planId && !SAAS_PLANS.some((plan) => plan.id === planId)) {
     return NextResponse.json({ ok: false, error: 'Plano inválido.' }, { status: 400 });
   }
 
-  const user = await addUserTokens(id, amount, { planId, billingCycle });
+  const user = mode === 'set'
+    ? await setUserTokens(id, amount)
+    : await addUserTokens(id, amount, { planId, billingCycle });
   if (!user) {
     return NextResponse.json({ ok: false, error: 'Cliente não encontrado.' }, { status: 404 });
   }
