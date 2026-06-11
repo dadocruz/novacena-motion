@@ -21,6 +21,31 @@ function useIsMobile(breakpoint = 768) {
   return mobile;
 }
 
+/** Countdown da barra de cupom (urgência). Aceita ISO ou "YYYY-MM-DD HH:MM". */
+function useCountdown(target?: string) {
+  const [left, setLeft] = useState<{ d: number; h: number; m: number; s: number } | null>(null);
+  useEffect(() => {
+    if (!target || !target.trim()) { setLeft(null); return; }
+    const ts = new Date(target.includes('T') ? target : target.trim().replace(' ', 'T')).getTime();
+    if (!Number.isFinite(ts)) { setLeft(null); return; }
+    const tick = () => {
+      const diff = Math.max(0, ts - Date.now());
+      setLeft({
+        d: Math.floor(diff / 86400000),
+        h: Math.floor(diff / 3600000) % 24,
+        m: Math.floor(diff / 60000) % 60,
+        s: Math.floor(diff / 1000) % 60,
+      });
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [target]);
+  return left;
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
 /* ── Data ─────────────────────────────────────────────── */
 
 import type { SiteContent, SiteReview, SiteFaq } from '../../lib/siteContentTypes';
@@ -132,7 +157,6 @@ export default function SalesPage() {
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const { topRef, bottomRef } = useDualScroll(0.4);
   const videoCarouselRef = useAutoScroll(0.4);
-  const showcaseRef = useAutoScroll(0.55);
   const isMobile = useIsMobile();
 
   // Fetch CMS content
@@ -163,9 +187,13 @@ export default function SalesPage() {
 
   const coupon = content.couponBar;
   const showCoupon = Boolean(coupon?.enabled && coupon.code);
+  const countdown = useCountdown(showCoupon ? coupon.endsAt : undefined);
 
   return (
     <main style={page}>
+      {/* keyframes que CSS inline não cobre (pulse do "ao vivo") */}
+      <style>{`@keyframes nvPulse { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: 0.55; transform: scale(0.82);} }`}</style>
+
       {/* ── Coupon bar (gatilho de oferta, fixa no topo) ── */}
       {showCoupon && (
         <div style={couponBarStyle}>
@@ -173,6 +201,13 @@ export default function SalesPage() {
           <span style={couponText}>
             USE O CUPOM <strong style={couponCode}>{coupon.code}</strong> E GANHE <strong>{coupon.discount}</strong>
           </span>
+          {countdown && !isMobile && (
+            <span style={{ display: 'inline-flex', gap: 4, marginLeft: 4 }}>
+              {[`${pad2(countdown.d)}d`, `${pad2(countdown.h)}h`, `${pad2(countdown.m)}m`, `${pad2(countdown.s)}s`].map((chip) => (
+                <span key={chip} style={countChip}>{chip}</span>
+              ))}
+            </span>
+          )}
           <span style={couponFire}>🔥</span>
         </div>
       )}
@@ -225,6 +260,7 @@ export default function SalesPage() {
                 ))}
               </div>
               <span style={socialProofText}>
+                <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 99, background: '#22c55e', boxShadow: '0 0 8px rgba(34,197,94,0.9)', marginRight: 7, animation: 'nvPulse 1.6s ease-in-out infinite' }} />
                 <span style={{ color: '#f59e0b' }}>★★★★★</span> {content.usersLine}
               </span>
             </div>
@@ -252,55 +288,68 @@ export default function SalesPage() {
         </div>
       </section>
 
-      {/* ── Showcase: motions demo (slots preenchidos via /admin/conteudo/motion) ── */}
+      {/* ── Showcase: motions demo em GRID instantâneo (slots via /admin/conteudo/motion) ── */}
       <section style={showcaseSect}>
         <div style={tagCenter}>{'// FEITO NA NOVACENA'}</div>
         <h2 style={h2Center}>
-          Seu lançamento pode ficar{' '}
-          <em style={emCyan}>assim</em>.
+          Seu lançamento em movimento.<br />
+          <em style={emCyan}>Pronto em menos de 5 minutos.</em>
         </h2>
-        <p style={subCenter}>Motions reais criados na plataforma. Toque para ver com som.</p>
-        <div ref={showcaseRef} style={showcaseCarousel}>
-          <div style={showcaseTrack}>
-            {(content.showcaseVideos.length > 0
-              ? [...content.showcaseVideos, ...content.showcaseVideos]
-              : SHOWCASE_PLACEHOLDERS
-            ).map((v, i) =>
-              v.src ? (
-                showcaseKind(v.src) === 'file' ? (
-                  <div key={`sc-${i}`} style={showcaseCard}>
-                    <video
-                      src={v.src}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                      style={showcaseVideo}
-                    />
-                    {v.label && <div style={showcaseLabel}>{v.label}</div>}
-                  </div>
-                ) : (
-                  <div key={`sc-${i}`} style={showcaseCard}>
-                    <iframe
-                      src={`https://www.youtube.com/embed/${extractYouTubeVideoId(v.src)}?autoplay=1&mute=1&loop=1&playlist=${extractYouTubeVideoId(v.src)}&controls=0&playsinline=1`}
-                      title={v.label || 'Motion demo'}
-                      allow="autoplay; encrypted-media"
-                      style={showcaseVideo}
-                    />
-                    {v.label && <div style={showcaseLabel}>{v.label}</div>}
-                  </div>
-                )
-              ) : (
-                <div key={`scph-${i}`} style={showcaseCard}>
-                  <div style={showcasePlaceholder}>
-                    <div style={videoPlayBtn}>▶</div>
-                    <span style={showcasePhText}>{v.label}</span>
-                  </div>
+        <p style={subCenter}>Motions reais exportados da plataforma, rodando agora.</p>
+        <div style={showcaseGrid}>
+          {(content.showcaseVideos.length > 0 ? content.showcaseVideos : SHOWCASE_PLACEHOLDERS).map((v, i) =>
+            v.src ? (
+              showcaseKind(v.src) === 'file' ? (
+                <div key={`sc-${i}`} style={showcaseCard}>
+                  <video
+                    src={v.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    style={showcaseVideo}
+                  />
+                  {v.label && <div style={showcaseLabel}>{v.label}</div>}
                 </div>
-              ),
-            )}
-          </div>
+              ) : (
+                <div key={`sc-${i}`} style={showcaseCard}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${extractYouTubeVideoId(v.src)}?autoplay=1&mute=1&loop=1&playlist=${extractYouTubeVideoId(v.src)}&controls=0&playsinline=1`}
+                    title={v.label || 'Motion demo'}
+                    allow="autoplay; encrypted-media"
+                    style={showcaseVideo}
+                  />
+                  {v.label && <div style={showcaseLabel}>{v.label}</div>}
+                </div>
+              )
+            ) : (
+              <div key={`scph-${i}`} style={showcaseCard}>
+                <div style={showcasePlaceholder}>
+                  <div style={videoPlayBtn}>▶</div>
+                  <span style={showcasePhText}>{v.label}</span>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+
+        {/* Feature chips (gatilhos rápidos, estilo "Esqueça o After Effects") */}
+        <div style={featStrip}>
+          {([
+            ['⚡', 'Pronto em minutos', 'Do upload ao MP4 Full HD na nuvem.'],
+            ['📱', 'Story e Feed', '1080×1920 e 1080×1350 prontos pra postar.'],
+            ['🚫', 'Sem After Effects', 'Tudo no navegador. Sem instalar nada.'],
+            ['💸', `A partir de ${formatBRL(bestPerRender)}/motion`, 'O que um designer cobra R$300–800.'],
+          ] as const).map(([icon, titleTxt, descTxt]) => (
+            <div key={titleTxt} style={featCard}>
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{icon}</span>
+              <div style={{ display: 'grid', gap: 3 }}>
+                <div style={featTitle}>{titleTxt}</div>
+                <div style={featDesc}>{descTxt}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -785,9 +834,10 @@ const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans
 const ACCENT = '#7B93FF';
 const W = 'min(1200px, calc(100% - 48px))';
 
-// minHeight (e não height+overflow): o documento é o scroller real — com
-// overflow:auto aqui os position:sticky (nav/cupom) nunca grudavam no scroll.
-const page: CSSProperties = { minHeight: '100vh', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS, position: 'relative' };
+// O main É o scroller da landing: globals.css trava html/body com
+// overflow:hidden no desktop (o editor é fullscreen). Nav/cupom/CTA usam
+// position:fixed, então ficam fixos no viewport independente deste scroller.
+const page: CSSProperties = { height: '100vh', overflow: 'auto', background: '#080a0f', color: '#e8e8ec', fontFamily: SANS, position: 'relative' };
 const gridBg: CSSProperties = { position: 'fixed', top: 0, left: 0, right: 0, height: '100vh', pointerEvents: 'none', zIndex: 0, backgroundImage: 'linear-gradient(rgba(123,147,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(123,147,255,0.04) 1px, transparent 1px)', backgroundSize: '48px 48px', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 70%)' };
 
 /* ── Nav ── */
@@ -967,6 +1017,13 @@ const couponBarStyle: CSSProperties = { position: 'fixed', top: 0, left: 0, righ
 const couponFire: CSSProperties = { fontSize: 12 };
 const couponText: CSSProperties = { fontSize: 11, fontWeight: 600, color: '#fff', letterSpacing: '0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const couponCode: CSSProperties = { background: 'rgba(255,255,255,0.18)', borderRadius: 5, padding: '2px 6px', fontFamily: MONO, fontWeight: 700, letterSpacing: '0.02em' };
+const countChip: CSSProperties = { background: 'rgba(255,255,255,0.22)', borderRadius: 5, padding: '2px 7px', fontFamily: MONO, fontSize: 10.5, fontWeight: 800, color: '#fff', minWidth: 30, textAlign: 'center' };
+
+/* ── Feature chips (gatilhos) ── */
+const featStrip: CSSProperties = { width: W, margin: '18px auto 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: 12 };
+const featCard: CSSProperties = { display: 'flex', gap: 12, alignItems: 'flex-start', padding: '16px 16px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' };
+const featTitle: CSSProperties = { fontSize: 14, fontWeight: 800, color: '#fff' };
+const featDesc: CSSProperties = { fontSize: 12.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 };
 
 /* ── Social proof (hero) ── */
 const socialProofRow: CSSProperties = { display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' };
@@ -975,10 +1032,10 @@ const avatarChip: CSSProperties = { width: 30, height: 30, borderRadius: '50%', 
 const socialProofText: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.45)', fontWeight: 500 };
 
 /* ── Showcase (demos do produto) ── */
-const showcaseSect: CSSProperties = { width: '100%', padding: '72px 0', display: 'grid', gap: 20, borderTop: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' };
-const showcaseCarousel: CSSProperties = { width: '100%', overflow: 'hidden', marginTop: 8 };
-const showcaseTrack: CSSProperties = { display: 'flex', gap: 16, width: 'max-content', padding: '0 24px' };
-const showcaseCard: CSSProperties = { position: 'relative', width: 210, aspectRatio: '9 / 16', flexShrink: 0, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#0c0e14' };
+const showcaseSect: CSSProperties = { width: '100%', padding: '72px 0', display: 'grid', gap: 20, borderTop: '1px solid rgba(255,255,255,0.06)' };
+// Grid responsivo: ~4 colunas no desktop, 2 no celular — vídeos 9:16 já diagramados.
+const showcaseGrid: CSSProperties = { width: W, margin: '8px auto 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(225px, 40vw), 1fr))', gap: 14 };
+const showcaseCard: CSSProperties = { position: 'relative', width: '100%', aspectRatio: '9 / 16', borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#0c0e14', boxShadow: '0 14px 44px rgba(0,0,0,0.45)' };
 const showcaseVideo: CSSProperties = { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', border: 'none' };
 const showcaseLabel: CSSProperties = { position: 'absolute', bottom: 10, left: 10, right: 10, fontFamily: MONO, fontSize: 10, fontWeight: 700, color: '#fff', letterSpacing: '0.08em', textShadow: '0 1px 8px rgba(0,0,0,0.8)' };
 const showcasePlaceholder: CSSProperties = { position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', alignContent: 'center', gap: 14, background: 'linear-gradient(160deg, rgba(123,147,255,0.10), rgba(123,147,255,0.02))' };

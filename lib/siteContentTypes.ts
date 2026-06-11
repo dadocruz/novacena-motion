@@ -31,11 +31,13 @@ export interface SiteShowcaseVideo {
   label: string;
 }
 
-/** Barra de cupom fixa no topo (estilo "USE O CUPOM X E GANHE Y OFF"). */
+/** Barra de cupom fixa no topo (estilo "USE O CUPOM X E GANHE Y OFF").
+ *  endsAt (ISO ou "YYYY-MM-DD HH:MM") liga o countdown 00d 00h 00m 00s. */
 export interface SiteCouponBar {
   enabled: boolean;
   code: string;
   discount: string;
+  endsAt?: string;
 }
 
 export interface SiteContent {
@@ -118,6 +120,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     enabled: false,
     code: 'PRIMEIRACOMPRA',
     discount: '20% OFF',
+    endsAt: '',
   },
   showcaseVideos: [],
   logos: [],

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { extractYouTubeVideoId } from '../../../../lib/siteContentTypes';
 import type { SiteContent, SiteLogo, SiteTestimonialVideo, SiteReview, SiteFaq, SiteShowcaseVideo } from '../../../../lib/siteContentTypes';
@@ -12,7 +12,7 @@ const EMPTY_CONTENT: SiteContent = {
   heroSubtitle: '',
   trustLine: '',
   usersLine: '',
-  couponBar: { enabled: false, code: '', discount: '' },
+  couponBar: { enabled: false, code: '', discount: '', endsAt: '' },
   showcaseVideos: [],
   logos: [],
   testimonialVideos: [],
@@ -138,8 +138,48 @@ export default function ConteudoPage() {
   }
 
   /* ── Showcase video helpers ── */
+  const demoFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingDemos, setUploadingDemos] = useState<string>('');
+
   function addShowcase() {
     updateField('showcaseVideos', [...content.showcaseVideos, { src: '', label: '' }]);
+  }
+
+  /** Sobe 1+ vídeos pro servidor e cria um slot pra cada — fluxo de 1 clique. */
+  async function uploadDemoVideos(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const list = Array.from(files);
+    const added: { src: string; label: string }[] = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const file = list[i];
+      setUploadingDemos(`Subindo ${i + 1}/${list.length}: ${file.name}...`);
+      try {
+        const fd = new FormData();
+        fd.append('video', file);
+        const res = await fetch('/api/site-upload', {
+          method: 'POST',
+          headers: { 'x-novacena-admin-token': token },
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          setMessageKind('error');
+          setMessage(`Falha em ${file.name}: ${data.error || res.status}`);
+          continue;
+        }
+        added.push({ src: data.src, label: file.name.replace(/\.[^.]+$/, '').slice(0, 28).toUpperCase() });
+      } catch {
+        setMessageKind('error');
+        setMessage(`Falha de rede subindo ${file.name}.`);
+      }
+    }
+    setUploadingDemos('');
+    if (added.length > 0) {
+      setContent((prev) => ({ ...prev, showcaseVideos: [...prev.showcaseVideos, ...added] }));
+      setMessageKind('success');
+      setMessage(`${added.length} vídeo(s) no servidor. Revise as legendas e clique em "Salvar alteracoes" pra publicar.`);
+    }
+    if (demoFileInputRef.current) demoFileInputRef.current.value = '';
   }
   function updateShowcase(i: number, field: keyof SiteShowcaseVideo, value: string) {
     const next = [...content.showcaseVideos];
@@ -151,7 +191,7 @@ export default function ConteudoPage() {
   }
 
   /* ── Coupon helpers ── */
-  function updateCoupon(field: 'enabled' | 'code' | 'discount', value: boolean | string) {
+  function updateCoupon(field: 'enabled' | 'code' | 'discount' | 'endsAt', value: boolean | string) {
     updateField('couponBar', { ...content.couponBar, [field]: value });
   }
 
@@ -399,6 +439,18 @@ export default function ConteudoPage() {
                       />
                     </div>
                   </div>
+                  <div style={fieldGroup}>
+                    <label style={labelSm}>Countdown — termina em (opcional)</label>
+                    <input
+                      style={inputSm}
+                      placeholder="Ex: 2026-06-20 23:59 (vazio = sem contagem)"
+                      value={content.couponBar.endsAt || ''}
+                      onChange={(e) => updateCoupon('endsAt', e.target.value)}
+                    />
+                    <p style={fieldHint}>
+                      Com data definida, a barra mostra a contagem regressiva 00d 00h 00m 00s (urgencia).
+                    </p>
+                  </div>
                   <p style={fieldHint}>
                     Importante: crie o cupom correspondente no painel do Stripe antes de ativar a barra,
                     senao o codigo nao vai funcionar no checkout.
@@ -418,16 +470,44 @@ export default function ConteudoPage() {
               {!collapsed.showcase && (
                 <div style={sectionBody}>
                   <p style={fieldHint}>
-                    Videos verticais (9:16) dos templates rodando. Aceita: caminho de arquivo no servidor
-                    (ex: /uploads/site/presave.mp4), URL direta .mp4/.webm, ou link do YouTube.
-                    Arquivos .mp4 ficam em autoplay mudo em loop — igual galeria de anuncio.
+                    Exporte os stories de 8s na ferramenta e suba aqui — eles entram na landing
+                    em autoplay mudo, em loop, ja diagramados pra computador e celular.
+                    Tambem aceita URL .mp4/.webm ou link do YouTube no campo de cada slot.
                   </p>
+
+                  {/* Upload direto: 1 clique, varios arquivos, slots criados sozinhos */}
+                  <input
+                    ref={demoFileInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => uploadDemoVideos(e.target.files)}
+                  />
+                  <button
+                    style={{ ...btnPrimary, width: '100%', opacity: uploadingDemos ? 0.6 : 1 }}
+                    disabled={Boolean(uploadingDemos)}
+                    onClick={() => demoFileInputRef.current?.click()}
+                  >
+                    {uploadingDemos || '📤 Subir videos do computador (pode varios de uma vez)'}
+                  </button>
+
                   {content.showcaseVideos.map((vid, i) => (
                     <div key={i} style={itemRow}>
+                      {vid.src && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(vid.src) && (
+                        <video
+                          src={vid.src}
+                          muted
+                          loop
+                          autoPlay
+                          playsInline
+                          style={{ width: 64, aspectRatio: '9 / 16', objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}
+                        />
+                      )}
                       <div style={itemFields}>
                         <input
                           style={inputSm}
-                          placeholder="/uploads/site/demo.mp4 ou link do YouTube"
+                          placeholder="/api/uploads/site/demo.mp4 ou link do YouTube"
                           value={vid.src}
                           onChange={(e) => updateShowcase(i, 'src', e.target.value)}
                         />
@@ -444,7 +524,7 @@ export default function ConteudoPage() {
                     </div>
                   ))}
                   <button style={btnAdd} onClick={addShowcase}>
-                    + Adicionar video demo
+                    + Adicionar por URL (sem upload)
                   </button>
                 </div>
               )}
