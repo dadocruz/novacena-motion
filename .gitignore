@@ -79,3 +79,9 @@ public/uploads/ai-backgrounds/
 public/uploads/backgrounds/
 public/uploads/motion-references/
 public/uploads/video-sources/
+
+# Catálogo Registros & Distribuição (dados de usuário — nunca commitar)
+public/uploads/catalog/
+data/users/
+data/audit.log
+data/monitor/

@@ -7060,6 +7060,18 @@ return (
               >
                 Monitor
               </a>
+              <a
+                href="/registros"
+                style={{
+                  ...topTab,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                Registros
+              </a>
               <button
                 onClick={() => openUpgradeOffer('Escolha um pacote para carregar renders na sua conta.')}
                 style={{

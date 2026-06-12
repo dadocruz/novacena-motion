@@ -18,6 +18,12 @@ function isPublicPath(req: NextRequest) {
   if (pathname === '/favicon.ico') return true;
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/fonts/')) return true;
+  // Link público de aprovação do artista (auth = token aleatório na URL)
+  if (pathname === '/aprovar-app.html') return true;
+  if (pathname === '/aprovar' || pathname.startsWith('/aprovar/')) return true;
+  if (pathname.startsWith('/api/catalog/approval/')) return true;
+  // capa/áudio do lançamento pro artista ouvir sem conta (nomes com hash aleatório)
+  if (pathname.startsWith('/api/uploads/catalog/')) return true;
   if (pathname === '/api/health') return true;
   if (pathname === '/api/fonts/css') return true;
   if (pathname === '/api/site-content' && req.method === 'GET') return true;

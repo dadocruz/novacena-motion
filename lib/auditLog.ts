@@ -12,7 +12,8 @@ export type AuditEvent =
   | 'signup'
   | 'logout'
   | 'render'
-  | 'plan_change';
+  | 'plan_change'
+  | 'credential_reveal';
 
 export async function audit(event: AuditEvent, data: Record<string, string | number | null> = {}) {
   try {

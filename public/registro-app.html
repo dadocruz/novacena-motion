@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>NovaCena · Registros & Distribuição</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#030305;--panel:rgba(12,12,20,.85);--panel2:rgba(18,18,30,.7);
+    --line:rgba(120,80,255,.08);--line2:rgba(120,80,255,.18);
+    --txt:#eee8ff;--muted:rgba(238,232,255,.5);--soft:rgba(238,232,255,.28);
+    --spotify:#1db954;--youtube:#ff0033;--red:#ef233c;--orange:#ff6b00;
+    --neon:#a855f7;--neon2:#6d28d9;--neon-glow:rgba(168,85,247,.25);
+    --cyan:#22d3ee;--cyan-glow:rgba(34,211,238,.2);
+    --pink:#f472b6;--pink-glow:rgba(244,114,182,.18);
+    --green:#34d399;--yellow:#fbbf24;
+    --radius:16px;--shadow:0 0 60px rgba(120,80,255,.08),0 20px 60px rgba(0,0,0,.55)
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+  body::before{content:'';position:fixed;inset:0;z-index:-1;background:
+    radial-gradient(900px 500px at 85% -10%,rgba(109,40,217,.16),transparent 60%),
+    radial-gradient(700px 420px at -10% 30%,rgba(34,211,238,.07),transparent 60%),
+    radial-gradient(800px 500px at 50% 110%,rgba(244,114,182,.06),transparent 60%)}
+  ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(168,85,247,.25);border-radius:3px}
+  a{color:var(--cyan)}
+  .header{position:sticky;top:0;z-index:40;background:rgba(3,3,5,.78);backdrop-filter:blur(40px) saturate(1.6);border-bottom:1px solid var(--line)}
+  .header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),var(--cyan),var(--pink),transparent);opacity:.35}
+  .hwrap{max-width:1280px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--neon),var(--cyan));display:grid;place-items:center;font:900 18px/1 'Space Mono',monospace;color:#030305;box-shadow:0 0 24px var(--neon-glow);flex-shrink:0}
+  .brand h1{margin:0;font:800 19px/1.1 'Outfit',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .brand p{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
+  .hspace{flex:1}
+  .hlink{font-size:12.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line2);padding:8px 14px;border-radius:10px;transition:.2s}
+  .hlink:hover{color:var(--txt);border-color:var(--neon)}
+  .tabs{max-width:1280px;margin:18px auto 0;padding:0 20px;display:flex;gap:8px;flex-wrap:wrap}
+  .tab{border:1px solid var(--line2);background:var(--panel2);color:var(--muted);padding:9px 18px;border-radius:12px;font:600 13px 'Outfit';cursor:pointer;transition:.2s}
+  .tab.on{color:#fff;border-color:var(--neon);background:linear-gradient(135deg,rgba(168,85,247,.18),rgba(34,211,238,.10));box-shadow:0 0 18px var(--neon-glow)}
+  main{max-width:1280px;margin:0 auto;padding:18px 20px 80px}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font:600 11.5px 'Outfit';padding:6px 12px;border-radius:99px;border:1px solid var(--line2);color:var(--muted);background:var(--panel2)}
+  .chip b{color:var(--txt)}
+  input,select,textarea{background:rgba(8,8,14,.9);border:1px solid var(--line2);color:var(--txt);border-radius:10px;padding:9px 12px;font:500 13px 'Outfit';outline:none;transition:.15s;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--neon);box-shadow:0 0 0 3px rgba(168,85,247,.12)}
+  textarea{resize:vertical;min-height:80px;line-height:1.5}
+  label{display:block;font:600 11px 'Outfit';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}
+  .btn{border:1px solid var(--line2);background:var(--panel2);color:var(--txt);padding:9px 16px;border-radius:11px;font:600 13px 'Outfit';cursor:pointer;transition:.18s;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .btn:hover{border-color:var(--neon);box-shadow:0 0 14px var(--neon-glow)}
+  .btn.primary{background:linear-gradient(135deg,var(--neon),var(--neon2));border:none;color:#fff;box-shadow:0 6px 22px rgba(168,85,247,.35)}
+  .btn.primary:hover{filter:brightness(1.12)}
+  .btn.cyan{background:linear-gradient(135deg,#0ea5b7,#0369a1);border:none;color:#fff}
+  .btn.ghost{background:transparent}
+  .btn.danger:hover{border-color:var(--red);color:#ff8fa3;box-shadow:none}
+  .btn.sm{padding:6px 11px;font-size:12px;border-radius:9px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);position:relative}
+  .rel-top{display:flex;gap:13px}
+  .cover{width:74px;height:74px;border-radius:10px;object-fit:cover;border:1px solid var(--line2);background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(34,211,238,.18));display:grid;place-items:center;font-size:22px;flex-shrink:0}
+  .rel-title{font:700 15.5px 'Outfit';margin:0 0 2px}
+  .rel-sub{font-size:12.5px;color:var(--muted)}
+  .badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .badge{font:700 10px 'Outfit';letter-spacing:.05em;text-transform:uppercase;padding:4px 9px;border-radius:99px;border:1px solid}
+  .st-rascunho{color:#cbd5e1;border-color:rgba(203,213,225,.35);background:rgba(203,213,225,.08)}
+  .st-aguardando_artista{color:var(--yellow);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .st-aprovado{color:var(--cyan);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.08)}
+  .st-registrado{color:var(--neon);border-color:rgba(168,85,247,.45);background:rgba(168,85,247,.1)}
+  .st-distribuido{color:var(--green);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .vbad{color:#ff8fa3;border-color:rgba(239,35,60,.4);background:rgba(239,35,60,.08)}
+  .vwarn{color:var(--yellow);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
+  .vok{color:var(--green);border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.08)}
+  .rel-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+  .empty{border:1px dashed var(--line2);border-radius:var(--radius);padding:46px 20px;text-align:center;color:var(--muted);font-size:14px}
+  .empty b{color:var(--txt)}
+  /* ---------- modal / wizard ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(2,2,6,.72);backdrop-filter:blur(8px);z-index:90;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 14px}
+  .overlay.on{display:flex}
+  .modal{background:#0a0a13;border:1px solid var(--line2);border-radius:20px;box-shadow:var(--shadow);width:100%;max-width:680px;padding:24px}
+  .modal h2{margin:0 0 16px;font:800 18px 'Outfit'}
+  .wizard{max-width:1060px}
+  .wiz-grid{display:grid;grid-template-columns:215px 1fr;gap:22px}
+  @media(max-width:820px){.wiz-grid{grid-template-columns:1fr}}
+  .steps{display:flex;flex-direction:column;gap:6px}
+  .step{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;border:1px solid transparent;color:var(--muted);font:600 13px 'Outfit';cursor:pointer}
+  .step .n{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font:700 12px 'Space Mono';border:1px solid var(--line2);flex-shrink:0}
+  .step.on{color:#fff;border-color:var(--neon);background:rgba(168,85,247,.1)}
+  .step.on .n{background:linear-gradient(135deg,var(--neon),var(--cyan));color:#06060a;border:none}
+  .frm{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .frm .full{grid-column:1/-1}
+  @media(max-width:640px){.frm{grid-template-columns:1fr}}
+  .wiz-foot{display:flex;gap:10px;margin-top:22px;align-items:center;flex-wrap:wrap}
+  .saveinfo{font-size:11.5px;color:var(--soft)}
+  .track{border:1px solid var(--line2);border-radius:14px;margin-bottom:12px;overflow:hidden}
+  .track-head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(168,85,247,.06);cursor:pointer}
+  .track-head .t{font:700 14px 'Outfit';flex:1}
+  .track-body{padding:14px;display:none}
+  .track.open .track-body{display:block}
+  .ptable{width:100%;border-collapse:collapse;margin-top:6px}
+  .ptable th{font:700 10px 'Outfit';letter-spacing:.06em;text-transform:uppercase;color:var(--soft);text-align:left;padding:4px 6px}
+  .ptable td{padding:4px 6px;vertical-align:middle}
+  .ptable input,.ptable select{padding:7px 9px;font-size:12.5px;border-radius:8px}
+  .sum{font:700 12px 'Space Mono';padding:5px 11px;border-radius:8px;border:1px solid}
+  .sum.ok{color:var(--green);border-color:rgba(52,211,153,.4)}
+  .sum.bad{color:#ff8fa3;border-color:rgba(239,35,60,.45)}
+  .hint{font-size:11.5px;color:var(--soft);line-height:1.5;margin-top:6px}
+  .vlist{display:flex;flex-direction:column;gap:7px;margin-top:10px}
+  .vitem{display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.45;padding:9px 12px;border-radius:10px;border:1px solid}
+  .vitem.err{color:#ffb3c0;border-color:rgba(239,35,60,.35);background:rgba(239,35,60,.06)}
+  .vitem.warn{color:#fde68a;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.05)}
+  .vitem.okk{color:#a7f3d0;border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.05)}
+  .cred{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:rgba(8,8,14,.55)}
+  .cred .plat{font:700 10.5px 'Outfit';text-transform:uppercase;letter-spacing:.04em;color:var(--cyan);border:1px solid rgba(34,211,238,.35);padding:3px 8px;border-radius:7px;flex-shrink:0}
+  .cred .lg{font:500 12.5px 'Space Mono';color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+  .iconbtn{background:none;border:1px solid var(--line2);color:var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:13px;display:grid;place-items:center;flex-shrink:0}
+  .iconbtn:hover{color:#fff;border-color:var(--neon)}
+  .toast-wrap{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{background:#12121f;border:1px solid var(--line2);border-left:3px solid var(--neon);padding:11px 18px;border-radius:11px;font:600 13px 'Outfit';box-shadow:var(--shadow);animation:tin .25s ease}
+  .toast.err{border-left-color:var(--red)}
+  .toast.ok{border-left-color:var(--green)}
+  @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .login-gate{position:fixed;inset:0;background:var(--bg);z-index:300;display:none;place-items:center;text-align:center;padding:20px}
+  .login-gate.on{display:grid}
+  .uploadbox{border:1.5px dashed var(--line2);border-radius:14px;padding:22px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer;transition:.2s}
+  .uploadbox:hover{border-color:var(--neon);color:var(--txt)}
+  .coverprev{width:200px;height:200px;border-radius:14px;object-fit:cover;border:1px solid var(--line2);display:block;margin:0 auto 12px}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  audio{width:100%;height:34px;margin-top:8px}
+  /* ---------- dossiê (papel claro + print) ---------- */
+  .paper{background:#fff;color:#14121f;border-radius:14px;max-width:860px;width:100%;padding:46px 52px;font-size:13.5px;line-height:1.55}
+  .paper h1{font:800 24px 'Outfit';margin:0}
+  .paper h2{font:800 15px 'Outfit';letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid #14121f;padding-bottom:6px;margin:30px 0 12px}
+  .paper h3{font:700 13.5px 'Outfit';margin:18px 0 6px}
+  .paper table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .paper th{text-align:left;font:700 10.5px 'Outfit';letter-spacing:.05em;text-transform:uppercase;color:#666;padding:6px 8px;border-bottom:1.5px solid #ddd}
+  .paper td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top}
+  .paper .meta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;margin-top:14px}
+  .paper .meta div b{display:block;font:700 10px 'Outfit';letter-spacing:.06em;text-transform:uppercase;color:#888}
+  .paper .lyr{white-space:pre-wrap;background:#f7f6fb;border:1px solid #e8e6f2;border-radius:8px;padding:12px;font-size:12px;line-height:1.6}
+  .paper .sig{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:40px}
+  .paper .sig div{border-top:1.5px solid #14121f;padding-top:6px;font-size:11.5px;text-align:center}
+  .paper .stamp{border:2px solid #0a8f5b;color:#0a8f5b;border-radius:10px;padding:10px 14px;display:inline-block;font:700 12px 'Outfit';margin-top:10px}
+  .paper .dochead{display:flex;gap:18px;align-items:center}
+  .paper .dochead img{width:108px;height:108px;border-radius:10px;object-fit:cover;border:1px solid #ddd}
+  .noprint-bar{display:flex;gap:10px;max-width:860px;width:100%;margin:0 auto 12px;justify-content:flex-end}
+  @media print{
+    body{background:#fff}
+    body>*{display:none!important}
+    #dossieOverlay{display:block!important;position:static;background:#fff;padding:0;overflow:visible}
+    #dossieOverlay .noprint-bar{display:none!important}
+    .paper{border-radius:0;max-width:none;padding:0;box-shadow:none}
+    .paper h2{page-break-after:avoid}
+    .paper table,.paper .lyr{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+  <header class="header"><div class="hwrap">
+    <div class="mark">RG</div>
+    <div class="brand"><h1>Registros &amp; Distribuição</h1><p>NovaCena · obra, fonograma, ISRC e dossiê pronto pra Abramus + agregadora</p></div>
+    <div class="hspace"></div>
+    <a class="hlink" href="/estudio">← Estúdio</a>
+    <a class="hlink" href="/monitor">Monitor</a>
+  </div></header>
+
+  <nav class="tabs">
+    <button class="tab on" data-tab="lanc" onclick="setTab('lanc')">🚀 Lançamentos</button>
+    <button class="tab" data-tab="cli" onclick="setTab('cli')">👥 Clientes</button>
+    <button class="tab" data-tab="cfg" onclick="setTab('cfg')">⚙️ Configurações</button>
+  </nav>
+
+  <main>
+    <section id="view-lanc">
+      <div class="toolbar">
+        <button class="btn primary" onclick="newRelease()">+ Novo lançamento</button>
+        <input id="q" placeholder="Buscar por título ou artista…" style="max-width:260px" oninput="renderReleases()">
+        <select id="fStatus" style="max-width:200px" onchange="renderReleases()">
+          <option value="">Todos os status</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="aguardando_artista">Aguardando artista</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="registrado">Registrado (Abramus)</option>
+          <option value="distribuido">Distribuído</option>
+        </select>
+        <div class="hspace"></div>
+        <div class="chips" id="pipeChips"></div>
+      </div>
+      <div id="relGrid" class="grid"></div>
+    </section>
+
+    <section id="view-cli" style="display:none">
+      <div class="toolbar">
+        <button class="btn primary" onclick="openClientModal()">+ Novo cliente</button>
+        <div class="hspace"></div>
+        <span class="chip">Senhas guardadas com criptografia · revelação fica no log de auditoria</span>
+      </div>
+      <div id="cliGrid" class="grid"></div>
+    </section>
+
+    <section id="view-cfg" style="display:none">
+      <div class="card" style="max-width:640px">
+        <h2 style="margin:0 0 4px;font:800 16px 'Outfit'">Identidade do catálogo</h2>
+        <p class="hint" style="margin-bottom:16px">Esses padrões preenchem os novos lançamentos automaticamente.</p>
+        <div class="frm">
+          <div class="full">
+            <label>Prefixo ISRC (país + código de produtor fonográfico)</label>
+            <input id="cfgPrefix" placeholder="ex.: BRGCA" style="font-family:'Space Mono';text-transform:uppercase">
+            <p class="hint">É o código que a Abramus/UBC emite pro produtor fonográfico — nos fonogramas da Gaveta aparece como <b>BR-GCA</b>. Com ele o sistema gera ISRC sozinho: BR-GCA-26-00001, 00002…</p>
+          </div>
+          <div><label>Selo / label padrão</label><input id="cfgLabel" placeholder="GAVETA MUSIC LTDA"></div>
+          <div><label>Produtor fonográfico padrão</label><input id="cfgProducer" placeholder="GAVETA MUSIC LTDA"></div>
+        </div>
+        <div class="wiz-foot"><button class="btn primary" onclick="saveSettings()">Salvar configurações</button></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- wizard -->
+  <div class="overlay" id="wizOverlay">
+    <div class="modal wizard">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <h2 style="margin:0" id="wizTitle">Novo lançamento</h2>
+        <div class="hspace"></div>
+        <span class="saveinfo" id="wizSaved"></span>
+        <button class="iconbtn" onclick="closeWizard()" title="Fechar">✕</button>
+      </div>
+      <div class="wiz-grid">
+        <div class="steps" id="wizSteps"></div>
+        <div id="wizBody"></div>
+      </div>
+      <div class="wiz-foot">
+        <button class="btn" id="wizPrev" onclick="wizGo(-1)">← Voltar</button>
+        <button class="btn cyan" onclick="saveWiz(true)">💾 Salvar</button>
+        <div class="hspace"></div>
+        <button class="btn primary" id="wizNext" onclick="wizGo(1)">Próximo →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- modal cliente -->
+  <div class="overlay" id="cliOverlay">
+    <div class="modal">
+      <div style="display:flex;align-items:center;margin-bottom:14px"><h2 style="margin:0" id="cliModalTitle">Novo cliente</h2><div class="hspace"></div><button class="iconbtn" onclick="hide('cliOverlay')">✕</button></div>
+      <div class="frm">
+        <div><label>Nome artístico *</label><input id="cName"></div>
+        <div><label>Nome completo</label><input id="cFull"></div>
+        <div><label>CPF / CNPJ</label><input id="cDoc"></div>
+        <div><label>E-mail</label><input id="cMail"></div>
+        <div><label>WhatsApp</label><input id="cPhone" placeholder="(11) 9 9999-9999"></div>
+        <div><label>Instagram</label><input id="cInsta" placeholder="@artista"></div>
+        <div class="full"><label>Observações</label><textarea id="cNotes" rows="2"></textarea></div>
+        <div class="full">
+          <label>Contas de agregadoras / plataformas</label>
+          <div id="credRows"></div>
+          <button class="btn sm" style="margin-top:9px" onclick="addCredRow()">+ Adicionar conta</button>
+          <p class="hint">A senha é criptografada no servidor. Deixe o campo de senha vazio pra manter a atual.</p>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <button class="btn" onclick="hide('cliOverlay')">Cancelar</button>
+        <div class="hspace"></div>
+        <button class="btn primary" onclick="saveClient()">Salvar cliente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- modal link aprovação -->
+  <div class="overlay" id="linkOverlay">
+    <div class="modal">
+      <div style="display:flex;align-items:center;margin-bottom:10px"><h2 style="margin:0">Link de aprovação do artista</h2><div class="hspace"></div><button class="iconbtn" onclick="hide('linkOverlay')">✕</button></div>
+      <p class="hint" style="margin-bottom:12px">Mande pro artista revisar capa, faixas, letras e percentuais. Ele completa o que faltar e aprova com nome completo — tudo fica registrado no dossiê. Gerar um novo link invalida o anterior.</p>
+      <input id="linkUrl" readonly style="font-family:'Space Mono';font-size:12px">
+      <div class="wiz-foot">
+        <button class="btn" onclick="copyText(byId('linkUrl').value,'Link copiado!')">📋 Copiar</button>
+        <a class="btn cyan" id="linkWa" target="_blank" rel="noopener">Enviar no WhatsApp</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- dossiê -->
+  <div class="overlay" id="dossieOverlay">
+    <div style="width:100%">
+      <div class="noprint-bar">
+        <button class="btn primary" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        <button class="btn" onclick="hide('dossieOverlay')">Fechar</button>
+      </div>
+      <div class="paper" id="paper" style="margin:0 auto"></div>
+    </div>
+  </div>
+
+  <div class="login-gate" id="loginGate">
+    <div>
+      <div class="mark" style="margin:0 auto 16px">RG</div>
+      <h2 style="font:800 20px 'Outfit';margin:0 0 8px">Entre na sua conta NovaCena</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 18px">A aba Registros usa o mesmo login do Estúdio.</p>
+      <a class="btn primary" href="/login" style="text-decoration:none">Fazer login</a>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toasts"></div>
+
+<script>
+'use strict';
+/* ================= helpers ================= */
+const byId = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = (d) => { if(!d) return '—'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+const fmtDur = (s) => { if(!s) return ''; const m = Math.floor(s/60); return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`; };
+const parseDur = (v) => { const m = String(v||'').trim().match(/^(\d+)[:.](\d{1,2})$/); if(m) return (+m[1])*60+(+m[2]); const n = parseInt(v,10); return Number.isFinite(n)&&n>0?n:0; };
+const fmtIsrc = (v) => { const c = String(v||'').toUpperCase().replace(/[^A-Z0-9]+/g,''); return /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(c) ? `${c.slice(0,2)}-${c.slice(2,5)}-${c.slice(5,7)}-${c.slice(7)}` : v; };
+function toast(msg, kind){ const t = document.createElement('div'); t.className = 'toast '+(kind||''); t.textContent = msg; byId('toasts').appendChild(t); setTimeout(()=>t.remove(), 4200); }
+function hide(id){ byId(id).classList.remove('on'); }
+function show(id){ byId(id).classList.add('on'); }
+async function copyText(text, okMsg){ try { await navigator.clipboard.writeText(text); toast(okMsg||'Copiado!', 'ok'); } catch { const i = document.createElement('input'); i.value = text; document.body.appendChild(i); i.select(); document.execCommand('copy'); i.remove(); toast(okMsg||'Copiado!', 'ok'); } }
+
+async function api(url, opts){
+  const r = await fetch(url, Object.assign({ credentials: 'same-origin' }, opts, opts && opts.body && !(opts.body instanceof FormData) ? { headers: Object.assign({'Content-Type':'application/json'}, (opts.headers||{})) } : {}));
+  if (r.status === 401) { show('loginGate'); throw new Error('login'); }
+  const data = await r.json().catch(() => ({ ok:false, error:'Resposta inválida do servidor.' }));
+  if (!r.ok || data.ok === false) throw new Error(data.error || ('Erro '+r.status));
+  return data;
+}
+
+/* ================= estado ================= */
+const S = { clients: [], releases: [], settings: {}, tab: 'lanc', wiz: null, wizStep: 0, credEdit: [], editingClientId: null };
+
+const PLATFORMS = [
+  ['onerpm','ONErpm'],['ofstep','OFstep'],['distrokid','DistroKid'],['tunecore','TuneCore'],
+  ['cdbaby','CD Baby'],['symphonic','Symphonic'],['altafonte','Altafonte'],['orchard','The Orchard'],
+  ['virgin','Virgin/UMG'],['spotify','Spotify for Artists'],['youtube','YouTube/CMS'],['abramus','Abramus'],['outra','Outra']
+];
+const platLabel = (v) => (PLATFORMS.find(p=>p[0]===v)||[v,v])[1];
+const GENRES = ['Sertanejo','Pagode','Samba','Funk','Gospel/Cristã','Pop','MPB','Forró','Piseiro','Arrocha','Brega-funk','Rap/Hip-Hop','Trap','Eletrônica','Rock','Reggae','Axé','Pisadinha','Country','Trilha sonora'];
+const LANGS = ['Português','Inglês','Espanhol','Instrumental (sem letra)'];
+const STATUS_LABEL = { rascunho:'Rascunho', aguardando_artista:'Aguardando artista', aprovado:'Aprovado', registrado:'Registrado', distribuido:'Distribuído' };
+const ROLE_LABEL = { compositor_autor:'Compositor/Autor', versionista:'Versionista', editora:'Editora' };
+const CAT_LABEL = { interprete:'Intérprete', musico:'Músico', produtor_fonografico:'Produtor fonográfico' };
+const clientById = (id) => S.clients.find(c => c.id === id) || null;
+
+/* ================= boot ================= */
+async function loadAll(){
+  try {
+    const [cli, rel] = await Promise.all([ api('/api/catalog/clients'), api('/api/catalog/releases') ]);
+    S.clients = cli.clients; S.releases = rel.releases; S.settings = rel.settings || cli.settings || {};
+    byId('cfgPrefix').value = S.settings.isrcPrefix || '';
+    byId('cfgLabel').value = S.settings.defaultLabel || '';
+    byId('cfgProducer').value = S.settings.defaultProducer || '';
+    renderReleases(); renderClients();
+  } catch(e){ if (e.message !== 'login') toast(e.message, 'err'); }
+}
+
+function setTab(tab){
+  S.tab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  byId('view-lanc').style.display = tab === 'lanc' ? '' : 'none';
+  byId('view-cli').style.display = tab === 'cli' ? '' : 'none';
+  byId('view-cfg').style.display = tab === 'cfg' ? '' : 'none';
+}
+
+/* ================= lançamentos: lista ================= */
+function renderReleases(){
+  const q = (byId('q').value||'').toLowerCase();
+  const fs = byId('fStatus').value;
+  const counts = {};
+  S.releases.forEach(r => counts[r.status] = (counts[r.status]||0)+1);
+  byId('pipeChips').innerHTML = Object.keys(STATUS_LABEL)
+    .filter(s => counts[s]).map(s => `<span class="chip">${esc(STATUS_LABEL[s])}: <b>${counts[s]}</b></span>`).join('');
+
+  const list = S.releases.filter(r =>
+    (!fs || r.status === fs) &&
+    (!q || (r.title||'').toLowerCase().includes(q) || (r.mainArtist||'').toLowerCase().includes(q)));
+
+  if (!list.length){
+    byId('relGrid').innerHTML = `<div class="empty" style="grid-column:1/-1"><b>Nenhum lançamento ${S.releases.length ? 'com esse filtro' : 'ainda'}.</b><br>Clique em <b>+ Novo lançamento</b> pra montar o primeiro dossiê.</div>`;
+    return;
+  }
+  byId('relGrid').innerHTML = list.map(r => {
+    const cli = clientById(r.clientId);
+    const v = r.validation || { errors: [], warnings: [] };
+    const vbadge = v.errors.length
+      ? `<span class="badge vbad">${v.errors.length} erro${v.errors.length>1?'s':''}</span>`
+      : (v.warnings.length ? `<span class="badge vwarn">${v.warnings.length} aviso${v.warnings.length>1?'s':''}</span>` : '<span class="badge vok">✓ validado</span>');
+    return `<div class="card">
+      <div class="rel-top">
+        ${r.coverUrl ? `<img class="cover" src="${esc(r.coverUrl)}" alt="">` : '<div class="cover">🎵</div>'}
+        <div style="min-width:0">
+          <p class="rel-title">${esc(r.title || 'Sem título')}</p>
+          <p class="rel-sub" style="margin:0">${esc(r.mainArtist || '—')}${r.featuring ? ' feat. '+esc(r.featuring) : ''}</p>
+          <p class="rel-sub" style="margin:2px 0 0">${esc((r.type||'single').toUpperCase())} · ${r.tracks.length} faixa${r.tracks.length===1?'':'s'} · ${fmtDate(r.releaseDate)}${cli ? ' · '+esc(cli.name) : ''}</p>
+          <div class="badges">
+            <span class="badge st-${esc(r.status)}">${esc(STATUS_LABEL[r.status]||r.status)}</span>
+            ${vbadge}
+            ${r.approval && r.approval.approvedAt ? '<span class="badge vok">✍ aprovado pelo artista</span>' : ''}
+          </div>
+        </div>
+      </div>
+      <div class="rel-actions">
+        <button class="btn sm" onclick="openWizard('${r.id}')">✏️ Editar</button>
+        <button class="btn sm" onclick="openDossie('${r.id}')">📄 Dossiê</button>
+        <button class="btn sm" onclick="approvalLink('${r.id}')">🔗 Aprovação</button>
+        <select class="btn sm" style="width:auto" onchange="setStatus('${r.id}', this.value)">
+          ${Object.keys(STATUS_LABEL).map(s => `<option value="${s}" ${s===r.status?'selected':''}>${STATUS_LABEL[s]}</option>`).join('')}
+        </select>
+        <button class="btn sm danger" onclick="delRelease('${r.id}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function setStatus(id, status){
+  try {
+    const data = await api('/api/catalog/releases/'+id, { method:'PATCH', body: JSON.stringify({ action:'status', status }) });
+    replaceRelease(data.release); renderReleases(); toast('Status: '+STATUS_LABEL[status], 'ok');
+  } catch(e){ toast(e.message, 'err'); loadAll(); }
+}
+
+async function delRelease(id){
+  const r = S.releases.find(x => x.id === id);
+  if (!confirm(`Excluir "${r ? r.title || 'sem título' : id}"? O link de aprovação morre junto.`)) return;
+  try {
+    await api('/api/catalog/releases/'+id, { method:'DELETE' });
+    S.releases = S.releases.filter(x => x.id !== id); renderReleases(); toast('Lançamento excluído.');
+  } catch(e){ toast(e.message, 'err'); }
+}
+
+function replaceRelease(release){
+  const i = S.releases.findIndex(r => r.id === release.id);
+  if (i >= 0) S.releases[i] = release; else S.releases.unshift(release);
+  if (S.wiz && S.wiz.id === release.id) S.wiz = JSON.parse(JSON.stringify(release));
+}
+
+/* ================= wizard ================= */
+const STEPS = ['Lançamento','Faixas & áudio','Obra (autores)','Fonograma','Capa','Revisão final'];
+
+async function newRelease(){
+  try {
+    const data = await api('/api/catalog/releases', { method:'POST', body: JSON.stringify({
+      label: S.settings.defaultLabel || '', language: 'Português', type: 'single'
+    }) });
+    replaceRelease(data.release); renderReleases(); openWizard(data.release.id);
+  } catch(e){ if (e.message !== 'login') toast(e.message, 'err'); }
+}
+
+function openWizard(id){
+  const rel = S.releases.find(r => r.id === id);
+  if (!rel) return;
+  S.wiz = JSON.parse(JSON.stringify(rel));
+  S.wizStep = 0;
+  byId('wizSaved').textContent = '';
+  show('wizOverlay');
+  renderWizard();
+}
+function closeWizard(){ saveWiz(false).finally(() => { hide('wizOverlay'); S.wiz = null; renderReleases(); }); }
+
+function renderWizard(){
+  const w = S.wiz; if (!w) return;
+  byId('wizTitle').textContent = w.title ? w.title : 'Novo lançamento';
+  byId('wizSteps').innerHTML = STEPS.map((s, i) =>
+    `<div class="step ${i===S.wizStep?'on':''}" onclick="wizJump(${i})"><span class="n">${i+1}</span>${s}</div>`).join('');
+  byId('wizPrev').style.visibility = S.wizStep === 0 ? 'hidden' : 'visible';
+  byId('wizNext').textContent = S.wizStep === STEPS.length-1 ? '✓ Concluir' : 'Próximo →';
+  const fns = [stepRelease, stepTracks, stepWork, stepPhono, stepCover, stepReview];
+  byId('wizBody').innerHTML = '';
+  fns[S.wizStep]();
+}
+function wizJump(i){ saveWiz(false); S.wizStep = i; renderWizard(); }
+function wizGo(dir){
+  if (S.wizStep === STEPS.length-1 && dir === 1){ saveWiz(true).then(() => { hide('wizOverlay'); S.wiz=null; renderReleases(); }); return; }
+  saveWiz(false); S.wizStep = Math.max(0, Math.min(STEPS.length-1, S.wizStep+dir)); renderWizard();
+}
+
+async function saveWiz(announce){
+  const w = S.wiz; if (!w) return;
+  try {
+    const data = await api('/api/catalog/releases/'+w.id, { method:'PATCH', body: JSON.stringify({ action:'update', release: {
+      title: w.title, type: w.type, mainArtist: w.mainArtist, featuring: w.featuring, label: w.label,
+      genre: w.genre, subgenre: w.subgenre, language: w.language, releaseDate: w.releaseDate,
+      upc: w.upc, distributor: w.distributor, distributorNote: w.distributorNote, internalNotes: w.internalNotes,
+      clientId: w.clientId || '', coverUrl: w.coverUrl || '', coverInfo: w.coverInfo || null, tracks: w.tracks
+    } }) });
+    const step = S.wizStep;
+    replaceRelease(data.release);
+    S.wizStep = step;
+    byId('wizSaved').textContent = 'Salvo às ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if (announce) { toast('Lançamento salvo.', 'ok'); renderReleases(); if (byId('wizOverlay').classList.contains('on')) renderWizard(); }
+    return data.release;
+  } catch(e){ if (e.message !== 'login') toast('Erro ao salvar: '+e.message, 'err'); throw e; }
+}
+
+/* ---- step 1: release ---- */
+function stepRelease(){
+  const w = S.wiz;
+  byId('wizBody').innerHTML = `
+    <div class="frm">
+      <div class="full"><label>Título do lançamento *</label><input id="wTitle" value="${esc(w.title)}"></div>
+      <div><label>Tipo</label><select id="wType">
+        <option value="single" ${w.type==='single'?'selected':''}>Single</option>
+        <option value="ep" ${w.type==='ep'?'selected':''}>EP</option>
+        <option value="album" ${w.type==='album'?'selected':''}>Álbum</option></select></div>
+      <div><label>Cliente</label><select id="wClient">
+        <option value="">— sem vínculo —</option>
+        ${S.clients.map(c => `<option value="${c.id}" ${w.clientId===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
+      <div><label>Artista principal *</label><input id="wArtist" value="${esc(w.mainArtist)}"></div>
+      <div><label>Participações (feat.)</label><input id="wFeat" value="${esc(w.featuring||'')}"></div>
+      <div><label>Gênero *</label><input id="wGenre" list="dlGenres" value="${esc(w.genre||'')}"><datalist id="dlGenres">${GENRES.map(g=>`<option value="${g}">`).join('')}</datalist></div>
+      <div><label>Subgênero</label><input id="wSub" value="${esc(w.subgenre||'')}"></div>
+      <div><label>Idioma</label><select id="wLang">${LANGS.map(l=>`<option ${w.language===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div><label>Data de lançamento *</label><input id="wDate" type="date" value="${esc(w.releaseDate||'')}"></div>
+      <div><label>Selo / Label</label><input id="wLabel" value="${esc(w.label||'')}" placeholder="${esc(S.settings.defaultLabel||'GAVETA MUSIC LTDA')}"></div>
+      <div><label>UPC (se já tiver)</label><input id="wUpc" value="${esc(w.upc||'')}" placeholder="a agregadora gera se vazio"></div>
+      <div><label>Agregadora de destino</label><select id="wDist"><option value="">— escolher —</option>${PLATFORMS.map(p=>`<option value="${p[0]}" ${w.distributor===p[0]?'selected':''}>${p[1]}</option>`).join('')}</select></div>
+      <div><label>Conta / observação de distribuição</label><input id="wDistNote" value="${esc(w.distributorNote||'')}" placeholder="ex.: conta Gaveta principal"></div>
+      <div class="full"><label>Notas internas (não vão pro artista)</label><textarea id="wNotes" rows="2">${esc(w.internalNotes||'')}</textarea></div>
+    </div>
+    <p class="hint">Dica: lance com 14+ dias de antecedência pra dar tempo de pitching de playlist e pré-save.</p>`;
+  const bind = (id, key, ev) => byId(id).addEventListener(ev||'input', (e)=>{ S.wiz[key] = e.target.value; if(key==='title') byId('wizTitle').textContent = e.target.value || 'Novo lançamento'; });
+  bind('wTitle','title'); bind('wType','type','change'); bind('wClient','clientId','change'); bind('wArtist','mainArtist');
+  bind('wFeat','featuring'); bind('wGenre','genre'); bind('wSub','subgenre'); bind('wLang','language','change');
+  bind('wDate','releaseDate','change'); bind('wLabel','label'); bind('wUpc','upc'); bind('wDist','distributor','change');
+  bind('wDistNote','distributorNote'); bind('wNotes','internalNotes');
+}
+
+/* ---- step 2: faixas ---- */
+function blankTrack(){
+  return { id: 'new', title:'', version:'original', explicit:false, instrumental:false, lyrics:'', isrc:'',
+    composers: [], phonogram: [], durationSec: 0, audioUrl:'', audioName:'', audioFormat:'' };
+}
+function stepTracks(){
+  const w = S.wiz;
+  byId('wizBody').innerHTML = `
+    <div id="trackList"></div>
+    <button class="btn" onclick="addTrack()">+ Adicionar faixa</button>
+    <p class="hint">Formato ideal de áudio: <b>WAV 24bit / 44.1kHz</b> (o mesmo arquivo serve pra Abramus e agregadora). A duração é detectada automaticamente.</p>`;
+  renderTracks();
+}
+function renderTracks(openIdx){
+  const w = S.wiz;
+  byId('trackList').innerHTML = w.tracks.map((t, i) => `
+    <div class="track ${openIdx===i || w.tracks.length===1 ? 'open':''}" id="trk${i}">
+      <div class="track-head" onclick="byId('trk${i}').classList.toggle('open')">
+        <span class="n" style="font:700 12px 'Space Mono';color:var(--cyan)">${String(i+1).padStart(2,'0')}</span>
+        <span class="t">${esc(t.title || 'Faixa sem título')}</span>
+        ${t.isrc ? `<span class="chip" style="font-family:'Space Mono'">${esc(fmtIsrc(t.isrc))}</span>` : ''}
+        ${t.durationSec ? `<span class="chip">${fmtDur(t.durationSec)}</span>` : ''}
+        <button class="iconbtn" title="Mover pra cima" onclick="event.stopPropagation();moveTrack(${i},-1)">↑</button>
+        <button class="iconbtn" title="Remover" onclick="event.stopPropagation();delTrack(${i})">🗑</button>
+      </div>
+      <div class="track-body">
+        <div class="frm">
+          <div><label>Título da faixa *</label><input value="${esc(t.title)}" oninput="S.wiz.tracks[${i}].title=this.value"></div>
+          <div><label>Versão</label><select onchange="S.wiz.tracks[${i}].version=this.value">
+            ${['original','acustica','remix','ao_vivo','playback','outra'].map(v=>`<option value="${v}" ${t.version===v?'selected':''}>${v.replace('_',' ')}</option>`).join('')}</select></div>
+          <div style="display:flex;gap:16px;align-items:center;padding-top:20px">
+            <label style="display:flex;gap:7px;align-items:center;margin:0;text-transform:none;font-size:13px;cursor:pointer"><input type="checkbox" style="width:auto" ${t.explicit?'checked':''} onchange="S.wiz.tracks[${i}].explicit=this.checked"> Conteúdo explícito</label>
+            <label style="display:flex;gap:7px;align-items:center;margin:0;text-transform:none;font-size:13px;cursor:pointer"><input type="checkbox" style="width:auto" ${t.instrumental?'checked':''} onchange="S.wiz.tracks[${i}].instrumental=this.checked"> Instrumental</label>
+          </div>
+          <div><label>Duração (m:ss)</label><input value="${t.durationSec?fmtDur(t.durationSec):''}" placeholder="auto via áudio" onchange="S.wiz.tracks[${i}].durationSec=parseDur(this.value)"></div>
+          <div class="full">
+            <label>Áudio</label>
+            ${t.audioUrl
+              ? `<div class="cred"><span class="plat">${esc((t.audioFormat||'?').toUpperCase())}</span><span class="lg">${esc(t.audioName||t.audioUrl)}</span>
+                  <button class="iconbtn" title="Trocar" onclick="pickAudio(${i})">↺</button></div><audio controls preload="none" src="${esc(t.audioUrl)}"></audio>`
+              : `<div class="uploadbox" onclick="pickAudio(${i})" id="audBox${i}">⬆️ Clique pra enviar o áudio (WAV/FLAC recomendado, até 300MB)</div>`}
+          </div>
+          <div class="full"><label>Letra ${t.instrumental?'(instrumental — opcional)':''}</label><textarea rows="5" placeholder="Cole a letra completa — vai pro registro da obra e pro dossiê" oninput="S.wiz.tracks[${i}].lyrics=this.value">${esc(t.lyrics||'')}</textarea></div>
+          <div><label>ISRC</label><input value="${esc(t.isrc?fmtIsrc(t.isrc):'')}" placeholder="BR-GCA-26-00001" style="font-family:'Space Mono'" onchange="S.wiz.tracks[${i}].isrc=this.value"></div>
+          <div style="display:flex;align-items:flex-end"><button class="btn cyan sm" onclick="genIsrc(${i})">⚡ Gerar ISRC (${esc(S.settings.isrcPrefix||'configure o prefixo')})</button></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function addTrack(){ S.wiz.tracks.push(blankTrack()); renderTracks(S.wiz.tracks.length-1); }
+function delTrack(i){ if(!confirm('Remover esta faixa?')) return; S.wiz.tracks.splice(i,1); renderTracks(); }
+function moveTrack(i, dir){ const t = S.wiz.tracks; const j = i+dir; if(j<0||j>=t.length) return; [t[i],t[j]]=[t[j],t[i]]; renderTracks(j); }
+
+function pickAudio(i){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.wav,.flac,.aif,.aiff,.mp3,.m4a,.ogg';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if(!f) return;
+    const box = byId('audBox'+i); if (box) box.innerHTML = '<span class="spin"></span> Enviando ' + esc(f.name) + '…';
+    try {
+      const fd = new FormData(); fd.append('kind','audio'); fd.append('file', f);
+      const data = await api('/api/catalog/upload', { method:'POST', body: fd });
+      const t = S.wiz.tracks[i];
+      t.audioUrl = data.url; t.audioName = data.name; t.audioFormat = data.format;
+      if (data.durationSec) t.durationSec = data.durationSec;
+      (data.warnings||[]).forEach(wn => toast(wn));
+      renderTracks(i); saveWiz(false);
+    } catch(e){ toast(e.message,'err'); renderTracks(i); }
+  };
+  inp.click();
+}
+
+async function genIsrc(i){
+  try {
+    const saved = await saveWiz(false);
+    const trackId = saved.tracks[i] && saved.tracks[i].id;
+    if (!trackId) return toast('Salve a faixa primeiro.','err');
+    const data = await api('/api/catalog/releases/'+S.wiz.id, { method:'PATCH', body: JSON.stringify({ action:'isrc', trackId }) });
+    replaceRelease(data.release); renderTracks(i);
+    toast('ISRC gerado: '+fmtIsrc(data.release.tracks[i].isrc), 'ok');
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+
+/* ---- steps 3/4: participantes ---- */
+function partTable(i, kind){
+  const t = S.wiz.tracks[i];
+  const list = kind==='work' ? t.composers : t.phonogram;
+  const total = list.reduce((a,p)=>a+(parseFloat(p.percent)||0),0);
+  const ok = Math.abs(total-100)<=0.11;
+  const cols = kind==='work'
+    ? `<th style="width:34%">Nome</th><th>CPF</th><th>Função</th><th>Assoc.</th><th style="width:70px">%</th><th></th>`
+    : `<th style="width:30%">Nome</th><th>Categoria</th><th>Instrumento</th><th>Assoc.</th><th style="width:70px">%</th><th></th>`;
+  const rows = list.map((p, pi) => kind==='work' ? `
+      <tr>
+        <td><input value="${esc(p.name)}" oninput="S.wiz.tracks[${i}].composers[${pi}].name=this.value"></td>
+        <td><input value="${esc(p.cpf||'')}" placeholder="000.000.000-00" oninput="S.wiz.tracks[${i}].composers[${pi}].cpf=this.value"></td>
+        <td><select onchange="S.wiz.tracks[${i}].composers[${pi}].role=this.value">${Object.entries(ROLE_LABEL).map(([v,l])=>`<option value="${v}" ${p.role===v?'selected':''}>${l}</option>`).join('')}</select></td>
+        <td><input value="${esc(p.association||'')}" placeholder="Abramus/UBC…" oninput="S.wiz.tracks[${i}].composers[${pi}].association=this.value"></td>
+        <td><input type="number" step="0.01" min="0" max="100" value="${p.percent}" oninput="S.wiz.tracks[${i}].composers[${pi}].percent=parseFloat(this.value)||0;updateSum(${i},'work')"></td>
+        <td><button class="iconbtn" onclick="S.wiz.tracks[${i}].composers.splice(${pi},1);renderPart(${i},'work')">🗑</button></td>
+      </tr>` : `
+      <tr>
+        <td><input value="${esc(p.name)}" oninput="S.wiz.tracks[${i}].phonogram[${pi}].name=this.value"></td>
+        <td><select onchange="S.wiz.tracks[${i}].phonogram[${pi}].category=this.value">${Object.entries(CAT_LABEL).map(([v,l])=>`<option value="${v}" ${p.category===v?'selected':''}>${l}</option>`).join('')}</select></td>
+        <td><input value="${esc(p.instrument||'')}" placeholder="voz, violão…" oninput="S.wiz.tracks[${i}].phonogram[${pi}].instrument=this.value"></td>
+        <td><input value="${esc(p.association||'')}" placeholder="Abramus…" oninput="S.wiz.tracks[${i}].phonogram[${pi}].association=this.value"></td>
+        <td><input type="number" step="0.01" min="0" max="100" value="${p.percent}" oninput="S.wiz.tracks[${i}].phonogram[${pi}].percent=parseFloat(this.value)||0;updateSum(${i},'phono')"></td>
+        <td><button class="iconbtn" onclick="S.wiz.tracks[${i}].phonogram.splice(${pi},1);renderPart(${i},'phono')">🗑</button></td>
+      </tr>`).join('');
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin:4px 0 2px">
+      <h3 style="font:700 14px 'Outfit';margin:0">Faixa ${i+1} — ${esc(t.title||'sem título')}</h3>
+      <div class="hspace" style="flex:1"></div>
+      <span class="sum ${ok?'ok':'bad'}" id="sum-${kind}-${i}">${total.toFixed(2)}%</span>
+    </div>
+    <table class="ptable"><thead><tr>${cols}</tr></thead><tbody>${rows || ''}</tbody></table>
+    <div style="display:flex;gap:8px;margin:8px 0 18px;flex-wrap:wrap">
+      ${kind==='work' ? `
+        <button class="btn sm" onclick="addPart(${i},'work')">+ Participante</button>
+        <button class="btn sm" onclick="splitEven(${i})">÷ Dividir igualmente</button>
+        ${i>0?`<button class="btn sm" onclick="copyParts(${i},'work')">⧉ Copiar da faixa 1</button>`:''}` : `
+        <button class="btn sm" onclick="addPart(${i},'interprete')">+ Intérprete</button>
+        <button class="btn sm" onclick="addPart(${i},'musico')">+ Músico</button>
+        <button class="btn sm" onclick="addPart(${i},'produtor_fonografico')">+ Produtor</button>
+        <button class="btn sm cyan" onclick="ecadDefault(${i})">⚖ Padrão ECAD (41,7 / 41,7 / 16,6)</button>
+        ${i>0?`<button class="btn sm" onclick="copyParts(${i},'phono')">⧉ Copiar da faixa 1</button>`:''}`}
+    </div>`;
+}
+function updateSum(i, kind){
+  const list = kind==='work' ? S.wiz.tracks[i].composers : S.wiz.tracks[i].phonogram;
+  const total = list.reduce((a,p)=>a+(parseFloat(p.percent)||0),0);
+  const el = byId(`sum-${kind}-${i}`); if(!el) return;
+  el.textContent = total.toFixed(2)+'%';
+  el.className = 'sum '+(Math.abs(total-100)<=0.11?'ok':'bad');
+}
+function renderPart(i, kind){
+  const host = byId('part-'+kind);
+  if (host) host.innerHTML = S.wiz.tracks.map((_, ti) => partTable(ti, kind==='work'?'work':'phono')).join('');
+}
+function stepWork(){
+  if (!S.wiz.tracks.length){ byId('wizBody').innerHTML = '<div class="empty">Adicione faixas no passo 2 primeiro.</div>'; return; }
+  byId('wizBody').innerHTML = `
+    <p class="hint" style="margin-top:0">É o espelho do <b>Cadastro de Obra da Abramus</b>: quem escreveu a música e quanto cada um tem. Os percentuais precisam fechar <b>100%</b>. CPF evita rejeição por homônimo.</p>
+    <div id="part-work">${S.wiz.tracks.map((_,i)=>partTable(i,'work')).join('')}</div>`;
+}
+function stepPhono(){
+  if (!S.wiz.tracks.length){ byId('wizBody').innerHTML = '<div class="empty">Adicione faixas no passo 2 primeiro.</div>'; return; }
+  byId('wizBody').innerHTML = `
+    <p class="hint" style="margin-top:0">Espelho do <b>Cadastro de Fonograma</b> (direitos conexos): quem gravou. O botão <b>Padrão ECAD</b> aplica 41,7% intérprete / 41,7% produtor fonográfico / 16,6% músicos (50/50 se não houver músicos).</p>
+    <div id="part-phono">${S.wiz.tracks.map((_,i)=>partTable(i,'phono')).join('')}</div>`;
+}
+function addPart(i, kindOrCat){
+  if (kindOrCat === 'work'){
+    S.wiz.tracks[i].composers.push({ name:'', cpf:'', role:'compositor_autor', association:'', percent:0 });
+    renderPart(i,'work');
+  } else {
+    const isProd = kindOrCat==='produtor_fonografico';
+    S.wiz.tracks[i].phonogram.push({ name: isProd ? (S.settings.defaultProducer||'') : '', cpf:'', category:kindOrCat, instrument: kindOrCat==='interprete'?'voz':'', association:'', percent:0 });
+    renderPart(i,'phono');
+  }
+}
+function splitEven(i){
+  const list = S.wiz.tracks[i].composers; if(!list.length) return;
+  const each = Math.floor(10000/list.length)/100;
+  list.forEach((p,idx)=>p.percent = idx===list.length-1 ? Math.round((100-each*(list.length-1))*100)/100 : each);
+  renderPart(i,'work');
+}
+function ecadDefault(i){
+  const ph = S.wiz.tracks[i].phonogram;
+  const interp = ph.filter(p=>p.category==='interprete');
+  const prod = ph.filter(p=>p.category==='produtor_fonografico');
+  const mus = ph.filter(p=>p.category==='musico');
+  if (!interp.length || !prod.length){ toast('Adicione pelo menos 1 intérprete e 1 produtor fonográfico.','err'); return; }
+  const shares = mus.length ? { i:41.7, p:41.7, m:16.6 } : { i:50, p:50, m:0 };
+  const apply = (arr, totalPct) => arr.forEach((p,idx)=>{
+    const each = Math.floor((totalPct/arr.length)*100)/100;
+    p.percent = idx===arr.length-1 ? Math.round((totalPct-each*(arr.length-1))*100)/100 : each;
+  });
+  apply(interp, shares.i); apply(prod, shares.p); if (mus.length) apply(mus, shares.m);
+  renderPart(i,'phono');
+}
+function copyParts(i, kind){
+  const src = S.wiz.tracks[0];
+  if (kind==='work') S.wiz.tracks[i].composers = JSON.parse(JSON.stringify(src.composers));
+  else S.wiz.tracks[i].phonogram = JSON.parse(JSON.stringify(src.phonogram));
+  renderPart(i, kind);
+}
+
+/* ---- step 5: capa ---- */
+function stepCover(){
+  const w = S.wiz;
+  byId('wizBody').innerHTML = `
+    <div style="text-align:center">
+      ${w.coverUrl ? `<img class="coverprev" src="${esc(w.coverUrl)}">` : ''}
+      <div class="uploadbox" id="covBox" onclick="pickCover()">${w.coverUrl ? '↺ Trocar capa' : '⬆️ Enviar capa (JPG/PNG quadrada — ideal 3000×3000)'}</div>
+      ${w.coverInfo ? `<p class="hint">Atual: ${w.coverInfo.width}×${w.coverInfo.height} ${esc((w.coverInfo.format||'').toUpperCase())}${w.coverInfo.width<3000?' — <span style="color:var(--yellow)">abaixo do ideal 3000×3000</span>':' ✓'}</p>` : ''}
+      <p class="hint">Regras das plataformas: quadrada, RGB, sem blur, sem telefone/URL/preço, sem logos de plataforma.<br>Precisa de capa? Usa o <a href="/estudio">Estúdio NovaCena</a> 😉</p>
+    </div>`;
+}
+function pickCover(){
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.jpg,.jpeg,.png';
+  inp.onchange = async () => {
+    const f = inp.files[0]; if(!f) return;
+    byId('covBox').innerHTML = '<span class="spin"></span> Enviando…';
+    try {
+      const fd = new FormData(); fd.append('kind','cover'); fd.append('file', f);
+      const data = await api('/api/catalog/upload', { method:'POST', body: fd });
+      S.wiz.coverUrl = data.url;
+      S.wiz.coverInfo = { width: data.width, height: data.height, format: data.format };
+      (data.warnings||[]).forEach(wn => toast(wn));
+      await saveWiz(false); renderWizard();
+    } catch(e){ toast(e.message,'err'); renderWizard(); }
+  };
+  inp.click();
+}
+
+/* ---- step 6: revisão ---- */
+function stepReview(){
+  byId('wizBody').innerHTML = '<div class="empty"><span class="spin"></span> Validando…</div>';
+  saveWiz(false).then((rel) => {
+    if (S.wizStep !== 5) return;
+    const v = rel.validation || { errors:[], warnings:[] };
+    const cli = clientById(rel.clientId);
+    byId('wizBody').innerHTML = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="badge ${v.errors.length?'vbad':'vok'}" style="font-size:12px;padding:7px 13px">${v.errors.length ? v.errors.length+' erro(s) bloqueando' : '✓ Pronto pra registrar e distribuir'}</span>
+        ${v.warnings.length?`<span class="badge vwarn" style="font-size:12px;padding:7px 13px">${v.warnings.length} aviso(s)</span>`:''}
+      </div>
+      <div class="vlist">
+        ${v.errors.map(e=>`<div class="vitem err">⛔ ${esc(e)}</div>`).join('')}
+        ${v.warnings.map(e=>`<div class="vitem warn">⚠️ ${esc(e)}</div>`).join('')}
+        ${!v.errors.length && !v.warnings.length ? '<div class="vitem okk">✓ Tudo certo. Gere o dossiê e mande o link de aprovação pro artista.</div>' : ''}
+      </div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:18px">
+        <button class="btn primary" onclick="openDossie('${rel.id}')">📄 Gerar dossiê</button>
+        <button class="btn cyan" onclick="approvalLink('${rel.id}')">🔗 Link de aprovação ${cli?('('+esc(cli.name)+')'):''}</button>
+        <button class="btn" onclick="isrcAll('${rel.id}')">⚡ ISRC pra todas as faixas</button>
+      </div>`;
+  }).catch(()=>{ byId('wizBody').innerHTML = '<div class="empty">Não consegui validar agora. Tente salvar de novo.</div>'; });
+}
+async function isrcAll(id){
+  try {
+    const data = await api('/api/catalog/releases/'+id, { method:'PATCH', body: JSON.stringify({ action:'isrc_all' }) });
+    replaceRelease(data.release); renderWizard(); toast('ISRCs gerados.', 'ok');
+  } catch(e){ toast(e.message,'err'); }
+}
+
+/* ================= link de aprovação ================= */
+async function approvalLink(id){
+  try {
+    const rel = S.releases.find(r=>r.id===id);
+    let release = rel;
+    if (!rel.approval || !rel.approval.token || confirmRegen(rel)) {
+      const data = await api('/api/catalog/releases/'+id, { method:'PATCH', body: JSON.stringify({ action:'approval_link' }) });
+      release = data.release; replaceRelease(release); renderReleases();
+    }
+    const url = location.origin + '/aprovar/' + release.approval.token;
+    byId('linkUrl').value = url;
+    const cli = clientById(release.clientId);
+    const msg = `Fala${cli?' '+cli.name:''}! Seu lançamento "${release.title}" tá montado 🎵 Confere tudo (capa, letra, percentuais) e aprova nesse link: ${url}`;
+    const phone = cli && cli.phone ? cli.phone.replace(/\D+/g,'') : '';
+    byId('linkWa').href = 'https://wa.me/' + (phone ? (phone.length<=11?'55':'')+phone : '') + '?text=' + encodeURIComponent(msg);
+    show('linkOverlay');
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+function confirmRegen(rel){
+  if (rel.approval && rel.approval.approvedAt) return confirm('Esse lançamento JÁ FOI aprovado pelo artista. Gerar novo link apaga a aprovação e ele terá que aprovar de novo. Continuar?');
+  return false; // tem token e não foi aprovado → reusa o mesmo link
+}
+
+/* ================= dossiê ================= */
+function openDossie(id){
+  const r = S.releases.find(x=>x.id===id); if(!r) return;
+  const cli = clientById(r.clientId);
+  const today = new Date().toLocaleDateString('pt-BR');
+  const durTotal = r.tracks.reduce((a,t)=>a+(t.durationSec||0),0);
+  const part = (list, labels) => list.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.cpf||'—')}</td><td>${esc(labels[p.role||p.category]||'')}${p.instrument?' ('+esc(p.instrument)+')':''}</td><td>${esc(p.association||'—')}</td><td style="text-align:right">${(+p.percent||0).toFixed(2)}%</td></tr>`).join('');
+  byId('paper').innerHTML = `
+    <div class="dochead">
+      ${r.coverUrl?`<img src="${esc(r.coverUrl)}">`:''}
+      <div>
+        <p style="margin:0;font:700 11px 'Outfit';letter-spacing:.1em;text-transform:uppercase;color:#888">Dossiê de registro &amp; distribuição</p>
+        <h1>${esc(r.title||'Sem título')}</h1>
+        <p style="margin:4px 0 0;font-size:14px">${esc(r.mainArtist)}${r.featuring?' feat. '+esc(r.featuring):''} · ${esc((r.type||'').toUpperCase())} · ${fmtDate(r.releaseDate)}</p>
+        <p style="margin:2px 0 0;font-size:12px;color:#666">${esc(r.label||'')}${cli?' · Cliente: '+esc(cli.name):''} · Gerado em ${today} pelo NovaCena</p>
+      </div>
+    </div>
+
+    <h2>1 · Dados pra agregadora (${esc(platLabel(r.distributor||'')||'—')})</h2>
+    <div class="meta">
+      <div><b>Título</b>${esc(r.title||'—')}</div>
+      <div><b>Artista principal</b>${esc(r.mainArtist||'—')}</div>
+      <div><b>Participações</b>${esc(r.featuring||'—')}</div>
+      <div><b>Tipo</b>${esc((r.type||'').toUpperCase())}</div>
+      <div><b>Gênero / Sub</b>${esc(r.genre||'—')}${r.subgenre?' / '+esc(r.subgenre):''}</div>
+      <div><b>Idioma</b>${esc(r.language||'—')}</div>
+      <div><b>Data de lançamento</b>${fmtDate(r.releaseDate)}</div>
+      <div><b>Selo / Label</b>${esc(r.label||'—')}</div>
+      <div><b>UPC</b>${esc(r.upc||'a gerar pela agregadora')}</div>
+      <div><b>Conta</b>${esc(r.distributorNote||'—')}</div>
+      <div><b>Duração total</b>${durTotal?fmtDur(durTotal):'—'}</div>
+      <div><b>Faixas</b>${r.tracks.length}</div>
+    </div>
+    <h3>Faixas</h3>
+    <table><thead><tr><th>#</th><th>Título</th><th>Versão</th><th>Duração</th><th>Explícita</th><th>ISRC</th></tr></thead><tbody>
+      ${r.tracks.map((t,i)=>`<tr><td>${i+1}</td><td>${esc(t.title)}</td><td>${esc(t.version||'original')}</td><td>${t.durationSec?fmtDur(t.durationSec):'—'}</td><td>${t.explicit?'Sim':'Não'}</td><td style="font-family:'Space Mono';font-size:11px">${t.isrc?esc(fmtIsrc(t.isrc)):'a gerar'}</td></tr>`).join('')}
+    </tbody></table>
+
+    ${r.tracks.map((t,i)=>`
+      <h2>${i+2} · Faixa ${i+1}: "${esc(t.title)}" — registro Abramus</h2>
+      <h3>Obra (direitos autorais) — participações devem somar 100%</h3>
+      <div class="meta" style="grid-template-columns:repeat(4,1fr)">
+        <div><b>Título da obra</b>${esc(t.title)}</div>
+        <div><b>Duração</b>${t.durationSec?fmtDur(t.durationSec):'—'}</div>
+        <div><b>Idioma</b>${esc(t.language||r.language||'—')}</div>
+        <div><b>Instrumental</b>${t.instrumental?'Sim':'Não'}</div>
+      </div>
+      <table style="margin-top:8px"><thead><tr><th>Titular</th><th>CPF</th><th>Classe</th><th>Associação</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${part(t.composers,ROLE_LABEL) || '<tr><td colspan="5">— preencher —</td></tr>'}</tbody></table>
+      <h3>Fonograma (direitos conexos) — ISRC ${t.isrc?esc(fmtIsrc(t.isrc)):'a gerar'} · Ano ${r.releaseDate?r.releaseDate.slice(0,4):new Date().getFullYear()}</h3>
+      <table><thead><tr><th>Integrante</th><th>CPF</th><th>Categoria</th><th>Associação</th><th style="text-align:right">%</th></tr></thead>
+      <tbody>${part(t.phonogram,CAT_LABEL) || '<tr><td colspan="5">— preencher —</td></tr>'}</tbody></table>
+      ${t.lyrics && !t.instrumental ? `<h3>Letra</h3><div class="lyr">${esc(t.lyrics)}</div>` : ''}
+    `).join('')}
+
+    <h2>${r.tracks.length+2} · Aprovação do artista</h2>
+    ${r.approval && r.approval.approvedAt
+      ? `<div class="stamp">✔ APROVADO por ${esc(r.approval.approvedName)} em ${new Date(r.approval.approvedAt).toLocaleString('pt-BR')} (IP ${esc(r.approval.approvedIp||'—')})</div>
+         ${r.approval.artistNotes?`<p style="font-size:12px"><b>Observações do artista:</b> ${esc(r.approval.artistNotes)}</p>`:''}`
+      : `<p style="font-size:12px;color:#666">Ainda sem aprovação digital registrada${r.approval?' (link enviado em '+new Date(r.approval.createdAt).toLocaleDateString('pt-BR')+')':''}.</p>
+         <div class="sig"><div>${esc(r.mainArtist||'Artista')}<br>CPF:</div><div>${esc(r.label||'Produtor')}<br>CNPJ:</div></div>`}
+  `;
+  show('dossieOverlay');
+}
+
+/* ================= clientes ================= */
+function renderClients(){
+  if (!S.clients.length){
+    byId('cliGrid').innerHTML = '<div class="empty" style="grid-column:1/-1"><b>Nenhum cliente ainda.</b><br>Cadastre os artistas que você atende — com as contas das agregadoras de cada um.</div>';
+    return;
+  }
+  byId('cliGrid').innerHTML = S.clients.map(c => `
+    <div class="card">
+      <div style="display:flex;gap:11px;align-items:center">
+        <div class="cover" style="width:48px;height:48px;font:800 17px 'Outfit'">${esc((c.name||'?').slice(0,1).toUpperCase())}</div>
+        <div style="min-width:0">
+          <p class="rel-title" style="margin:0">${esc(c.name)}</p>
+          <p class="rel-sub" style="margin:1px 0 0">${esc(c.fullName||'')}${c.cpfCnpj?' · '+esc(c.cpfCnpj):''}</p>
+          <p class="rel-sub" style="margin:1px 0 0">${esc([c.email,c.phone,c.instagram].filter(Boolean).join(' · '))}</p>
+        </div>
+      </div>
+      ${(c.credentials||[]).map(cr => `
+        <div class="cred">
+          <span class="plat">${esc(platLabel(cr.platform))}</span>
+          <span class="lg" id="lg-${cr.id}">${esc(cr.loginMasked)}${cr.label?' · '+esc(cr.label):''}</span>
+          <button class="iconbtn" title="Revelar login e senha" onclick="reveal('${c.id}','${cr.id}')">👁</button>
+        </div>`).join('')}
+      ${c.notes?`<p class="hint">${esc(c.notes)}</p>`:''}
+      <div class="rel-actions">
+        <button class="btn sm" onclick="openClientModal('${c.id}')">✏️ Editar</button>
+        <button class="btn sm" onclick="newReleaseFor('${c.id}')">🚀 Novo lançamento</button>
+        <button class="btn sm danger" onclick="delClient('${c.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+async function newReleaseFor(clientId){
+  try {
+    const cli = clientById(clientId);
+    const data = await api('/api/catalog/releases', { method:'POST', body: JSON.stringify({
+      clientId, mainArtist: cli ? cli.name : '', label: S.settings.defaultLabel || '', language:'Português', type:'single' }) });
+    replaceRelease(data.release); setTab('lanc'); renderReleases(); openWizard(data.release.id);
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+
+async function reveal(clientId, credId){
+  try {
+    const data = await api('/api/catalog/clients/'+clientId, { method:'POST', body: JSON.stringify({ action:'reveal', credentialId: credId }) });
+    const el = byId('lg-'+credId);
+    el.innerHTML = `<b style="color:var(--txt)">${esc(data.login)}</b> · senha: <b style="color:var(--cyan)">${esc(data.password||'(não salva)')}</b>`;
+    const b1 = document.createElement('button'); b1.className='iconbtn'; b1.textContent='📋'; b1.title='Copiar senha';
+    b1.onclick = () => copyText(data.password||data.login, 'Senha copiada!');
+    el.parentElement.appendChild(b1);
+    setTimeout(() => renderClients(), 30000); // re-mascara em 30s
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+
+function credRowHtml(cr, idx){
+  return `<div class="cred" style="flex-wrap:wrap" data-cred="${idx}">
+    <select style="width:150px" data-f="platform">${PLATFORMS.map(p=>`<option value="${p[0]}" ${cr.platform===p[0]?'selected':''}>${p[1]}</option>`).join('')}</select>
+    <input style="flex:1;min-width:140px" placeholder="login / e-mail" value="${esc(cr.login||'')}" data-f="login">
+    <input style="flex:1;min-width:120px" type="password" placeholder="${cr.id?'senha (vazio = manter)':'senha'}" data-f="password" autocomplete="new-password">
+    <input style="width:130px" placeholder="rótulo (opc.)" value="${esc(cr.label||'')}" data-f="label">
+    <input type="hidden" data-f="id" value="${esc(cr.id||'')}">
+    <button class="iconbtn" onclick="this.parentElement.remove()">🗑</button>
+  </div>`;
+}
+function addCredRow(){ byId('credRows').insertAdjacentHTML('beforeend', credRowHtml({ platform:'onerpm' }, Date.now())); }
+
+function openClientModal(id){
+  S.editingClientId = id || null;
+  const c = id ? clientById(id) : null;
+  byId('cliModalTitle').textContent = c ? 'Editar cliente' : 'Novo cliente';
+  byId('cName').value = c?c.name:''; byId('cFull').value = c?c.fullName||'':'';
+  byId('cDoc').value = c?c.cpfCnpj||'':''; byId('cMail').value = c?c.email||'':'';
+  byId('cPhone').value = c?c.phone||'':''; byId('cInsta').value = c?c.instagram||'':'';
+  byId('cNotes').value = c?c.notes||'':'';
+  byId('credRows').innerHTML = (c?c.credentials:[]).map((cr,i)=>credRowHtml({ id:cr.id, platform:cr.platform, login:'', label:cr.label }, i)).join('');
+  // login mascarado não volta editável por segurança: campo vem vazio = manter o atual
+  if (c && c.credentials.length) {
+    const rows = byId('credRows').querySelectorAll('[data-cred]');
+    c.credentials.forEach((cr, i) => { const inp = rows[i] && rows[i].querySelector('[data-f="login"]'); if (inp) { inp.value = ''; inp.placeholder = cr.loginMasked + ' (vazio = manter)'; } });
+  }
+  show('cliOverlay');
+}
+
+async function saveClient(){
+  const name = byId('cName').value.trim();
+  if (!name) return toast('Informe o nome artístico.','err');
+  // login/senha vazios numa credencial existente = manter os atuais (regra do servidor)
+  const credentials = [...byId('credRows').querySelectorAll('[data-cred]')].map(row => {
+    const get = (f) => { const el = row.querySelector(`[data-f="${f}"]`); return el ? el.value : ''; };
+    return { id: get('id') || undefined, platform: get('platform'), login: get('login').trim(), password: get('password'), label: get('label') };
+  }).filter(c => c.login || c.id);
+  const payload = {
+    name, fullName: byId('cFull').value, cpfCnpj: byId('cDoc').value, email: byId('cMail').value,
+    phone: byId('cPhone').value, instagram: byId('cInsta').value, notes: byId('cNotes').value, credentials
+  };
+  try {
+    if (S.editingClientId){
+      const data = await api('/api/catalog/clients/'+S.editingClientId, { method:'PATCH', body: JSON.stringify(payload) });
+      const i = S.clients.findIndex(c=>c.id===S.editingClientId); if(i>=0) S.clients[i] = data.client;
+    } else {
+      const data = await api('/api/catalog/clients', { method:'POST', body: JSON.stringify(payload) });
+      S.clients.unshift(data.client);
+    }
+    hide('cliOverlay'); renderClients(); toast('Cliente salvo.','ok');
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+
+async function delClient(id){
+  const c = clientById(id);
+  if (!confirm(`Excluir o cliente "${c?c.name:id}"? As credenciais salvas são apagadas juntas (lançamentos ficam).`)) return;
+  try {
+    await api('/api/catalog/clients/'+id, { method:'DELETE' });
+    S.clients = S.clients.filter(x=>x.id!==id); renderClients(); toast('Cliente excluído.');
+  } catch(e){ toast(e.message,'err'); }
+}
+
+/* ================= settings ================= */
+async function saveSettings(){
+  try {
+    const data = await api('/api/catalog/releases/settings', { method:'PATCH', body: JSON.stringify({ action:'settings', settings: {
+      isrcPrefix: byId('cfgPrefix').value, defaultLabel: byId('cfgLabel').value, defaultProducer: byId('cfgProducer').value
+    } }) });
+    S.settings = data.settings; toast('Configurações salvas.','ok');
+  } catch(e){ if(e.message!=='login') toast(e.message,'err'); }
+}
+
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>Aprovação de lançamento · NovaCena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#030305;--panel:rgba(14,14,24,.92);--line:rgba(120,80,255,.14);--line2:rgba(120,80,255,.24);
+    --txt:#eee8ff;--muted:rgba(238,232,255,.55);--neon:#a855f7;--neon2:#6d28d9;--cyan:#22d3ee;
+    --green:#34d399;--red:#ef233c;--yellow:#fbbf24;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Outfit',sans-serif;-webkit-font-smoothing:antialiased}
+  body::before{content:'';position:fixed;inset:0;z-index:-1;background:
+    radial-gradient(700px 420px at 90% -10%,rgba(109,40,217,.2),transparent 60%),
+    radial-gradient(600px 400px at -10% 40%,rgba(34,211,238,.08),transparent 60%)}
+  .wrap{max-width:640px;margin:0 auto;padding:22px 16px 90px}
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+  .mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--neon),var(--cyan));display:grid;place-items:center;font:900 15px/1 'Space Mono',monospace;color:#06060a}
+  .top p{margin:0;font-size:12px;color:var(--muted)}
+  .top b{display:block;font-size:14px;color:var(--txt)}
+  .hero{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;display:flex;gap:15px;align-items:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .hero img{width:104px;height:104px;border-radius:14px;object-fit:cover;border:1px solid var(--line2)}
+  .hero .ph{width:104px;height:104px;border-radius:14px;background:linear-gradient(135deg,rgba(168,85,247,.3),rgba(34,211,238,.2));display:grid;place-items:center;font-size:34px}
+  .hero h1{margin:0;font:800 20px/1.15 'Outfit'}
+  .hero p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-top:14px}
+  .sec h2{margin:0 0 10px;font:800 13px 'Outfit';letter-spacing:.07em;text-transform:uppercase;color:var(--cyan)}
+  .kv{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;font-size:13.5px}
+  .kv b{display:block;font:700 10px 'Outfit';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+  .track{border:1px solid var(--line);border-radius:14px;padding:13px;margin-top:10px}
+  .track h3{margin:0 0 6px;font:700 15px 'Outfit'}
+  .tag{display:inline-block;font:700 10px 'Outfit';text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--line2);border-radius:99px;padding:3px 9px;color:var(--muted);margin:0 4px 4px 0}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+  th{text-align:left;font:700 10px 'Outfit';text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:4px 6px;border-bottom:1px solid var(--line)}
+  td{padding:5px 6px;border-bottom:1px solid rgba(120,80,255,.06)}
+  td:last-child,th:last-child{text-align:right}
+  audio{width:100%;height:36px;margin-top:8px}
+  textarea,input{width:100%;background:rgba(8,8,14,.92);border:1px solid var(--line2);color:var(--txt);border-radius:11px;padding:11px 13px;font:500 14px 'Outfit';outline:none}
+  textarea:focus,input:focus{border-color:var(--neon)}
+  textarea{resize:vertical;min-height:90px;line-height:1.55}
+  label{display:block;font:700 11px 'Outfit';text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 6px}
+  .btn{width:100%;border:none;border-radius:13px;padding:14px;font:700 15px 'Outfit';cursor:pointer;transition:.18s}
+  .btn.primary{background:linear-gradient(135deg,var(--neon),var(--neon2));color:#fff;box-shadow:0 8px 26px rgba(168,85,247,.4)}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--muted);margin-top:9px}
+  .btn:disabled{opacity:.55}
+  .ok-stamp{border:1.5px solid var(--green);color:var(--green);border-radius:13px;padding:13px;text-align:center;font:700 14px 'Outfit';background:rgba(52,211,153,.07)}
+  .note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:9px;text-align:center}
+  .center{min-height:70vh;display:grid;place-items:center;text-align:center;padding:20px}
+  .spin{display:inline-block;width:22px;height:22px;border:2.5px solid rgba(255,255,255,.2);border-top-color:var(--neon);border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#13131f;border:1px solid var(--line2);border-left:3px solid var(--green);padding:11px 18px;border-radius:11px;font:600 13px 'Outfit';z-index:50;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+  .toast.err{border-left-color:var(--red)}
+</style>
+</head>
+<body>
+  <div id="app" class="center"><div><div class="spin"></div><p style="color:var(--muted);font-size:13px">Carregando seu lançamento…</p></div></div>
+<script>
+'use strict';
+const byId = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = (d) => { if(!d) return 'a definir'; const [y,m,dd] = d.split('-'); return `${dd}/${m}/${y}`; };
+const fmtDur = (s) => { if(!s) return '—'; const m = Math.floor(s/60); return `${m}:${String(Math.round(s%60)).padStart(2,'0')}`; };
+const ROLE = { compositor_autor:'Compositor/Autor', versionista:'Versionista', editora:'Editora' };
+const CAT = { interprete:'Intérprete', musico:'Músico', produtor_fonografico:'Produtor fonográfico' };
+const token = new URLSearchParams(location.search).get('t') || '';
+let R = null;
+
+function toast(msg, kind){ const t = document.createElement('div'); t.className='toast '+(kind||''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 4200); }
+
+async function call(method, body){
+  const r = await fetch('/api/catalog/approval/'+encodeURIComponent(token), {
+    method, headers: body?{'Content-Type':'application/json'}:undefined, body: body?JSON.stringify(body):undefined });
+  const data = await r.json().catch(()=>({ok:false,error:'Falha de conexão.'}));
+  if (!r.ok || data.ok===false) throw new Error(data.error||'Erro '+r.status);
+  return data;
+}
+
+function fail(msg){
+  byId('app').className='center';
+  byId('app').innerHTML = `<div><div style="font-size:40px;margin-bottom:10px">🔗</div>
+    <h2 style="font:800 19px 'Outfit';margin:0 0 8px">${esc(msg)}</h2>
+    <p style="color:var(--muted);font-size:13.5px">Pede um link novo pra quem te enviou. 😉</p></div>`;
+}
+
+function collectLyrics(){
+  const out = {};
+  if (!R) return out;
+  R.tracks.forEach(t => { const el = byId('lyr-'+t.id); if (el) out[t.id] = el.value; });
+  return out;
+}
+
+function render(){
+  const approved = R.approval && R.approval.approvedAt;
+  byId('app').className = 'wrap';
+  byId('app').innerHTML = `
+    <div class="top"><div class="mark">NC</div><p><b>Revisão de lançamento</b>Confere tudo com calma — depois de distribuído, mudar dá trabalho.</p></div>
+    <div class="hero">
+      ${R.coverUrl?`<img src="${esc(R.coverUrl)}" alt="capa">`:'<div class="ph">🎵</div>'}
+      <div>
+        <h1>${esc(R.title||'Sem título')}</h1>
+        <p>${esc(R.mainArtist)}${R.featuring?' feat. '+esc(R.featuring):''}</p>
+        <p>${esc((R.type||'').toUpperCase())} · lança em <b style="color:var(--cyan)">${fmtDate(R.releaseDate)}</b></p>
+      </div>
+    </div>
+
+    <div class="sec"><h2>Informações gerais</h2>
+      <div class="kv">
+        <div><b>Gênero</b>${esc(R.genre||'—')}${R.subgenre?' / '+esc(R.subgenre):''}</div>
+        <div><b>Idioma</b>${esc(R.language||'—')}</div>
+        <div><b>Selo</b>${esc(R.label||'—')}</div>
+        <div><b>Equipe</b>${esc(R.clientName||'NovaCena')}</div>
+      </div>
+      <p class="note" style="text-align:left">Capa certa? Nome escrito certinho (maiúsculas, acentos)? Data ok?</p>
+    </div>
+
+    ${R.tracks.map((t,i)=>`
+      <div class="sec">
+        <h2>Faixa ${i+1} · ${esc(t.title||'sem título')}</h2>
+        <div>
+          ${t.version && t.version!=='original'?`<span class="tag">${esc(t.version)}</span>`:''}
+          <span class="tag">${t.explicit?'🅴 explícita':'sem conteúdo explícito'}</span>
+          <span class="tag">${fmtDur(t.durationSec)}</span>
+          ${t.isrc?`<span class="tag" style="font-family:'Space Mono'">${esc(t.isrc)}</span>`:''}
+        </div>
+        ${t.audioUrl?`<audio controls preload="none" src="${esc(t.audioUrl)}"></audio>`:''}
+        ${t.composers.length?`
+          <table><thead><tr><th>Quem escreveu (obra)</th><th>Função</th><th>%</th></tr></thead><tbody>
+            ${t.composers.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(ROLE[c.role]||c.role)}</td><td>${(+c.percent||0).toFixed(1)}%</td></tr>`).join('')}
+          </tbody></table>`:''}
+        ${t.phonogram.length?`
+          <table><thead><tr><th>Quem gravou (fonograma)</th><th>Papel</th><th>%</th></tr></thead><tbody>
+            ${t.phonogram.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(CAT[p.category]||p.category)}${p.instrument?' · '+esc(p.instrument):''}</td><td>${(+p.percent||0).toFixed(1)}%</td></tr>`).join('')}
+          </tbody></table>`:''}
+        ${t.instrumental?'' : `
+          <label>Letra ${t.lyrics?'(confere se está exatamente como você canta)':'— tá faltando! Cola aqui 👇'}</label>
+          <textarea id="lyr-${esc(t.id)}" ${approved?'disabled':''} placeholder="Cola a letra completa aqui…">${esc(t.lyrics||'')}</textarea>`}
+      </div>`).join('')}
+
+    <div class="sec"><h2>Observações</h2>
+      <textarea id="artistNotes" ${approved?'disabled':''} placeholder="Algo errado ou faltando? Escreve aqui (ex.: 'meu nome artístico é com Y', 'trocar a capa')…">${esc(R.approval?R.approval.artistNotes||'':'')}</textarea>
+    </div>
+
+    <div class="sec">
+      ${approved
+        ? `<div class="ok-stamp">✔ Aprovado por ${esc(R.approval.approvedName)} em ${new Date(R.approval.approvedAt).toLocaleString('pt-BR')}</div>
+           <p class="note">Mudou de ideia em algo? Fala direto com a equipe.</p>`
+        : `<h2>Aprovação</h2>
+           <p class="note" style="text-align:left;margin:0 0 4px">Ao aprovar, você confirma que os dados acima (título, capa, letra, participantes e percentuais) estão corretos pra registro e distribuição.</p>
+           <label>Seu nome completo</label>
+           <input id="fullName" placeholder="Nome e sobrenome" autocomplete="name">
+           <div style="height:14px"></div>
+           <button class="btn primary" id="btnApprove" onclick="approve()">✓ APROVAR LANÇAMENTO</button>
+           <button class="btn ghost" id="btnSave" onclick="savePartial()">Salvar letra/observações sem aprovar</button>`}
+    </div>
+    <p class="note">NovaCena · Registros &amp; Distribuição</p>`;
+}
+
+async function savePartial(){
+  const btn = byId('btnSave'); btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    const data = await call('POST', { action:'save', lyrics: collectLyrics(), notes: byId('artistNotes').value });
+    R = data.release; toast('Salvo! Pode voltar depois pra aprovar.', ''); render();
+  } catch(e){ toast(e.message,'err'); btn.disabled=false; btn.textContent='Salvar letra/observações sem aprovar'; }
+}
+
+async function approve(){
+  const name = (byId('fullName').value||'').trim();
+  if (name.length < 5 || !name.includes(' ')) return toast('Digite seu nome completo pra registrar a aprovação.','err');
+  if (!confirm(`Confirmar aprovação como "${name}"? Fica registrado com data e hora.`)) return;
+  const btn = byId('btnApprove'); btn.disabled = true; btn.innerHTML = 'Registrando…';
+  try {
+    const data = await call('POST', { action:'approve', fullName:name, lyrics: collectLyrics(), notes: byId('artistNotes').value });
+    R = data.release; render(); toast('Lançamento aprovado! 🎉');
+    window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+  } catch(e){ toast(e.message,'err'); btn.disabled=false; btn.textContent='✓ APROVAR LANÇAMENTO'; }
+}
+
+(async () => {
+  if (!token) return fail('Link incompleto');
+  try { const data = await call('GET'); R = data.release; render(); }
+  catch(e){ fail(e.message==='Link inválido ou expirado.'?'Esse link não vale mais':'Não consegui carregar'); }
+})();
+</script>
+</body>
+</html>
