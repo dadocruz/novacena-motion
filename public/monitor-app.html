@@ -351,9 +351,9 @@
     <div class="actions">
       <div class="chip" id="lastSync">Carregando...</div>
       <nav class="workspace-nav" aria-label="Ferramentas NovaCena">
-        <a class="workspace-link" href="/estudio">Studio</a>
-        <a class="workspace-link active" href="/monitor">Monitor</a>
-        <a class="workspace-link" href="/registros">Registros</a>
+        <a class="workspace-link" href="/estudio" target="_top">Studio</a>
+        <a class="workspace-link active" href="/monitor" target="_top">Monitor</a>
+        <a class="workspace-link" href="/registros" target="_top">Registros</a>
       </nav>
       <span class="tool-divider" aria-hidden="true"></span>
       <button class="btn dark" id="refreshBtn">Atualizar agora</button>
@@ -394,9 +394,9 @@
     <p>Ações rápidas do painel.</p>
   </div>
   <div class="menu-drawer-body">
-    <a class="btn dark" href="/estudio">Studio</a>
-    <a class="btn dark" href="/monitor">Monitor</a>
-    <a class="btn dark" href="/registros">Registros</a>
+    <a class="btn dark" href="/estudio" target="_top">Studio</a>
+    <a class="btn dark" href="/monitor" target="_top">Monitor</a>
+    <a class="btn dark" href="/registros" target="_top">Registros</a>
     <button class="btn dark" id="menuRefreshBtn">Atualizar agora</button>
     <button class="btn dark" id="menuExportBtn">Exportar lista</button>
     <button class="btn dark" id="menuImportBtn">Importar lista</button>
@@ -2648,7 +2648,7 @@
     if (calendarConnected) {
       showToast('Google Agenda ja esta conectada. Eventos de "Pedir arte" serao criados no seu calendario.', 'success');
     } else {
-      window.location.href = '/api/auth/google/calendar';
+      window.top.location.href = '/api/auth/google/calendar';
     }
   });
 

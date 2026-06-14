@@ -175,9 +175,9 @@
     <div class="brand"><h1>Registros &amp; Distribuição</h1><p>NovaCena · obra, fonograma, ISRC e dossiê pronto pra Abramus + agregadora</p></div>
     <div class="hspace"></div>
     <nav class="workspace-nav" aria-label="Ferramentas NovaCena">
-      <a class="workspace-link" href="/estudio">Studio</a>
-      <a class="workspace-link" href="/monitor">Monitor</a>
-      <a class="workspace-link active" href="/registros">Registros</a>
+      <a class="workspace-link" href="/estudio" target="_top">Studio</a>
+      <a class="workspace-link" href="/monitor" target="_top">Monitor</a>
+      <a class="workspace-link active" href="/registros" target="_top">Registros</a>
     </nav>
   </div></header>
 
@@ -311,7 +311,7 @@
       <div class="mark" style="margin:0 auto 16px">RG</div>
       <h2 style="font:800 20px 'Outfit';margin:0 0 8px">Entre na sua conta NovaCena</h2>
       <p style="color:var(--muted);font-size:14px;margin:0 0 18px">A aba Registros usa o mesmo login do Estúdio.</p>
-      <a class="btn primary" href="/login" style="text-decoration:none">Fazer login</a>
+      <a class="btn primary" href="/login" target="_top" style="text-decoration:none">Fazer login</a>
     </div>
   </div>
 
@@ -752,7 +752,7 @@ function stepCover(){
       ${w.coverUrl ? `<img class="coverprev" src="${esc(w.coverUrl)}">` : ''}
       <div class="uploadbox" id="covBox" onclick="pickCover()">${w.coverUrl ? '↺ Trocar capa' : '⬆️ Enviar capa (JPG/PNG quadrada — ideal 3000×3000)'}</div>
       ${w.coverInfo ? `<p class="hint">Atual: ${w.coverInfo.width}×${w.coverInfo.height} ${esc((w.coverInfo.format||'').toUpperCase())}${w.coverInfo.width<3000?' — <span style="color:var(--yellow)">abaixo do ideal 3000×3000</span>':' ✓'}</p>` : ''}
-      <p class="hint">Regras das plataformas: quadrada, RGB, sem blur, sem telefone/URL/preço, sem logos de plataforma.<br>Precisa de capa? Usa o <a href="/estudio">Estúdio NovaCena</a> 😉</p>
+      <p class="hint">Regras das plataformas: quadrada, RGB, sem blur, sem telefone/URL/preço, sem logos de plataforma.<br>Precisa de capa? Usa o <a href="/estudio" target="_top">Estúdio NovaCena</a> 😉</p>
     </div>`;
 }
 function pickCover(){

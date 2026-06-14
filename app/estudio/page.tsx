@@ -7033,13 +7033,61 @@ return (
             </div>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => setActiveTab('studio')}
-            style={activeTab === 'studio' ? topTabActive : topTab}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <nav
+            aria-label="Ferramentas NovaCena"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: 4,
+              border: '1px solid var(--border-2)',
+              borderRadius: 10,
+              background: 'var(--surface-1)',
+            }}
           >
-            Studio
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('studio')}
+              style={{
+                ...topTabActive,
+                minHeight: 30,
+                padding: '0 12px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Studio
+            </button>
+            <a
+              href="/monitor"
+              style={{
+                ...topTab,
+                minHeight: 30,
+                padding: '0 12px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Monitor
+            </a>
+            <a
+              href="/registros"
+              style={{
+                ...topTab,
+                minHeight: 30,
+                padding: '0 12px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Registros
+            </a>
+          </nav>
+          <div style={separator} />
           <button
             onClick={() => setActiveTab('gallery')}
             style={activeTab === 'gallery' ? topTabActive : topTab}
@@ -7048,30 +7096,6 @@ return (
           </button>
           {SAAS_EXPORT_MODE && (
             <>
-              <a
-                href="/monitor"
-                style={{
-                  ...topTab,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                Monitor
-              </a>
-              <a
-                href="/registros"
-                style={{
-                  ...topTab,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                Registros
-              </a>
               <button
                 onClick={() => openUpgradeOffer('Escolha um pacote para carregar renders na sua conta.')}
                 style={{
