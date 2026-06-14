@@ -16,26 +16,75 @@ export const maxDuration = 120;
 const execFileAsync = promisify(execFile);
 
 const COVER_EXTS = new Set(['.jpg', '.jpeg', '.png']);
-const AUDIO_EXTS = new Set(['.wav', '.flac', '.aif', '.aiff', '.mp3', '.m4a', '.ogg']);
+const AUDIO_EXTS = new Set(['.wav', '.wave', '.flac', '.aif', '.aiff', '.mp3', '.m4a', '.ogg']);
 const COVER_MAX = 40 * 1024 * 1024;
-const AUDIO_MAX = 300 * 1024 * 1024;
+const AUDIO_MAX = 1024 * 1024 * 1024;
+
+type AudioIdentity = {
+  title?: string;
+  artist?: string;
+};
 
 function getSession(req: NextRequest) {
   return verifySessionToken(req.cookies.get(SAAS_COOKIE_NAME)?.value);
 }
 
-async function probeDurationSec(filePath: string): Promise<number | undefined> {
+function cleanMetadataValue(value: unknown) {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160) || undefined;
+}
+
+function firstTag(tags: Record<string, unknown> | undefined, keys: string[]) {
+  if (!tags) return undefined;
+  const normalized = new Map(
+    Object.entries(tags).map(([key, value]) => [key.toLowerCase().replace(/[\s_-]+/g, ''), value])
+  );
+  for (const key of keys) {
+    const value = cleanMetadataValue(normalized.get(key.toLowerCase().replace(/[\s_-]+/g, '')));
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function inferIdentityFromFilename(fileName: string): AudioIdentity {
+  const base = path
+    .basename(fileName || '', path.extname(fileName || ''))
+    .replace(/[_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!base) return {};
+
+  const parts = base.split(/\s+(?:-|–|—)\s+/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return {
+      artist: cleanMetadataValue(parts[0]),
+      title: cleanMetadataValue(parts.slice(1).join(' - ')),
+    };
+  }
+
+  return { title: cleanMetadataValue(base) };
+}
+
+async function probeAudioInfo(filePath: string): Promise<{ durationSec?: number } & AudioIdentity> {
   try {
     const { stdout } = await execFileAsync('ffprobe', [
       '-v', 'error',
-      '-show_entries', 'format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=1',
+      '-show_entries', 'format=duration:format_tags',
+      '-of', 'json',
       filePath,
     ]);
-    const sec = parseFloat(stdout.trim());
-    return Number.isFinite(sec) && sec > 0 ? Math.round(sec) : undefined;
+    const data = JSON.parse(stdout);
+    const format = data?.format || {};
+    const sec = parseFloat(String(format.duration || ''));
+    return {
+      durationSec: Number.isFinite(sec) && sec > 0 ? Math.round(sec) : undefined,
+      title: firstTag(format.tags, ['title', 'tit2']),
+      artist: firstTag(format.tags, ['artist', 'albumartist', 'album_artist', 'composer', 'tpe1', 'tpe2']),
+    };
   } catch {
-    return undefined; // ffprobe ausente/falhou — duração fica manual
+    return {}; // ffprobe ausente/falhou — duração/metadados ficam manuais
   }
 }
 
@@ -125,8 +174,15 @@ export async function POST(req: NextRequest) {
   const url = `/api/uploads/catalog/${userDir}/${name}`;
 
   let durationSec: number | undefined;
+  let audioIdentity: AudioIdentity = {};
   if (kind === 'audio') {
-    durationSec = await probeDurationSec(path.join(dir, name));
+    const probed = await probeAudioInfo(path.join(dir, name));
+    const inferred = inferIdentityFromFilename(file.name || name);
+    durationSec = probed.durationSec;
+    audioIdentity = {
+      title: probed.title || inferred.title,
+      artist: probed.artist || inferred.artist,
+    };
     if (['.mp3', '.m4a', '.ogg'].includes(ext)) {
       warnings.push('Áudio com perdas — pra distribuição o ideal é WAV 24bit/44.1kHz ou FLAC.');
     }
@@ -140,6 +196,9 @@ export async function POST(req: NextRequest) {
     width,
     height,
     durationSec,
+    metadata: audioIdentity,
+    suggestedTitle: audioIdentity.title || '',
+    suggestedArtist: audioIdentity.artist || '',
     warnings,
   });
 }

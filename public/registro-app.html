@@ -30,17 +30,21 @@
   a{color:var(--cyan)}
   .header{position:sticky;top:0;z-index:40;background:rgba(3,3,5,.78);backdrop-filter:blur(40px) saturate(1.6);border-bottom:1px solid var(--line)}
   .header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--neon),var(--cyan),var(--pink),transparent);opacity:.35}
-  .hwrap{max-width:1280px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .hwrap{max-width:1720px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
   .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--neon),var(--cyan));display:grid;place-items:center;font:900 18px/1 'Space Mono',monospace;color:#030305;box-shadow:0 0 24px var(--neon-glow);flex-shrink:0}
   .brand h1{margin:0;font:800 19px/1.1 'Outfit',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
   .brand p{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
   .hspace{flex:1}
   .hlink{font-size:12.5px;color:var(--muted);text-decoration:none;border:1px solid var(--line2);padding:8px 14px;border-radius:10px;transition:.2s}
   .hlink:hover{color:var(--txt);border-color:var(--neon)}
-  .tabs{max-width:1280px;margin:18px auto 0;padding:0 20px;display:flex;gap:8px;flex-wrap:wrap}
+  .workspace-nav{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:12px;background:rgba(168,85,247,.05);flex-wrap:wrap}
+  .workspace-link{min-height:30px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none;transition:.18s;white-space:nowrap}
+  .workspace-link:hover{color:var(--txt);background:rgba(168,85,247,.10)}
+  .workspace-link.active{color:#fff;background:linear-gradient(135deg,rgba(168,85,247,.30),rgba(34,211,238,.18));box-shadow:0 0 16px var(--neon-glow)}
+  .tabs{max-width:1720px;margin:18px auto 0;padding:0 28px;display:flex;gap:8px;flex-wrap:wrap}
   .tab{border:1px solid var(--line2);background:var(--panel2);color:var(--muted);padding:9px 18px;border-radius:12px;font:600 13px 'Outfit';cursor:pointer;transition:.2s}
   .tab.on{color:#fff;border-color:var(--neon);background:linear-gradient(135deg,rgba(168,85,247,.18),rgba(34,211,238,.10));box-shadow:0 0 18px var(--neon-glow)}
-  main{max-width:1280px;margin:0 auto;padding:18px 20px 80px}
+  main{max-width:1720px;margin:0 auto;padding:18px 28px 80px}
   .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
   .chips{display:flex;gap:8px;flex-wrap:wrap}
   .chip{font:600 11.5px 'Outfit';padding:6px 12px;border-radius:99px;border:1px solid var(--line2);color:var(--muted);background:var(--panel2)}
@@ -131,6 +135,12 @@
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
   @keyframes sp{to{transform:rotate(360deg)}}
   audio{width:100%;height:34px;margin-top:8px}
+  @media(max-width:720px){
+    .hwrap,.tabs,main{padding-left:14px;padding-right:14px}
+    .brand p{display:none}
+    .workspace-nav{width:100%;order:4}
+    .workspace-link{flex:1}
+  }
   /* ---------- dossiê (papel claro + print) ---------- */
   .paper{background:#fff;color:#14121f;border-radius:14px;max-width:860px;width:100%;padding:46px 52px;font-size:13.5px;line-height:1.55}
   .paper h1{font:800 24px 'Outfit';margin:0}
@@ -164,8 +174,11 @@
     <div class="mark">RG</div>
     <div class="brand"><h1>Registros &amp; Distribuição</h1><p>NovaCena · obra, fonograma, ISRC e dossiê pronto pra Abramus + agregadora</p></div>
     <div class="hspace"></div>
-    <a class="hlink" href="/estudio">← Estúdio</a>
-    <a class="hlink" href="/monitor">Monitor</a>
+    <nav class="workspace-nav" aria-label="Ferramentas NovaCena">
+      <a class="workspace-link" href="/estudio">Studio</a>
+      <a class="workspace-link" href="/monitor">Monitor</a>
+      <a class="workspace-link active" href="/registros">Registros</a>
+    </nav>
   </div></header>
 
   <nav class="tabs">
@@ -565,7 +578,7 @@ function renderTracks(openIdx){
             ${t.audioUrl
               ? `<div class="cred"><span class="plat">${esc((t.audioFormat||'?').toUpperCase())}</span><span class="lg">${esc(t.audioName||t.audioUrl)}</span>
                   <button class="iconbtn" title="Trocar" onclick="pickAudio(${i})">↺</button></div><audio controls preload="none" src="${esc(t.audioUrl)}"></audio>`
-              : `<div class="uploadbox" onclick="pickAudio(${i})" id="audBox${i}">⬆️ Clique pra enviar o áudio (WAV/FLAC recomendado, até 300MB)</div>`}
+              : `<div class="uploadbox" onclick="pickAudio(${i})" id="audBox${i}">⬆️ Clique pra enviar o áudio (WAV/FLAC recomendado, até 1GB)</div>`}
           </div>
           <div class="full"><label>Letra ${t.instrumental?'(instrumental — opcional)':''}</label><textarea rows="5" placeholder="Cole a letra completa — vai pro registro da obra e pro dossiê" oninput="S.wiz.tracks[${i}].lyrics=this.value">${esc(t.lyrics||'')}</textarea></div>
           <div><label>ISRC</label><input value="${esc(t.isrc?fmtIsrc(t.isrc):'')}" placeholder="BR-GCA-26-00001" style="font-family:'Space Mono'" onchange="S.wiz.tracks[${i}].isrc=this.value"></div>
@@ -578,8 +591,26 @@ function addTrack(){ S.wiz.tracks.push(blankTrack()); renderTracks(S.wiz.tracks.
 function delTrack(i){ if(!confirm('Remover esta faixa?')) return; S.wiz.tracks.splice(i,1); renderTracks(); }
 function moveTrack(i, dir){ const t = S.wiz.tracks; const j = i+dir; if(j<0||j>=t.length) return; [t[i],t[j]]=[t[j],t[i]]; renderTracks(j); }
 
+function applyAudioIdentity(i, data){
+  if (!S.wiz || !S.wiz.tracks || !S.wiz.tracks[i]) return;
+  const meta = data.metadata || {};
+  const title = String(meta.title || data.suggestedTitle || '').trim();
+  const artist = String(meta.artist || data.suggestedArtist || '').trim();
+  let changed = false;
+  const t = S.wiz.tracks[i];
+
+  if (title && !t.title) { t.title = title; changed = true; }
+  if (title && !S.wiz.title) { S.wiz.title = title; changed = true; }
+  if (artist && !S.wiz.mainArtist) { S.wiz.mainArtist = artist; changed = true; }
+
+  if (changed) {
+    byId('wizTitle').textContent = S.wiz.title || 'Novo lançamento';
+    toast('Título e artista preenchidos pelo áudio.', 'ok');
+  }
+}
+
 function pickAudio(i){
-  const inp = document.createElement('input'); inp.type='file'; inp.accept='.wav,.flac,.aif,.aiff,.mp3,.m4a,.ogg';
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='.wav,.wave,.flac,.aif,.aiff,.mp3,.m4a,.ogg,audio/wav,audio/wave,audio/x-wav';
   inp.onchange = async () => {
     const f = inp.files[0]; if(!f) return;
     const box = byId('audBox'+i); if (box) box.innerHTML = '<span class="spin"></span> Enviando ' + esc(f.name) + '…';
@@ -589,6 +620,7 @@ function pickAudio(i){
       const t = S.wiz.tracks[i];
       t.audioUrl = data.url; t.audioName = data.name; t.audioFormat = data.format;
       if (data.durationSec) t.durationSec = data.durationSec;
+      applyAudioIdentity(i, data);
       (data.warnings||[]).forEach(wn => toast(wn));
       renderTracks(i); saveWiz(false);
     } catch(e){ toast(e.message,'err'); renderTracks(i); }

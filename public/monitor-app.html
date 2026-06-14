@@ -45,8 +45,13 @@
     .mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--neon),var(--cyan));display:grid;place-items:center;font:900 20px/1 'Space Mono',monospace;color:#030305;box-shadow:0 0 24px var(--neon-glow),0 4px 16px rgba(0,0,0,.4);flex-shrink:0;letter-spacing:-.02em}
     .brand h1{margin:0;font:800 19px/1.1 'Outfit',sans-serif;letter-spacing:-.02em;background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .brand p{margin:3px 0 0;color:var(--soft);font-size:10px;letter-spacing:.15em;text-transform:uppercase;font-weight:500}
-    .actions{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+    .actions{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;flex-wrap:wrap;justify-content:flex-end}
     .chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:rgba(168,85,247,.04);color:var(--muted);font-size:11px;white-space:nowrap;font-weight:500;font-family:'Space Mono',monospace;letter-spacing:-.01em}
+    .workspace-nav{display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line2);border-radius:12px;background:rgba(168,85,247,.05);flex-wrap:wrap}
+    .workspace-link{min-height:30px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:8px;color:var(--muted);font-size:12.5px;font-weight:700;text-decoration:none;transition:.18s;white-space:nowrap}
+    .workspace-link:hover{color:var(--txt);background:rgba(168,85,247,.10)}
+    .workspace-link.active{color:#fff;background:linear-gradient(135deg,rgba(168,85,247,.30),rgba(34,211,238,.18));box-shadow:0 0 16px var(--neon-glow)}
+    .tool-divider{width:1px;height:24px;background:var(--line2);margin:0 2px}
     .btn{border:0;border-radius:10px;padding:10px 16px;font-weight:700;font-size:12.5px;cursor:pointer;transition:all .22s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
     .btn:hover{transform:translateY(-2px)}
     .btn:active{transform:translateY(0) scale(.98)}
@@ -305,6 +310,14 @@
     .filter-empty{grid-column:1/-1;padding:48px;text-align:center;color:var(--soft);font-size:14px;line-height:1.6}
     .filter-empty strong{color:var(--neon);display:block;margin-bottom:6px;font-size:16px}
 
+    @media(max-width:1500px){
+      .header-inner{height:auto;min-height:70px;padding-top:8px;padding-bottom:8px}
+      .brand h1{white-space:nowrap}
+      .brand p{display:none}
+      #lastSync{display:none}
+      .btn{padding:9px 13px;font-size:12px}
+      .workspace-link{padding:0 10px}
+    }
     @media(max-width:1700px){.artist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:1200px){.artist-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:980px){.layout{grid-template-columns:1fr}.artist-grid{grid-template-columns:1fr}}
@@ -337,7 +350,12 @@
     </button>
     <div class="actions">
       <div class="chip" id="lastSync">Carregando...</div>
-      <a href="/estudio" class="btn dark" style="text-decoration:none">Editor</a>
+      <nav class="workspace-nav" aria-label="Ferramentas NovaCena">
+        <a class="workspace-link" href="/estudio">Studio</a>
+        <a class="workspace-link active" href="/monitor">Monitor</a>
+        <a class="workspace-link" href="/registros">Registros</a>
+      </nav>
+      <span class="tool-divider" aria-hidden="true"></span>
       <button class="btn dark" id="refreshBtn">Atualizar agora</button>
       <button class="btn dark" id="exportBtn">Exportar lista</button>
       <button class="btn dark" id="importBtn">Importar lista</button>
@@ -376,6 +394,9 @@
     <p>Ações rápidas do painel.</p>
   </div>
   <div class="menu-drawer-body">
+    <a class="btn dark" href="/estudio">Studio</a>
+    <a class="btn dark" href="/monitor">Monitor</a>
+    <a class="btn dark" href="/registros">Registros</a>
     <button class="btn dark" id="menuRefreshBtn">Atualizar agora</button>
     <button class="btn dark" id="menuExportBtn">Exportar lista</button>
     <button class="btn dark" id="menuImportBtn">Importar lista</button>
