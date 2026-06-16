@@ -1,0 +1,52 @@
+name: Deploy Remotion Lambda Site
+
+on:
+  workflow_dispatch:
+
+env:
+  SERVICE: novacena-motion
+
+jobs:
+  deploy-remotion-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Redeploy Remotion site from VPS container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          envs: SERVICE
+          timeout: 120s
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+
+            CID="$(docker ps -q --filter "name=${SERVICE}" --filter "health=healthy" 2>/dev/null | head -1)"
+            if [ -z "${CID}" ]; then
+              CID="$(docker ps -q --filter "name=${SERVICE}" 2>/dev/null | head -1)"
+            fi
+            if [ -z "${CID}" ]; then
+              echo "No running container found for service ${SERVICE}"
+              exit 1
+            fi
+
+            CURRENT_SERVE_URL="$(docker exec "${CID}" sh -lc 'printf "%s" "${REMOTION_LAMBDA_SERVE_URL:-}"')"
+            if [ -z "${CURRENT_SERVE_URL}" ]; then
+              echo "REMOTION_LAMBDA_SERVE_URL is empty in container ${CID}"
+              exit 1
+            fi
+
+            SITE_NAME="$(node -e 'const u = new URL(process.argv[1]); const parts = u.pathname.split("/").filter(Boolean); const idx = parts.indexOf("sites"); process.stdout.write(idx >= 0 && parts[idx + 1] ? parts[idx + 1] : "");' "${CURRENT_SERVE_URL}")"
+            if [ -z "${SITE_NAME}" ]; then
+              echo "Could not infer site name from ${CURRENT_SERVE_URL}"
+              exit 1
+            fi
+
+            echo "Redeploying Remotion Lambda site ${SITE_NAME} from container ${CID}"
+            docker exec "${CID}" sh -lc "test -f remotion-entry/index.ts"
+            docker exec "${CID}" sh -lc "npx remotion lambda sites create remotion-entry/index.ts --site-name='${SITE_NAME}'"
+
+            echo "Checking YouTubeViews composition is available"
+            docker exec "${CID}" sh -lc 'npx remotion lambda compositions "${REMOTION_LAMBDA_SERVE_URL}" --function-name="${REMOTION_LAMBDA_FUNCTION_NAME}" --force-bucket-name="${REMOTION_LAMBDA_BUCKET_NAME}" | grep -E "YouTubeViews|YouTubeViewsFeed"'
