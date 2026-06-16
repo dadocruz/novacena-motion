@@ -66,6 +66,50 @@ function compositionCandidatesFor(compositionKey: string) {
     .filter((composition, index, list) => list.indexOf(composition) === index);
 }
 
+const lambdaCompositionCache = new Map<string, { ids: Set<string>; expiresAt: number }>();
+const LAMBDA_COMPOSITION_CACHE_TTL_MS = 5 * 60 * 1000;
+
+async function getAvailableLambdaCompositionIds(
+  getCompositionsOnLambda: (options: Record<string, unknown>) => Promise<Array<{ id: string }>>,
+  options: {
+    region: string;
+    functionName: string;
+    serveUrl: string;
+    bucketName: string;
+  },
+) {
+  const cacheKey = `${options.region}|${options.functionName}|${options.serveUrl}|${options.bucketName}`;
+  const cached = lambdaCompositionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.ids;
+
+  try {
+    const compositions = await getCompositionsOnLambda({
+      region: options.region,
+      functionName: options.functionName,
+      serveUrl: options.serveUrl,
+      inputProps: {},
+      forceBucketName: options.bucketName,
+      timeoutInMilliseconds: 45000,
+      logLevel: 'warn',
+    });
+    const ids = new Set(compositions.map((composition) => composition.id));
+    lambdaCompositionCache.set(cacheKey, {
+      ids,
+      expiresAt: Date.now() + LAMBDA_COMPOSITION_CACHE_TTL_MS,
+    });
+    return ids;
+  } catch (error) {
+    console.warn('[render:lambda] Não consegui listar composições da Lambda; tentando render direto.', error);
+    return null;
+  }
+}
+
+function supportedCompositionCandidates(candidates: string[], availableIds: Set<string> | null) {
+  if (!availableIds) return candidates;
+  const supported = candidates.filter((candidate) => availableIds.has(candidate));
+  return supported.length > 0 ? supported : candidates;
+}
+
 function maxWorkersPerRender(accountConcurrencyLimit: number) {
   const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || 2);
   const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - 2);
@@ -335,14 +379,19 @@ export async function POST(req: NextRequest) {
     const maxWorkers = maxWorkersPerRender(concurrencyLimit);
     const optimalFramesPerLambda = Math.max(20, Math.ceil(totalFrames / maxWorkers));
 
-    const { renderMediaOnLambda } = await import('@remotion/lambda/client');
+    const { getCompositionsOnLambda, renderMediaOnLambda } = await import('@remotion/lambda/client');
+    const availableCompositionIds = await getAvailableLambdaCompositionIds(
+      getCompositionsOnLambda as unknown as (options: Record<string, unknown>) => Promise<Array<{ id: string }>>,
+      { region, functionName, serveUrl, bucketName },
+    );
+    const renderCompositionCandidates = supportedCompositionCandidates(compositionCandidates, availableCompositionIds);
 
     let result: { renderId: string; bucketName: string } | null = null;
     let composition = primaryComposition;
     let fallbackFrom: string | undefined;
     let lastMissingCompositionError: unknown = null;
 
-    for (const candidate of compositionCandidates) {
+    for (const candidate of renderCompositionCandidates) {
       try {
         result = await startRenderWithCapacityRetry(
           renderMediaOnLambda,
@@ -364,7 +413,7 @@ export async function POST(req: NextRequest) {
         break;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (isMissingCompositionError(message) && candidate !== compositionCandidates[compositionCandidates.length - 1]) {
+        if (isMissingCompositionError(message) && candidate !== renderCompositionCandidates[renderCompositionCandidates.length - 1]) {
           lastMissingCompositionError = error;
           continue;
         }
