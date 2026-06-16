@@ -111,6 +111,24 @@ function isLambdaRateLimitError(message: string) {
   return /rate exceeded|concurrency limit|ConcurrentInvocationLimitExceeded|TooManyRequestsException/i.test(message);
 }
 
+function isMissingCompositionError(message: string) {
+  return /Could not find composition with ID|No composition with id|Composition .* not found/i.test(message);
+}
+
+function compositionCandidatesForId(compositionId: string) {
+  const fallbacks: Record<string, string[]> = {
+    YouTubeSubscribe: ['WatchOnYouTube'],
+    YouTubeSubscribeFeed: ['WatchOnYouTubeFeed'],
+    YouTubeViews: ['Milestone', 'WatchOnYouTube'],
+    YouTubeViewsFeed: ['MilestoneFeed', 'WatchOnYouTubeFeed'],
+    ListenDeezer: ['OutNow'],
+    ListenDeezerFeed: ['OutNowFeed'],
+  };
+
+  return [compositionId, ...(fallbacks[compositionId] ?? [])]
+    .filter((candidate, index, list) => list.indexOf(candidate) === index);
+}
+
 function friendlyLambdaError(message: string) {
   if (!isLambdaRateLimitError(message)) return message;
 
@@ -413,6 +431,7 @@ export async function POST(request: NextRequest) {
         if (lambdaConfig && !posterEnabled) {
           const startedAt = Date.now();
           const framesPerLambda = getEffectiveFramesPerLambda(renderProps);
+          const compositionCandidates = compositionCandidatesForId(comp.id);
           console.log('[render:lambda] starting', {
             composition: comp.id,
             target: comp.target,
@@ -425,19 +444,46 @@ export async function POST(request: NextRequest) {
           try {
             const lambdaModule = await new Function('specifier', 'return import(specifier)')('@remotion/lambda');
             const { getRenderProgress, renderMediaOnLambda } = lambdaModule;
-            const render = await renderMediaOnLambda({
-              region: lambdaConfig.region,
-              functionName: lambdaConfig.functionName,
-              serveUrl: lambdaConfig.serveUrl,
-              composition: comp.id,
-              codec: 'h264',
-              imageFormat: 'jpeg',
-              framesPerLambda,
-              concurrencyPerLambda: 1,
-              maxRetries: 2,
-              privacy: 'public',
-              inputProps: renderProps,
-            });
+            let render: { renderId: string; bucketName: string } | null = null;
+            let lambdaComposition = comp.id;
+            let lastMissingCompositionError: unknown = null;
+
+            for (const candidate of compositionCandidates) {
+              try {
+                render = await renderMediaOnLambda({
+                  region: lambdaConfig.region,
+                  functionName: lambdaConfig.functionName,
+                  serveUrl: lambdaConfig.serveUrl,
+                  composition: candidate,
+                  codec: 'h264',
+                  imageFormat: 'jpeg',
+                  framesPerLambda,
+                  concurrencyPerLambda: 1,
+                  maxRetries: 2,
+                  privacy: 'public',
+                  inputProps: renderProps,
+                });
+                lambdaComposition = candidate;
+                break;
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                if (isMissingCompositionError(message) && candidate !== compositionCandidates[compositionCandidates.length - 1]) {
+                  lastMissingCompositionError = error;
+                  console.warn('[render:lambda] composition missing, trying fallback', {
+                    missing: candidate,
+                    next: compositionCandidates[compositionCandidates.indexOf(candidate) + 1],
+                  });
+                  continue;
+                }
+                throw error;
+              }
+            }
+
+            if (!render) {
+              throw lastMissingCompositionError instanceof Error
+                ? lastMissingCompositionError
+                : new Error(`Não foi possível iniciar o render da composição ${comp.id}`);
+            }
 
             let lastLoggedProgress = -1;
             while (Date.now() - startedAt < LAMBDA_MAX_WAIT_MS) {
@@ -455,7 +501,7 @@ export async function POST(request: NextRequest) {
                 lastLoggedProgress = pct;
                 console.log('[render:lambda] progress', {
                   renderId: render.renderId,
-                  composition: comp.id,
+                  composition: lambdaComposition,
                   progress: pct,
                   done: progress.done,
                 });

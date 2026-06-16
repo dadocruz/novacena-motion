@@ -36,6 +36,15 @@ const COMPOSITION_MAP: Record<string, string> = {
   'spotify_print:feed': 'SpotifyPrintFeed',
 };
 
+const LEGACY_COMPOSITION_FALLBACKS: Record<string, string[]> = {
+  youtube_subscribe: ['WatchOnYouTube'],
+  'youtube_subscribe:feed': ['WatchOnYouTubeFeed'],
+  youtube_views: ['Milestone', 'WatchOnYouTube'],
+  'youtube_views:feed': ['MilestoneFeed', 'WatchOnYouTubeFeed'],
+  listen_deezer: ['OutNow'],
+  'listen_deezer:feed': ['OutNowFeed'],
+};
+
 const LAMBDA_START_RETRY_DELAYS_MS = [2500, 7500, 15000];
 
 function wait(ms: number) {
@@ -44,6 +53,17 @@ function wait(ms: number) {
 
 function isLambdaCapacityError(message: string) {
   return /rate exceeded|concurrency|quota|ConcurrentInvocationLimitExceeded|TooManyRequestsException|too many requests/i.test(message);
+}
+
+function isMissingCompositionError(message: string) {
+  return /Could not find composition with ID|No composition with id|Composition .* not found/i.test(message);
+}
+
+function compositionCandidatesFor(compositionKey: string) {
+  const primary = COMPOSITION_MAP[compositionKey];
+  if (!primary) return [];
+  return [primary, ...(LEGACY_COMPOSITION_FALLBACKS[compositionKey] ?? [])]
+    .filter((composition, index, list) => list.indexOf(composition) === index);
 }
 
 function maxWorkersPerRender(accountConcurrencyLimit: number) {
@@ -226,13 +246,14 @@ export async function POST(req: NextRequest) {
     };
 
     const compositionKey = target === 'feed' ? `${template}:feed` : template;
-    const composition = COMPOSITION_MAP[compositionKey];
-    if (!composition) {
+    const compositionCandidates = compositionCandidatesFor(compositionKey);
+    if (compositionCandidates.length === 0) {
       return NextResponse.json(
         { ok: false, error: `Template desconhecido: ${compositionKey}` },
         { status: 400 }
       );
     }
+    const primaryComposition = compositionCandidates[0];
 
     const region = process.env.REMOTION_AWS_REGION || 'us-east-1';
     const functionName = process.env.REMOTION_LAMBDA_FUNCTION_NAME;
@@ -316,21 +337,46 @@ export async function POST(req: NextRequest) {
 
     const { renderMediaOnLambda } = await import('@remotion/lambda/client');
 
-    const result = await startRenderWithCapacityRetry(
-      renderMediaOnLambda,
-      {
-        region: region as 'us-east-1',
-        functionName,
-        serveUrl,
-        composition,
-        codec: 'h264',
-        inputProps: resolvedProps,
-        forceBucketName: bucketName,
-        maxRetries: 2,
-      },
-      totalFrames,
-      optimalFramesPerLambda,
-    );
+    let result: { renderId: string; bucketName: string } | null = null;
+    let composition = primaryComposition;
+    let fallbackFrom: string | undefined;
+    let lastMissingCompositionError: unknown = null;
+
+    for (const candidate of compositionCandidates) {
+      try {
+        result = await startRenderWithCapacityRetry(
+          renderMediaOnLambda,
+          {
+            region: region as 'us-east-1',
+            functionName,
+            serveUrl,
+            composition: candidate,
+            codec: 'h264',
+            inputProps: resolvedProps,
+            forceBucketName: bucketName,
+            maxRetries: 2,
+          },
+          totalFrames,
+          optimalFramesPerLambda,
+        );
+        composition = candidate;
+        fallbackFrom = candidate === primaryComposition ? undefined : primaryComposition;
+        break;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (isMissingCompositionError(message) && candidate !== compositionCandidates[compositionCandidates.length - 1]) {
+          lastMissingCompositionError = error;
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!result) {
+      throw lastMissingCompositionError instanceof Error
+        ? lastMissingCompositionError
+        : new Error(`Não foi possível iniciar o render da composição ${primaryComposition}`);
+    }
 
     await activateLambdaRenderSlot(reservationId, result.renderId, result.bucketName);
 
@@ -345,6 +391,7 @@ export async function POST(req: NextRequest) {
       renderId: result.renderId,
       bucketName: result.bucketName,
       composition,
+      fallbackFrom,
     });
   } catch (err) {
     if (reservationId) {

@@ -2581,13 +2581,20 @@ export default function Home() {
 
 
   // O player só REMONTA (volta pra frame 0) em mudanças ESTRUTURAIS: troca de
-  // template/formato, novo vídeo de fundo, ou restart manual (previewNonce).
+  // template/formato, novo vídeo de fundo, troca de fonte, ou restart manual
+  // (previewNonce). A troca de fonte entra aqui porque o Remotion/Browser pode
+  // manter a face antiga carregada enquanto só os inputProps mudam.
   // Transições, textInFrames e coverMotion fluem por inputProps (motion memo) e
   // atualizam o preview AO VIVO — não entram aqui, senão editar qualquer um
   // desses (ou undo/redo / aplicar preset) jogava o player de volta pra 0.
   const playerRemountKey = [
     template,
     target,
+    fontHeadline,
+    fontDate,
+    fontCta,
+    fontCta1,
+    fontCta2,
     previewNonce,
     showCover,
     effectivePreviewBgVideoSrc,
