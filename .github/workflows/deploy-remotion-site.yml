@@ -2,6 +2,17 @@ name: Deploy Remotion Lambda Site
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/render-cloud-lambda
+    paths:
+      - .github/workflows/deploy-remotion-site.yml
+      - Dockerfile
+      - package.json
+      - package-lock.json
+      - remotion/**
+      - remotion-entry/**
+      - lib/fontCatalog.ts
 
 env:
   SERVICE: novacena-motion
