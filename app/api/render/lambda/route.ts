@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { consumeUserTokens, getSaasUserById, SAAS_COOKIE_NAME, verifySessionToken } from '../../../../lib/saasUsers';
+import { getSaasUserById, SAAS_COOKIE_NAME, verifySessionToken } from '../../../../lib/saasUsers';
 import { cleanupTransientFiles } from '../../../../lib/transientCleanup';
 import {
   activateLambdaRenderSlot,
@@ -427,11 +427,7 @@ export async function POST(req: NextRequest) {
         : new Error(`Não foi possível iniciar o render da composição ${primaryComposition}`);
     }
 
-    await activateLambdaRenderSlot(reservationId, result.renderId, result.bucketName);
-
-    if (saasUserId) {
-      await consumeUserTokens(saasUserId, 1);
-    }
+    await activateLambdaRenderSlot(reservationId, result.renderId, result.bucketName, saasUserId);
 
     cleanupTransientFiles().catch(() => {});
 

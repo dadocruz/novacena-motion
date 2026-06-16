@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { heartbeatLambdaRenderSlot, releaseLambdaRenderSlot } from '../../../../../lib/lambdaRenderSlots';
+import {
+  claimLambdaRenderTokenCharge,
+  heartbeatLambdaRenderSlot,
+  releaseLambdaRenderSlot,
+} from '../../../../../lib/lambdaRenderSlots';
+import { consumeUserTokens } from '../../../../../lib/saasUsers';
 
 export const runtime = 'nodejs';
 
@@ -35,7 +40,13 @@ export async function GET(req: NextRequest) {
       region: region as 'us-east-1',
     });
 
-    if (progress.done || progress.fatalErrorEncountered) {
+    if (progress.done) {
+      const charge = await claimLambdaRenderTokenCharge(renderId, bucket).catch(() => null);
+      if (charge?.saasUserId) {
+        await consumeUserTokens(charge.saasUserId, 1).catch(() => null);
+      }
+      await releaseLambdaRenderSlot({ renderId, bucketName: bucket }).catch(() => {});
+    } else if (progress.fatalErrorEncountered) {
       await releaseLambdaRenderSlot({ renderId, bucketName: bucket }).catch(() => {});
     } else {
       await heartbeatLambdaRenderSlot(renderId, bucket).catch(() => {});
@@ -52,6 +63,7 @@ export async function GET(req: NextRequest) {
       ),
     });
   } catch (err) {
+    await releaseLambdaRenderSlot({ renderId, bucketName: bucket }).catch(() => {});
     const message = err instanceof Error ? err.message : 'Erro ao consultar progresso';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }

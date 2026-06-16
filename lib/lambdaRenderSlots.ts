@@ -7,6 +7,8 @@ type LambdaRenderSlot = {
   reservationId: string;
   renderId?: string;
   bucketName?: string;
+  saasUserId?: string;
+  tokenChargedAt?: number;
   status: 'starting' | 'rendering';
   startedAt: number;
   updatedAt: number;
@@ -14,7 +16,7 @@ type LambdaRenderSlot = {
 
 const STATE_DIR = path.join(tmpdir(), 'novacena-motion');
 const STATE_FILE = path.join(STATE_DIR, 'lambda-render-slots.json');
-const SLOT_TTL_MS = Number(process.env.NOVACENA_LAMBDA_SLOT_TTL_MS || 20 * 60 * 1000);
+const SLOT_TTL_MS = Number(process.env.NOVACENA_LAMBDA_SLOT_TTL_MS || 2 * 60 * 1000);
 
 let mutex: Promise<void> = Promise.resolve();
 
@@ -98,7 +100,12 @@ export async function reserveLambdaRenderSlot() {
   });
 }
 
-export async function activateLambdaRenderSlot(reservationId: string, renderId: string, bucketName: string) {
+export async function activateLambdaRenderSlot(
+  reservationId: string,
+  renderId: string,
+  bucketName: string,
+  saasUserId?: string | null,
+) {
   await withStateLock(async () => {
     const slots = await readSlotsUnlocked();
     const index = slots.findIndex((slot) => slot.reservationId === reservationId);
@@ -106,6 +113,8 @@ export async function activateLambdaRenderSlot(reservationId: string, renderId: 
       reservationId,
       renderId,
       bucketName,
+      saasUserId: saasUserId ?? slots[index]?.saasUserId,
+      tokenChargedAt: slots[index]?.tokenChargedAt,
       status: 'rendering',
       startedAt: index >= 0 ? slots[index].startedAt : Date.now(),
       updatedAt: Date.now(),
@@ -118,6 +127,27 @@ export async function activateLambdaRenderSlot(reservationId: string, renderId: 
     }
 
     await writeSlotsUnlocked(slots);
+  });
+}
+
+export async function claimLambdaRenderTokenCharge(renderId: string, bucketName: string) {
+  return withStateLock(async () => {
+    const slots = await readSlotsUnlocked();
+    const index = slots.findIndex((slot) => slot.renderId === renderId && slot.bucketName === bucketName);
+    if (index < 0) return null;
+
+    const slot = slots[index];
+    if (!slot.saasUserId || slot.tokenChargedAt) return null;
+
+    slots[index] = { ...slot, tokenChargedAt: Date.now(), updatedAt: Date.now() };
+    await writeSlotsUnlocked(slots);
+
+    return {
+      reservationId: slot.reservationId,
+      renderId: slot.renderId,
+      bucketName: slot.bucketName,
+      saasUserId: slot.saasUserId,
+    };
   });
 }
 
