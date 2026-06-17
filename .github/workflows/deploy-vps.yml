@@ -44,6 +44,8 @@ jobs:
           build-args: |
             NEXT_PUBLIC_NOVACENA_SAAS_MODE=1
             NEXT_PUBLIC_GTM_ID=${{ vars.NEXT_PUBLIC_GTM_ID || 'GTM-P4RX9S2X' }}
+            NEXT_PUBLIC_WHATSAPP_PHONE=${{ vars.NEXT_PUBLIC_WHATSAPP_PHONE || '5519993941536' }}
+            NEXT_PUBLIC_WHATSAPP_MESSAGE=${{ vars.NEXT_PUBLIC_WHATSAPP_MESSAGE || 'Olá! Vim pelo site NovaCena Motion e tenho interesse em criar motions para lançamentos musicais. Origem: site_motion_google_ads' }}
 
       - name: Deploy to VPS
         id: deploy1

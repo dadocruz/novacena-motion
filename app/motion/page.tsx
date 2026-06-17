@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle, type SaasPlan } from '../../lib/saasPlans';
-import { trackEvent, trackSelectPlan } from '../../src/lib/tracking';
+import { trackEvent, trackSelectPlan, trackWhatsAppClick } from '../../src/lib/tracking';
+import { buildWhatsAppUrl, type WhatsAppCtaLocation } from '../../src/lib/whatsapp';
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -84,6 +85,10 @@ function trackTrialClick() {
 
 function trackPlanClick(plan: SaasPlan, cycle: BillingCycle) {
   trackSelectPlan(plan.id, planPrice(plan, cycle));
+}
+
+function trackMotionWhatsApp(location: WhatsAppCtaLocation) {
+  trackWhatsAppClick(location);
 }
 
 /* ── Dual-row auto-scroll hook ───────────────────────── */
@@ -179,6 +184,15 @@ export default function SalesPage() {
     () => BILLING_CYCLES.find((item) => item.id === cycle) ?? BILLING_CYCLES[0],
     [cycle],
   );
+  const whatsappUrls = useMemo(
+    () => ({
+      header: buildWhatsAppUrl('header'),
+      hero: buildWhatsAppUrl('hero'),
+      pricing: buildWhatsAppUrl('pricing'),
+      floating: buildWhatsAppUrl('floating'),
+    }),
+    [],
+  );
   const months = selectedCycle.multiplier;
 
   // Menor custo por render entre os planos (gatilho "faça as contas").
@@ -227,6 +241,18 @@ export default function SalesPage() {
           )}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {isMobile && <a href="/login" style={navItemMobile}>Entrar</a>}
+            {!isMobile && (
+              <a
+                href={whatsappUrls.header}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-track-manual-whatsapp="true"
+                onClick={() => trackMotionWhatsApp('header')}
+                style={navWhatsapp}
+              >
+                Falar com especialista
+              </a>
+            )}
             <a href={CTA_URL} onClick={trackTrialClick} style={isMobile ? navCtaMobile : navCta}>
               {isMobile ? 'Teste grátis ↗' : 'Teste gratuitamente ↗'}
             </a>
@@ -251,6 +277,16 @@ export default function SalesPage() {
           <p style={heroSub}>{content.heroSubtitle}</p>
           <div style={heroBtns}>
             <a href={CTA_URL} onClick={trackTrialClick} style={btnPrimary}>Testar grátis agora →</a>
+            <a
+              href={whatsappUrls.hero}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-track-manual-whatsapp="true"
+              onClick={() => trackMotionWhatsApp('hero')}
+              style={btnWhatsApp}
+            >
+              Quero ajuda para criar meu motion
+            </a>
             <a href="#planos" style={btnGhost}>Ver planos</a>
           </div>
           <p style={trustLine}>{content.trustLine}</p>
@@ -710,6 +746,16 @@ export default function SalesPage() {
         <p style={guaranteeLine}>
           {'✓ Cancele quando quiser  ·  ✓ Sem fidelidade  ·  ✓ Comece pelo celular, edite no computador'}
         </p>
+        <a
+          href={whatsappUrls.pricing}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-track-manual-whatsapp="true"
+          onClick={() => trackMotionWhatsApp('pricing')}
+          style={pricingWhatsapp}
+        >
+          Tirar dúvida no WhatsApp
+        </a>
       </section>
 
       {/* ── FAQ ────────────────────────────────────── */}
@@ -809,6 +855,16 @@ export default function SalesPage() {
       </footer>
 
       {/* ── CTA fixo mobile (quem vem do anúncio) ───── */}
+      <a
+        href={whatsappUrls.floating}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-track-manual-whatsapp="true"
+        onClick={() => trackMotionWhatsApp('floating')}
+        style={isMobile ? floatingWhatsappMobile : floatingWhatsapp}
+      >
+        WhatsApp
+      </a>
       {isMobile && <div style={{ height: 84 }} />}
       {isMobile && (
         <div style={stickyCtaBar}>
@@ -846,6 +902,7 @@ const sectionZ: CSSProperties = { position: 'relative', zIndex: 1 };
 const navLogo: CSSProperties = { color: '#fff', textDecoration: 'none', fontWeight: 800, fontSize: 17, letterSpacing: '-0.02em' };
 const navPill: CSSProperties = { display: 'flex', gap: 2, padding: '5px 6px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' };
 const navItem: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 14, fontWeight: 600, padding: '7px 16px', borderRadius: 999 };
+const navWhatsapp: CSSProperties = { color: '#c7ffde', textDecoration: 'none', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 999, padding: '8px 16px', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap' };
 const navCta: CSSProperties = { color: '#000', textDecoration: 'none', background: '#fff', borderRadius: 999, padding: '8px 20px', fontWeight: 700, fontSize: 14 };
 const navCtaMobile: CSSProperties = { ...navCta, padding: '7px 14px', fontSize: 13 };
 const navItemMobile: CSSProperties = { color: 'rgba(255,255,255,0.5)', textDecoration: 'none', fontSize: 13, fontWeight: 600 };
@@ -863,6 +920,7 @@ const subMuted: CSSProperties = { margin: 0, fontSize: 17, color: 'rgba(255,255,
 const subCenter: CSSProperties = { ...subMuted, textAlign: 'center' };
 const sect: CSSProperties = { width: W, margin: '0 auto', padding: '120px 0', display: 'grid', gap: 24, borderTop: '1px solid rgba(255,255,255,0.06)' };
 const btnPrimary: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 32px', borderRadius: 999, background: '#fff', color: '#000', textDecoration: 'none', fontWeight: 700, fontSize: 15 };
+const btnWhatsApp: CSSProperties = { ...btnPrimary, background: '#22c55e', color: '#04130a', boxShadow: '0 12px 34px rgba(34,197,94,0.18)' };
 const btnGhost: CSSProperties = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 52, padding: '0 32px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', textDecoration: 'none', fontWeight: 600, fontSize: 15 };
 const trustLine: CSSProperties = { margin: 0, fontFamily: MONO, fontSize: 13, color: 'rgba(255,255,255,0.25)' };
 const trustLineCenter: CSSProperties = { ...trustLine, textAlign: 'center' };
@@ -1056,6 +1114,7 @@ const costPerHero: CSSProperties = { fontSize: 13, color: 'rgba(255,255,255,0.55
 /* ── Pricing extras ── */
 const planPerRender: CSSProperties = { fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.45)' };
 const guaranteeLine: CSSProperties = { margin: '8px 0 0', textAlign: 'center', fontFamily: MONO, fontSize: 12, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.02em' };
+const pricingWhatsapp: CSSProperties = { justifySelf: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 46, padding: '0 24px', borderRadius: 999, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#c7ffde', textDecoration: 'none', fontWeight: 800, fontSize: 14 };
 
 /* ── Duas opções ── */
 const choiceGrid: CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginTop: 16 };
@@ -1073,3 +1132,5 @@ const stickyCtaInfo: CSSProperties = { display: 'grid', gap: 1, minWidth: 0 };
 const stickyCtaTitle: CSSProperties = { fontSize: 14, fontWeight: 800, color: '#fff' };
 const stickyCtaSub: CSSProperties = { fontSize: 11, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 const stickyCtaBtn: CSSProperties = { flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 46, padding: '0 24px', borderRadius: 999, background: ACCENT, color: '#000', textDecoration: 'none', fontWeight: 800, fontSize: 15 };
+const floatingWhatsapp: CSSProperties = { position: 'fixed', right: 22, bottom: 22, zIndex: 140, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 42, padding: '0 18px', borderRadius: 999, background: 'rgba(34,197,94,0.92)', color: '#031108', textDecoration: 'none', fontWeight: 900, fontSize: 13, boxShadow: '0 18px 45px rgba(0,0,0,0.35), 0 0 32px rgba(34,197,94,0.18)' };
+const floatingWhatsappMobile: CSSProperties = { ...floatingWhatsapp, right: 14, bottom: 82, height: 38, padding: '0 14px', fontSize: 12 };

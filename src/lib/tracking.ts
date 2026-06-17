@@ -6,9 +6,9 @@ declare global {
   }
 }
 
-function currentPagePath() {
+function currentPathname() {
   if (typeof window === 'undefined') return '';
-  return `${window.location.pathname}${window.location.search}`;
+  return window.location.pathname;
 }
 
 function pushDataLayer(eventName: string, params: TrackingParams = {}) {
@@ -37,7 +37,7 @@ export function trackEvent(eventName: string, params: TrackingParams = {}) {
 export function trackWhatsAppClick(location: string) {
   trackEvent('nc_whatsapp_click', {
     location,
-    page_path: currentPagePath(),
+    page_path: currentPathname(),
   });
 }
 

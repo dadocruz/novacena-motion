@@ -16,6 +16,7 @@ export default function GoogleTagManager() {
       const target = event.target as Element | null;
       const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
       if (!anchor || !isWhatsAppHref(anchor.href)) return;
+      if (anchor.dataset.trackManualWhatsapp === 'true') return;
 
       const location =
         anchor.dataset.trackingLocation ||
