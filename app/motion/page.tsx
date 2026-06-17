@@ -179,6 +179,7 @@ export default function SalesPage() {
   const topRow = reviews.slice(0, Math.ceil(reviews.length / 2));
   const bottomRow = reviews.slice(Math.ceil(reviews.length / 2));
   const activeVideos = content.testimonialVideos.filter((v) => v.youtubeId);
+  const showVideoTestimonials = activeVideos.length > 0;
 
   const selectedCycle = useMemo(
     () => BILLING_CYCLES.find((item) => item.id === cycle) ?? BILLING_CYCLES[0],
@@ -629,16 +630,16 @@ export default function SalesPage() {
       </section>
 
       {/* ── Video testimonials carousel ────────────── */}
-      <section style={videoCarouselSect}>
-        <div style={tag}>{'// NO YOUTUBE'}</div>
-        <h2 style={h2}>
-          Quem usa a NovaCena{' '}
-          <em style={emCyan}>mostra o resultado</em>.
-        </h2>
-        <div ref={videoCarouselRef} style={vidCarousel}>
-          <div style={vidCarouselTrack}>
-            {activeVideos.length > 0 ? (
-              [...activeVideos, ...activeVideos].map((v, i) => (
+      {showVideoTestimonials && (
+        <section style={videoCarouselSect}>
+          <div style={tag}>{'// NO YOUTUBE'}</div>
+          <h2 style={h2}>
+            Quem usa a NovaCena{' '}
+            <em style={emCyan}>mostra o resultado</em>.
+          </h2>
+          <div ref={videoCarouselRef} style={vidCarousel}>
+            <div style={vidCarouselTrack}>
+              {[...activeVideos, ...activeVideos].map((v, i) => (
                 <a
                   key={`${v.youtubeId}-${i}`}
                   href={`https://www.youtube.com/watch?v=${v.youtubeId}`}
@@ -651,21 +652,11 @@ export default function SalesPage() {
                   <div style={vidLabel}>{v.label}</div>
                   <div style={vidYt}>ASSISTIR NO YOUTUBE</div>
                 </a>
-              ))
-            ) : (
-              [1, 2, 3, 4].map((i) => (
-                <div key={`ph-${i}`} style={vidCard}>
-                  <div style={vidPlaceholder}>
-                    <div style={vidPlay}>▶</div>
-                  </div>
-                  <div style={vidLabel}>Em breve</div>
-                  <div style={vidYt}>VÍDEO DE DEPOIMENTO</div>
-                </div>
-              ))
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── CTA Banner 3 ──────────────────────────── */}
       <section style={ctaBanner}>
@@ -1024,7 +1015,6 @@ const vidOverlay: CSSProperties = { position: 'absolute', top: 0, left: 0, right
 const vidPlay: CSSProperties = { width: 48, height: 48, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'grid', placeItems: 'center', fontSize: 18, color: '#fff', backdropFilter: 'blur(8px)' };
 const vidLabel: CSSProperties = { padding: '12px 16px 4px', fontSize: 14, fontWeight: 600, color: '#fff' };
 const vidYt: CSSProperties = { padding: '0 16px 14px', fontFamily: MONO, fontSize: 11, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.06em' };
-const vidPlaceholder: CSSProperties = { width: '100%', aspectRatio: '16 / 9', background: 'linear-gradient(135deg, rgba(123,147,255,0.06), rgba(123,147,255,0.02))', display: 'grid', placeItems: 'center' };
 
 /* ── Pricing ── */
 const cycleRow: CSSProperties = { display: 'inline-flex', gap: 4, padding: 4, borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', justifySelf: 'center' };
