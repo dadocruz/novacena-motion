@@ -24,6 +24,8 @@ function isPublicPath(req: NextRequest) {
   if (pathname.startsWith('/api/catalog/approval/')) return true;
   // capa/áudio do lançamento pro artista ouvir sem conta (nomes com hash aleatório)
   if (pathname.startsWith('/api/uploads/catalog/')) return true;
+  // vídeos da vitrine pública da landing /motion
+  if (pathname.startsWith('/api/uploads/site/')) return true;
   if (pathname === '/api/health') return true;
   if (pathname === '/api/fonts/css') return true;
   if (pathname === '/api/site-content' && req.method === 'GET') return true;
