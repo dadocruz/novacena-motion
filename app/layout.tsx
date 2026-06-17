@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './fonts.css';
 import CookieConsent from './components/CookieConsent';
-import MarketingTags from './components/MarketingTags';
+import GoogleTagManager from './components/GoogleTagManager';
 import AntiInspect from './components/AntiInspect';
 
 const BASE_URL = 'https://www.estudionovacena.com';
@@ -101,7 +101,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <MarketingTags />
+        <GoogleTagManager />
         <AntiInspect />
         {children}
         <CookieConsent />

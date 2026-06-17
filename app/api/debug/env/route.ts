@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     NOVACENA_ADMIN_TOKEN: mask(process.env.NOVACENA_ADMIN_TOKEN),
     GEMINI_API_KEY: mask(process.env.GEMINI_API_KEY),
     NEXT_PUBLIC_NOVACENA_SAAS_MODE: process.env.NEXT_PUBLIC_NOVACENA_SAAS_MODE ?? null,
-    NEXT_PUBLIC_MOTION_META_PIXEL_ID: process.env.NEXT_PUBLIC_MOTION_META_PIXEL_ID ?? null,
+    NEXT_PUBLIC_GTM_ID: process.env.NEXT_PUBLIC_GTM_ID ?? null,
   };
 
   return NextResponse.json({ ok: true, env });

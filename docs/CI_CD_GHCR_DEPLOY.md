@@ -37,10 +37,7 @@ O `GITHUB_TOKEN` do workflow já publica a imagem no GHCR. O `GHCR_TOKEN` é usa
 Crie em `Settings > Secrets and variables > Actions > Variables` se quiser compilar tags de marketing:
 
 ```txt
-NEXT_PUBLIC_MOTION_META_PIXEL_ID=1640871190359011
-NEXT_PUBLIC_MOTION_GTM_ID=
-NEXT_PUBLIC_MOTION_GA_ID=
-NEXT_PUBLIC_MOTION_GOOGLE_ADS_ID=
+NEXT_PUBLIC_GTM_ID=GTM-P4RX9S2X
 ```
 
 ## Preparação única na VPS

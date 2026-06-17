@@ -151,7 +151,14 @@ import {
   ToggleRow,
   FontPicker,
 } from '../../components/editor';
-import { trackMarketingEvent } from '../../lib/marketingEvents';
+import {
+  trackBeginCheckout,
+  trackDownloadClicked,
+  trackPurchase,
+  trackRenderCompleted,
+  trackRenderStarted,
+  trackSelectPlan,
+} from '../../src/lib/tracking';
 
 type RenderEngine = 'desktop' | 'local' | 'lambda';
 
@@ -871,19 +878,19 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [renderJobId]);
 
-  // ── Conversão de COMPRA (Meta Pixel + GTM/Google Ads) ──────────────
-  // Dispara Purchase com valor quando o checkout volta com sucesso. Limpa os
-  // params logo em seguida pra não disparar de novo num refresh.
+  // ── Conversão de COMPRA (via GTM/dataLayer) ──────────────
+  // Dispara somente quando o checkout volta com sucesso. Limpa os params logo
+  // em seguida para não disparar de novo num refresh.
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('checkout') !== 'success') return;
     const value = Number(params.get('value') || 0) || undefined;
-    const currency = params.get('currency') || 'BRL';
-    const plan = params.get('plan') || undefined;
-    trackMarketingEvent('Purchase', { value, currency, content_name: plan, content_type: 'product' });
+    const plan = params.get('plan') || 'unknown';
+    const transactionId = params.get('session_id') || `checkout-${Date.now()}`;
+    trackPurchase(transactionId, plan, value || 0);
     const url = new URL(window.location.href);
-    ['checkout', 'value', 'currency', 'plan'].forEach((k) => url.searchParams.delete(k));
+    ['checkout', 'value', 'currency', 'plan', 'session_id'].forEach((k) => url.searchParams.delete(k));
     window.history.replaceState({}, '', url.toString());
   }, []);
 
@@ -6124,6 +6131,7 @@ export default function Home() {
     setRenderStatus('rendering');
     setLambdaOutputUrl(null);
     setRenderMessage(`Preparando ${label}…`);
+    trackRenderStarted(trackingUserPlan(), template);
     try {
       const optimizedPatch = await ensureBackgroundVideoReadyForExport();
       if (optimizedPatch === false) return;
@@ -6155,6 +6163,7 @@ export default function Home() {
         setLambdaOutputUrl(result.outputFile);
       }
       setRenderMessage(result.provider === 'lambda' ? `${label} gerado no Lambda. ✓` : `${label} gerado. ✓`);
+      trackRenderCompleted(trackingUserPlan(), template);
       // Atualizar lista de arquivos disponíveis para download
       fetch('/api/render-files').then(r => r.json()).then(d => setRenderFiles(d.files ?? []));
     } catch (error) {
@@ -6280,6 +6289,10 @@ export default function Home() {
   }
 
   async function chooseUpgradePlan(planId: string) {
+    const selectedPlan = SAAS_PLANS.find((plan) => plan.id === planId);
+    const value = selectedPlan ? planPrice(selectedPlan, upgradeCycle) : 0;
+    trackSelectPlan(planId, value);
+    trackBeginCheckout(planId, value);
     setLoadingUpgradePlan(planId);
     setUpgradeMessage('');
     setUpgradePixPayment(null);
@@ -6313,6 +6326,14 @@ export default function Home() {
     } finally {
       setLoadingUpgradePlan(null);
     }
+  }
+
+  function trackingUserPlan() {
+    return saasUser?.planId || 'free';
+  }
+
+  function trackCurrentDownload() {
+    trackDownloadClicked(trackingUserPlan());
   }
 
   async function renderLambda(label: string) {
@@ -6356,6 +6377,7 @@ export default function Home() {
       }
 
       const { renderId, bucketName } = startData;
+      trackRenderStarted(trackingUserPlan(), template);
       setRenderMessage(SAAS_EXPORT_MODE ? `Exportação iniciada (${renderId.slice(0, 8)}…)` : `☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
 
       // Poll progress
@@ -6399,6 +6421,7 @@ export default function Home() {
           setRenderMessage(SAAS_EXPORT_MODE ? `${label} exportado em ${totalTime}s ✓` : `☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
           setRenderStatus('done');
           setRenderProgress(100);
+          trackRenderCompleted(trackingUserPlan(), template);
           if (SAAS_EXPORT_MODE) {
             fetch('/api/auth/me')
               .then((response) => response.json())
@@ -7666,7 +7689,7 @@ return (
             </button>
           )}
           {lambdaOutputUrl && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && (
-            <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
+            <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer" onClick={trackCurrentDownload} style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block' }}>
               {SAAS_EXPORT_MODE ? 'Baixar vídeo' : 'Baixar vídeo Lambda'}
             </a>
           )}
@@ -8000,6 +8023,7 @@ return (
               )}
               {lambdaOutputUrl && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && (
                 <a href={lambdaOutputUrl} target="_blank" rel="noopener noreferrer"
+                  onClick={trackCurrentDownload}
                   style={{ ...ghostBtnStyle, textAlign: 'center', textDecoration: 'none', display: 'block', color: '#f97316' }}>
                   {SAAS_EXPORT_MODE ? 'Baixar vídeo' : 'Baixar vídeo Lambda'}
                 </a>
@@ -8024,6 +8048,7 @@ return (
                 href={lambdaOutputUrl}
                 target="_blank"
                 rel="noreferrer"
+                onClick={trackCurrentDownload}
                 style={downloadVideoWideBtnStyle}
               >
                 {SAAS_EXPORT_MODE ? 'Abrir vídeo' : 'Abrir vídeo renderizado'}
@@ -8033,6 +8058,7 @@ return (
               <a
                 href={`/api/render-files?file=${encodeURIComponent(renderFiles[0].name)}`}
                 download={renderFiles[0].name}
+                onClick={trackCurrentDownload}
                 style={downloadVideoWideBtnStyle}
               >
                 Baixar vídeo
@@ -8099,6 +8125,7 @@ return (
                       <a
                         href={`/api/render-files?file=${encodeURIComponent(f.name)}`}
                         download={f.name}
+                        onClick={trackCurrentDownload}
                         style={{
                           display: 'flex',
                           alignItems: 'center',

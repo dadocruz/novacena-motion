@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { BILLING_CYCLES, planPrice, SAAS_PLANS, type BillingCycle, type SaasPlan } from '../../lib/saasPlans';
-import { trackMarketingEvent } from '../../lib/marketingEvents';
+import { trackEvent, trackSelectPlan } from '../../src/lib/tracking';
 
 function formatBRL(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -79,19 +79,11 @@ const SHOWCASE_PLACEHOLDERS = [
 const AVATAR_COLORS = ['#7B93FF', '#E06C6C', '#5BBF8A', '#F5A55B', '#B07BFF'];
 
 function trackTrialClick() {
-  trackMarketingEvent('Lead', {
-    content_name: 'NovaCena Motion trial',
-    content_category: 'signup',
-  });
+  // Intentionally no conversion event here: sign-up is tracked only after account creation.
 }
 
 function trackPlanClick(plan: SaasPlan, cycle: BillingCycle) {
-  trackMarketingEvent('InitiateCheckout', {
-    content_name: `NovaCena Motion ${plan.id}`,
-    content_category: 'plan',
-    currency: 'BRL',
-    value: planPrice(plan, cycle),
-  });
+  trackSelectPlan(plan.id, planPrice(plan, cycle));
 }
 
 /* ── Dual-row auto-scroll hook ───────────────────────── */
@@ -158,6 +150,16 @@ export default function SalesPage() {
   const { topRef, bottomRef } = useDualScroll(0.4);
   const videoCarouselRef = useAutoScroll(0.4);
   const isMobile = useIsMobile();
+  const motionViewTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (motionViewTrackedRef.current) return;
+    motionViewTrackedRef.current = true;
+    trackEvent('nc_view_motion_landing', {
+      page_path: window.location.pathname,
+      page_title: document.title || 'NovaCena Motion',
+    });
+  }, []);
 
   // Fetch CMS content
   useEffect(() => {
@@ -791,10 +793,7 @@ export default function SalesPage() {
           <div style={footerCol}>
             <div style={footerColTitle}>CONTA</div>
             <a href="/login" style={footerLink}>Entrar</a>
-            <a href={CTA_BILLING} onClick={() => trackMarketingEvent('InitiateCheckout', {
-              content_name: 'NovaCena Motion footer',
-              content_category: 'billing',
-            })} style={footerLink}>Comprar renders</a>
+            <a href={CTA_BILLING} style={footerLink}>Comprar renders</a>
           </div>
           <div style={footerCol}>
             <div style={footerColTitle}>LEGAL</div>

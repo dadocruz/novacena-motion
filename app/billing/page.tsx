@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { BillingCycle, SaasPlan } from '../../lib/saasPlans';
+import {
+  trackBeginCheckout,
+  trackPurchase,
+  trackSelectPlan,
+} from '../../src/lib/tracking';
 
 type Cycle = {
   id: BillingCycle;
@@ -70,8 +75,13 @@ export default function BillingPage() {
     if (params.get('status') !== 'success') return;
 
     setCheckoutSucceeded(true);
+    trackPurchase(
+      params.get('session_id') || `billing-${Date.now()}`,
+      params.get('plan') || 'unknown',
+      Number(params.get('value') || 0) || 0
+    );
     const redirect = window.setTimeout(() => {
-      window.location.href = '/estudio?checkout=success';
+      window.location.href = '/estudio';
     }, 1200);
 
     return () => window.clearTimeout(redirect);
@@ -83,6 +93,10 @@ export default function BillingPage() {
   );
 
   async function choosePlan(planId: string) {
+    const plan = plans.find((item) => item.id === planId);
+    const value = plan ? plan.monthlyPriceBRL * (selectedCycle?.multiplier ?? 1) : 0;
+    trackSelectPlan(planId, value);
+    trackBeginCheckout(planId, value);
     setLoadingPlan(planId);
     setMessage('');
     setPixPayment(null);

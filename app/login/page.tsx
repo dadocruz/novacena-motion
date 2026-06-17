@@ -1,6 +1,7 @@
 'use client';
 
 import { type CSSProperties, FormEvent, useEffect, useState } from 'react';
+import { trackSignUp } from '../../src/lib/tracking';
 
 const MONO = '"SF Mono", "Fira Code", Menlo, monospace';
 const SANS = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
@@ -42,6 +43,9 @@ export default function LoginPage() {
       if (!response.ok || !data.ok) {
         setError(data.error || 'Não foi possível entrar.');
         return;
+      }
+      if (mode === 'signup') {
+        trackSignUp('email', typeof data.user?.id === 'string' ? data.user.id : undefined);
       }
       window.location.href = nextPath;
     } catch {
