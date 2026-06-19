@@ -6186,7 +6186,10 @@ export default function Home() {
     if (/media playback|media_element_error|blob:|url safety check|error loading video/i.test(message)) {
       return 'O vídeo do render ainda não está pronto para exportar. Clique em Cortar/otimizar e tente novamente.';
     }
-    if (/concurrency|rate exceeded|quota|timed out|timeout|too many requests/i.test(message)) {
+    if (/timed out|timeout/i.test(message)) {
+      return 'O render demorou mais que o limite e foi interrompido. Tente exportar de novo; se o vídeo for muito longo ou pesado, reduza a duração ou avise o suporte.';
+    }
+    if (/concurrency|rate exceeded|quota|too many requests/i.test(message)) {
       return 'O serviço de exportação está ocupado no momento. Tente novamente em alguns minutos.';
     }
     return message;

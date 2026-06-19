@@ -138,7 +138,10 @@ async function startRenderWithCapacityRetry(
       const canRetry = isLambdaCapacityError(message) && attempt < LAMBDA_START_RETRY_DELAYS_MS.length;
       if (!canRetry) throw error;
 
-      framesPerLambda = Math.max(framesPerLambda, totalFrames);
+      // Capacidade estourou (muitos lambdas concorrentes): reduz a concorrência
+      // dobrando o chunk — mas NUNCA joga tudo num lambda só (totalFrames), que
+      // garantiria timeout. Limitado a metade do total pra manter ≥2 chunks.
+      framesPerLambda = Math.min(Math.ceil(totalFrames / 2), framesPerLambda * 2);
       await wait(LAMBDA_START_RETRY_DELAYS_MS[attempt]);
     }
   }
@@ -377,7 +380,16 @@ export async function POST(req: NextRequest) {
     const totalFrames = Math.ceil(durationSec * 30);
     const concurrencyLimit = Number(process.env.REMOTION_LAMBDA_CONCURRENCY ?? 10);
     const maxWorkers = maxWorkersPerRender(concurrencyLimit);
-    const optimalFramesPerLambda = Math.max(20, Math.ceil(totalFrames / maxWorkers));
+    // Cada chunk precisa caber no timeout da função Lambda (~120s), incluindo
+    // cold start + download dos assets (bg/overlays/capa) por worker. Dividir só
+    // por maxWorkers (=2) gerava ~900 frames/chunk em vídeos de 60s, estourando
+    // o timeout e matando o render em ~40%. Teto de ~150 frames (≈5s) por chunk
+    // resolve e mantém a concorrência saudável. Ajustável por env.
+    const maxFramesPerLambda = Math.max(20, Number(process.env.REMOTION_LAMBDA_MAX_FRAMES_PER_LAMBDA ?? 150));
+    const optimalFramesPerLambda = Math.min(
+      maxFramesPerLambda,
+      Math.max(20, Math.ceil(totalFrames / maxWorkers)),
+    );
 
     const { getCompositionsOnLambda, renderMediaOnLambda } = await import('@remotion/lambda/client');
     const availableCompositionIds = await getAvailableLambdaCompositionIds(
