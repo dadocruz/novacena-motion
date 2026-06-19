@@ -111,9 +111,12 @@ function supportedCompositionCandidates(candidates: string[], availableIds: Set<
 }
 
 function maxWorkersPerRender(accountConcurrencyLimit: number) {
-  const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || 2);
+  // Deixa 2 de folga abaixo do limite da conta (1 p/ a função orquestradora +
+  // 1 de margem). Com limite 10 → 8 workers. Default = esse teto da conta; só
+  // cai pra menos se REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER for definido.
   const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - 2);
-  const appWorkerLimit = Math.max(1, Math.floor(Number.isFinite(configured) ? configured : 2));
+  const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || accountWorkerLimit);
+  const appWorkerLimit = Math.max(1, Math.floor(Number.isFinite(configured) ? configured : accountWorkerLimit));
   return Math.max(1, Math.min(accountWorkerLimit, appWorkerLimit));
 }
 
@@ -380,16 +383,12 @@ export async function POST(req: NextRequest) {
     const totalFrames = Math.ceil(durationSec * 30);
     const concurrencyLimit = Number(process.env.REMOTION_LAMBDA_CONCURRENCY ?? 10);
     const maxWorkers = maxWorkersPerRender(concurrencyLimit);
-    // Cada chunk precisa caber no timeout da função Lambda (~120s), incluindo
-    // cold start + download dos assets (bg/overlays/capa) por worker. Dividir só
-    // por maxWorkers (=2) gerava ~900 frames/chunk em vídeos de 60s, estourando
-    // o timeout e matando o render em ~40%. Teto de ~150 frames (≈5s) por chunk
-    // resolve e mantém a concorrência saudável. Ajustável por env.
-    const maxFramesPerLambda = Math.max(20, Number(process.env.REMOTION_LAMBDA_MAX_FRAMES_PER_LAMBDA ?? 150));
-    const optimalFramesPerLambda = Math.min(
-      maxFramesPerLambda,
-      Math.max(20, Math.ceil(totalFrames / maxWorkers)),
-    );
+    // O nº de chunks = totalFrames / framesPerLambda NUNCA pode passar do limite
+    // de concorrência da conta (10) — senão estoura ConcurrentInvocationLimit e
+    // o render morre com "ocupado". Por isso dividimos por maxWorkers (=8), o que
+    // garante ≤8 chunks simultâneos. A função Lambda é de 900s, então cada chunk
+    // (mesmo grande, ex. 225 frames em vídeo de 60s) cabe folgado no timeout.
+    const optimalFramesPerLambda = Math.max(20, Math.ceil(totalFrames / maxWorkers));
 
     const { getCompositionsOnLambda, renderMediaOnLambda } = await import('@remotion/lambda/client');
     const availableCompositionIds = await getAvailableLambdaCompositionIds(
