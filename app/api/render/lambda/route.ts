@@ -415,6 +415,11 @@ export async function POST(req: NextRequest) {
             inputProps: resolvedProps,
             forceBucketName: bucketName,
             maxRetries: 2,
+            // Timeout do delayRender POR FRAME (padrão 30s é baixo). Overlays de
+            // vídeo no render fazem seek pesado (<Freeze><Video>) e alguns frames
+            // passam de 30s → render morria ~60% com "timeout". 120s dá folga; a
+            // função Lambda é de 900s, então o chunk inteiro ainda cabe.
+            timeoutInMilliseconds: Number(process.env.REMOTION_LAMBDA_FRAME_TIMEOUT_MS || 120000),
           },
           totalFrames,
           optimalFramesPerLambda,

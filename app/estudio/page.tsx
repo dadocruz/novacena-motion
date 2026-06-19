@@ -6383,23 +6383,38 @@ export default function Home() {
       trackRenderStarted(trackingUserPlan(), template);
       setRenderMessage(SAAS_EXPORT_MODE ? `Exportação iniciada (${renderId.slice(0, 8)}…)` : `☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
 
-      // Poll progress
+      // Poll progress. Render pesado pode levar minutos; uma falha transitória
+      // de rede/proxy num único poll NÃO pode matar o export (o Lambda continua
+      // e conclui). Toleramos várias falhas seguidas antes de desistir.
       let done = false;
       const startTime = Date.now();
+      let consecutiveFailures = 0;
+      const MAX_POLL_FAILURES = 12; // ~36s de instabilidade tolerada
       while (!done) {
         await new Promise((r) => setTimeout(r, 3000));
-        const statusRes = await fetch(`/api/render/lambda/status?renderId=${renderId}&bucketName=${bucketName}`);
-        const status = await statusRes.json();
 
-        if (!status.ok) {
-          setRenderMessage(
-            SAAS_EXPORT_MODE
-              ? `Erro ao consultar progresso: ${formatSaasExportError(status.error)}`
-              : `Erro ao consultar progresso: ${status.error}`
-          );
-          setRenderStatus('error');
-          return;
+        let status: { ok?: boolean; error?: string; progress?: number; done?: boolean; outputFile?: string | null; fatalErrorEncountered?: boolean; errors?: string[] } | null = null;
+        try {
+          const statusRes = await fetch(`/api/render/lambda/status?renderId=${renderId}&bucketName=${bucketName}`);
+          status = await statusRes.json();
+        } catch {
+          status = null; // falha de rede/parse — trata como transitória abaixo
         }
+
+        if (!status || !status.ok) {
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= MAX_POLL_FAILURES) {
+            setRenderMessage(
+              'Perdi a conexão com o progresso da exportação, mas o render pode ter concluído. Aguarde um instante e confira seus vídeos — não exporte de novo pra não gastar outro render.'
+            );
+            setRenderStatus('error');
+            return;
+          }
+          const waited = Math.round((Date.now() - startTime) / 1000);
+          setRenderMessage(SAAS_EXPORT_MODE ? `Exportando… (${waited}s, reconectando)` : `☁ Lambda: reconectando (${waited}s)`);
+          continue; // não desiste — tenta o próximo poll
+        }
+        consecutiveFailures = 0; // poll OK: zera o contador
 
         const pct = status.progress ?? 0;
         setRenderProgress(pct);
@@ -6420,7 +6435,7 @@ export default function Home() {
         if (status.done) {
           done = true;
           const totalTime = Math.round((Date.now() - startTime) / 1000);
-          setLambdaOutputUrl(status.outputFile);
+          setLambdaOutputUrl(status.outputFile ?? null);
           setRenderMessage(SAAS_EXPORT_MODE ? `${label} exportado em ${totalTime}s ✓` : `☁ Lambda: ${label} concluído em ${totalTime}s ✓`);
           setRenderStatus('done');
           setRenderProgress(100);
