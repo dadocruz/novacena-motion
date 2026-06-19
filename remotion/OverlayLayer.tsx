@@ -6,6 +6,7 @@ import {
   Freeze,
   Loop,
   Video,
+  OffthreadVideo,
   getRemotionEnvironment,
   interpolate,
   staticFile,
@@ -400,11 +401,17 @@ const FrameControlledVideo: React.FC<{
     mediaFrame = cycleFrame <= lastFrame ? cycleFrame : cycleDuration - cycleFrame;
   }
 
+  // OffthreadVideo extrai o frame exato via ffmpeg — MUITO mais rápido e estável
+  // no Lambda que <Video> (seek HTML5 por frame, que deixava o render ~12min e
+  // estourava o delayRender). transparent=true preserva o alpha dos overlays
+  // .webm (o upload converte os alpha pra -alpha.webm); .mp4 é opaco.
+  const isAlphaOverlay = /\.webm(\?|#|$)/i.test(src);
   return (
     <Freeze frame={mediaFrame}>
-      <Video
+      <OffthreadVideo
         src={src}
         muted
+        transparent={isAlphaOverlay}
         style={style}
       />
     </Freeze>
