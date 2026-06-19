@@ -861,6 +861,27 @@ export default function Home() {
   const [renderJobId, setRenderJobId] = React.useState<string | null>(null);
   const [renderProgress, setRenderProgress] = React.useState(0);
   const [renderStatus, setRenderStatus] = React.useState<'idle'|'rendering'|'done'|'error'>('idle');
+  // Cancelamento do export: ref lido pelo loop de polling; activeRender guarda
+  // renderId/bucket pra liberar a fila na hora ao cancelar.
+  const renderCancelRef = React.useRef(false);
+  const activeLambdaRenderRef = React.useRef<{ renderId: string; bucketName: string } | null>(null);
+
+  async function cancelLambdaRender() {
+    renderCancelRef.current = true;
+    const active = activeLambdaRenderRef.current;
+    setRenderStatus('idle');
+    setRenderProgress(0);
+    setRenderMessage(SAAS_EXPORT_MODE ? 'Exportação cancelada.' : 'Render cancelado.');
+    setRendering(false);
+    if (active) {
+      fetch('/api/render/lambda/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(active),
+      }).catch(() => {});
+      activeLambdaRenderRef.current = null;
+    }
+  }
 
   React.useEffect(() => {
     if (!renderJobId) return;
@@ -3486,7 +3507,16 @@ export default function Home() {
       }
 
       const totalDuration = Number(d.durationSec) || browserDuration || 0;
-      const clipDuration = Math.min(durationSeconds, MAX_BACKGROUND_CLIP_SECONDS);
+      // BG mais curto que a duração da comp: a animação passa a ter o tempo do
+      // vídeo (teaser tem tempo próprio) em vez de sobrar tela preta no fim ou
+      // o BG faltar. Encurta a comp pro tamanho do vídeo (mín 3s). Se o vídeo
+      // for >= a duração atual, mantém (o usuário escolhe um trecho pelo trim).
+      const adaptToShortBg = totalDuration > 0.5 && totalDuration < durationSeconds - 0.2;
+      const effectiveDuration = adaptToShortBg
+        ? Math.max(3, Math.round(totalDuration * 10) / 10)
+        : durationSeconds;
+      if (adaptToShortBg) setDurationSeconds(effectiveDuration);
+      const clipDuration = Math.min(effectiveDuration, MAX_BACKGROUND_CLIP_SECONDS);
       const uploadedWidth = Number(d.width || 0);
       const uploadedHeight = Number(d.height || 0);
       const uploadedSize = Number(d.size || file.size || 0);
@@ -3548,12 +3578,15 @@ export default function Home() {
         : d.previewSkipped
           ? ' Preview local em qualidade original ativado para o upload não travar.'
           : '';
+      const durationNotice = adaptToShortBg
+        ? ` Duração ajustada para ${effectiveDuration}s (tempo do vídeo) — a animação acompanha o teaser.`
+        : '';
       setVideoUploadMsg(
         shouldTrim && needsOnlyOptimization
-          ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
+          ? `Vídeo recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice}${durationNotice} Otimize antes de exportar para gerar um arquivo ${target === 'story' ? '1080×1920' : '1080×1350'} leve.`
           : shouldTrim
             ? `Bruto recebido e aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Escolha o início e clique em Cortar/otimizar antes de exportar.`
-            : `Vídeo pronto aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice} Ajustes visuais liberados.`
+            : `Vídeo pronto aplicado aos templates (${(file.size / 1024 / 1024).toFixed(1)} MB, ${totalDuration.toFixed(1)}s).${previewNotice}${durationNotice} Ajustes visuais liberados.`
       );
     } catch (error) {
       if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
@@ -6340,6 +6373,8 @@ export default function Home() {
   }
 
   async function renderLambda(label: string) {
+    renderCancelRef.current = false;
+    activeLambdaRenderRef.current = null;
     setRendering(true);
     setRenderLog('');
     setRenderProgress(0);
@@ -6380,6 +6415,15 @@ export default function Home() {
       }
 
       const { renderId, bucketName } = startData;
+      // Se o usuário já cancelou antes do start retornar, libera e sai.
+      if (renderCancelRef.current) {
+        fetch('/api/render/lambda/cancel', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ renderId, bucketName }),
+        }).catch(() => {});
+        return;
+      }
+      activeLambdaRenderRef.current = { renderId, bucketName };
       trackRenderStarted(trackingUserPlan(), template);
       setRenderMessage(SAAS_EXPORT_MODE ? `Exportação iniciada (${renderId.slice(0, 8)}…)` : `☁ Lambda: render iniciado (${renderId.slice(0, 8)}…)`);
 
@@ -6392,6 +6436,9 @@ export default function Home() {
       const MAX_POLL_FAILURES = 12; // ~36s de instabilidade tolerada
       while (!done) {
         await new Promise((r) => setTimeout(r, 3000));
+
+        // Usuário cancelou: para de esperar (cancelLambdaRender já liberou a fila).
+        if (renderCancelRef.current) return;
 
         let status: { ok?: boolean; error?: string; progress?: number; done?: boolean; outputFile?: string | null; fatalErrorEncountered?: boolean; errors?: string[] } | null = null;
         try {
@@ -8026,6 +8073,26 @@ return (
                   ? (renderEngine === 'lambda' ? `☁ Renderizando… ${renderProgress}%` : 'Renderizando…')
                   : renderEngine === 'desktop' ? `Exportar pacote ${target}` : renderEngine === 'local' ? `Renderizar no servidor ${target}` : `☁ Renderizar ${target}`)}
               </button>
+              {rendering && (SAAS_EXPORT_MODE || renderEngine === 'lambda') && renderStatus === 'rendering' && (
+                <button
+                  type="button"
+                  onClick={cancelLambdaRender}
+                  style={{
+                    marginTop: 8,
+                    width: '100%',
+                    height: 38,
+                    borderRadius: 10,
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    background: 'rgba(239,68,68,0.10)',
+                    color: '#ef4444',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕ Cancelar exportação
+                </button>
+              )}
               {renderStatus !== 'idle' && (
                 <div style={{ marginTop: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>
