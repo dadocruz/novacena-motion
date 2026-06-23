@@ -707,6 +707,8 @@ export default function Home() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [rendering, setRendering] = useState(false);
+  // Nome do single/título pro nome do arquivo exportado (nomenclatura padrão).
+  const [exportSingleName, setExportSingleName] = useState('');
   const [renderMessage, setRenderMessage] = useState('');
   const [renderLog, setRenderLog] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -6062,6 +6064,26 @@ export default function Home() {
     else setHeadline(value);
   }
 
+  // Nomenclatura padrão do arquivo exportado:
+  // {FEED|STORY} - {TIPO} - {ARTISTA} - {SINGLE}, tudo em CAPSLOCK.
+  // TIPO = headline (LANÇAMENTO / DISPONÍVEL / ASSISTA NO YOUTUBE / ...).
+  // Segmentos vazios são omitidos pra não ficar " -  - ".
+  function buildExportFileName() {
+    const clean = (s: string) =>
+      String(s || '')
+        .replace(/\s*\n\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
+    const tipo = clean(headline);
+    const artista = clean(activeArtist?.name ?? '');
+    const single = clean(exportSingleName);
+    const segments = [target === 'feed' ? 'FEED' : 'STORY', tipo, artista, single].filter(Boolean);
+    // remove caracteres problemáticos pra header/arquivo, preserva espaço e hífen
+    const base = segments.join(' - ').replace(/[\\/:*?"<>|]+/g, '').slice(0, 180) || 'NOVACENA';
+    return `${base}.mp4`;
+  }
+
   function buildRenderInputProps(overrides?: {
     background?: Partial<NonNullable<MotionConfig['background']>>;
   }) {
@@ -6392,7 +6414,7 @@ export default function Home() {
       );
 
       const { response: startRes, data: startData } = await startLambdaExportRequest(
-        { template, target, inputProps },
+        { template, target, inputProps, downloadName: buildExportFileName() },
         label
       );
       if (!startData.ok) {
@@ -8061,6 +8083,24 @@ return (
                   </button>
                 </div>
               )}
+              <div style={{ marginBottom: 8, display: 'grid', gap: 4 }}>
+                <label style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, letterSpacing: 0.3 }}>
+                  NOME DO SINGLE (pro nome do arquivo)
+                </label>
+                <input
+                  value={exportSingleName}
+                  onChange={(e) => setExportSingleName(e.target.value)}
+                  placeholder="Ex: COM OU SEM SAUDADE"
+                  style={{
+                    width: '100%', height: 34, borderRadius: 8, padding: '0 10px',
+                    border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.25)',
+                    color: 'var(--text-1)', fontSize: 12, outline: 'none', boxSizing: 'border-box',
+                  }}
+                />
+                <span style={{ fontSize: 9.5, color: 'var(--text-4)', lineHeight: 1.35 }}>
+                  Arquivo: <strong style={{ color: 'var(--text-2)' }}>{buildExportFileName()}</strong>
+                </span>
+              </div>
               <button
                 disabled={rendering || mediaProcessingBlocksExport}
                 onClick={handleRender}

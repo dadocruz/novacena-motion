@@ -289,11 +289,22 @@ export async function POST(req: NextRequest) {
     cleanupTransientFiles().catch(() => {});
 
     const body = await req.json();
-    const { template, target = 'story', inputProps } = body as {
+    const { template, target = 'story', inputProps, downloadName } = body as {
       template: string;
       target?: 'story' | 'feed';
       inputProps?: Record<string, unknown>;
+      downloadName?: string;
     };
+
+    // Nome do arquivo no download (Content-Disposition no S3). Sanitiza pra um
+    // nome de arquivo seguro mantendo espaços/hífen; sempre termina em .mp4.
+    const safeDownloadName = (() => {
+      const raw = typeof downloadName === 'string' ? downloadName.trim() : '';
+      if (!raw) return undefined;
+      const cleaned = raw.replace(/[\\/:*?"<>|\r\n]+/g, '').slice(0, 200);
+      if (!cleaned) return undefined;
+      return /\.mp4$/i.test(cleaned) ? cleaned : `${cleaned}.mp4`;
+    })();
 
     const compositionKey = target === 'feed' ? `${template}:feed` : template;
     const compositionCandidates = compositionCandidatesFor(compositionKey);
@@ -420,6 +431,12 @@ export async function POST(req: NextRequest) {
             // passam de 30s → render morria ~60% com "timeout". 120s dá folga; a
             // função Lambda é de 900s, então o chunk inteiro ainda cabe.
             timeoutInMilliseconds: Number(process.env.REMOTION_LAMBDA_FRAME_TIMEOUT_MS || 120000),
+            // Nomenclatura padrão: o S3 serve o arquivo já com o nome certo
+            // (FEED - LANÇAMENTO - ARTISTA - SINGLE.mp4) no download — funciona
+            // em cross-origin, ao contrário do atributo download no <a>.
+            ...(safeDownloadName
+              ? { downloadBehavior: { type: 'download' as const, fileName: safeDownloadName } }
+              : {}),
           },
           totalFrames,
           optimalFramesPerLambda,
