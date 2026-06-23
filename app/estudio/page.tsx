@@ -4255,6 +4255,43 @@ export default function Home() {
     }
   }
 
+  // Cria uma camada de TÍTULO (texto livre) com entrada/saída — pra sinalizar
+  // músicas num poupourri, créditos, etc. Aparece na timeline como faixa
+  // (arrastar início/duração) e tem controle total no painel Overlay.
+  function addTextOverlay() {
+    const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const start = Math.max(0, Math.min(Math.round(timelineSec || 0), Math.max(0, durationSeconds - 1)));
+    setOverlays((arr) => [
+      ...arr,
+      {
+        id,
+        src: '',
+        type: 'text' as const,
+        text: 'NOVO TÍTULO',
+        startSec: start,
+        durationSec: Math.min(3, Math.max(1, durationSeconds - start)),
+        opacity: 1,
+        blendMode: 'normal',
+        layout: 'cover',
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotate: 0,
+        fontSizePx: 96,
+        fontColor: '#ffffff',
+        fontWeight: 800,
+        textAlign: 'center',
+        textShadow: true,
+        entryTransition: 'slide-up',
+        entryDurationFrames: 14,
+        exitTransition: 'fade',
+        exitDurationFrames: 12,
+      } as OverlayPlacement,
+    ]);
+    setSelectedOverlayId(id);
+    selectStudioTool('overlay');
+  }
+
   async function deleteOverlayAsset(id: string) {
     if (!confirm('Remover esse overlay da biblioteca? (Instâncias já no projeto continuam.)')) return;
     await fetch(`/api/upload-overlay?id=${id}`, { method: 'DELETE' });
@@ -5742,7 +5779,7 @@ export default function Home() {
       const ovDur = ov.durationSec && ov.durationSec > 0 ? ov.durationSec : Math.max(0.2, dur - start);
       tracks.push({
         id: `ov-${ov.id}`,
-        label: ov.label ? `▦ ${ov.label}` : `Overlay ${i + 1}`,
+        label: ov.type === 'text' ? `🔤 ${ov.text || 'Título'}` : ov.label ? `▦ ${ov.label}` : `Overlay ${i + 1}`,
         color: '#22d3ee',
         startSec: start,
         endSec: Math.min(dur, start + ovDur),
@@ -8651,6 +8688,13 @@ return (
 
             <div data-right-panel-section="Overlay" style={{ marginTop: 12, scrollMarginTop: 78 }}>
               <div style={miniLabel}>Overlays / elementos livres</div>
+              <button
+                onClick={addTextOverlay}
+                style={{ ...dashedUpload, marginBottom: 8, borderColor: 'rgba(168,85,247,0.5)', color: 'var(--text-1)' }}
+                title="Cria uma camada de título/texto com entrada e saída — pra sinalizar músicas num poupourri, créditos, etc."
+              >
+                + Camada de título (texto)
+              </button>
               <button
                 onClick={() => overlayInputRef.current?.click()}
                 style={{ ...dashedUpload, opacity: uploadingOverlay ? 0.72 : 1, cursor: uploadingOverlay ? 'wait' : 'pointer' }}

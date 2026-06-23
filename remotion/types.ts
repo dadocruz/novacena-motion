@@ -116,10 +116,10 @@ export type CoverMotionId =
 export type OverlayPlacement = {
   /** id único dentro do projeto */
   id: string;
-  /** caminho do asset (referência ao OverlayAsset cadastrado) */
+  /** caminho do asset (referência ao OverlayAsset cadastrado); vazio p/ texto */
   src: string;
-  /** tipo do asset (vídeo ou imagem) */
-  type: 'video' | 'image';
+  /** tipo do asset (vídeo, imagem ou camada de texto) */
+  type: 'video' | 'image' | 'text';
   /** segundo onde começa */
   startSec: number;
   /** duração em segundos */
@@ -147,6 +147,18 @@ export type OverlayPlacement = {
   entryTransition?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-pop' | 'bounce-left';
   /** duração da entrada em frames */
   entryDurationFrames?: number;
+  /** transição de SAÍDA (camadas de texto) */
+  exitTransition?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-pop';
+  exitDurationFrames?: number;
+  /** ── Camada de texto (type: 'text') ── */
+  text?: string;
+  fontSizePx?: number;
+  fontColor?: string;
+  fontWeight?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  textShadow?: boolean;
+  textBgColor?: string;
+  textBgOpacity?: number;
   /** wiggle contínuo de posição em px */
   wigglePosition?: number;
   /** wiggle contínuo de rotação em graus */

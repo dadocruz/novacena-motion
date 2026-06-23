@@ -122,7 +122,7 @@ export function OverlayTimeline({
             gap: 8, alignItems: 'center',
           }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {ov.type === 'video' ? '🎞' : '🖼'} {ov.label}
+              {ov.type === 'video' ? '🎞' : ov.type === 'text' ? '🔤' : '🖼'} {ov.type === 'text' ? (ov.text || 'Título') : ov.label}
             </span>
             <button
               type="button"
@@ -194,7 +194,7 @@ export function OverlayTimeline({
                   <option value="normal">loop normal</option>
                   <option value="pingpong">loop ida/volta</option>
                 </select>
-              ) : (
+              ) : ov.type === 'text' ? null : (
                 <select
                   value={ov.layout ?? 'element'}
                   onChange={(e) => {
@@ -209,7 +209,71 @@ export function OverlayTimeline({
               )}
           </div>
 
-          {selectedId === ov.id && (
+          {selectedId === ov.id && ov.type === 'text' && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 8, display: 'grid', gap: 8 }}>
+              <div style={{ fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 800 }}>
+                Texto da camada
+              </div>
+              <textarea
+                value={ov.text ?? ''}
+                onChange={(e) => onUpdate(ov.id, { text: e.target.value })}
+                rows={2}
+                placeholder="Nome da música / título"
+                style={{ width: '100%', resize: 'vertical', borderRadius: 6, padding: '6px 8px', background: 'var(--bg-1)', color: 'var(--text-1)', border: '1px solid var(--border-1)', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, alignItems: 'end' }}>
+                <MiniControl label="tamanho">
+                  <input type="number" min={20} max={300} step={2} value={ov.fontSizePx ?? 96}
+                    onChange={(e) => onUpdate(ov.id, { fontSizePx: clampNumber(parseFloat(e.target.value), 300) })}
+                    style={tinyNumInput} />
+                </MiniControl>
+                <MiniControl label="cor">
+                  <input type="color" value={ov.fontColor ?? '#ffffff'}
+                    onChange={(e) => onUpdate(ov.id, { fontColor: e.target.value })}
+                    style={{ width: '100%', height: 28, border: 'none', background: 'none', cursor: 'pointer' }} />
+                </MiniControl>
+                <MiniControl label="peso">
+                  <select value={String(ov.fontWeight ?? 800)} onChange={(e) => onUpdate(ov.id, { fontWeight: parseInt(e.target.value, 10) })} style={tinySelect}>
+                    <option value="400">regular</option>
+                    <option value="600">semibold</option>
+                    <option value="800">bold</option>
+                    <option value="900">black</option>
+                  </select>
+                </MiniControl>
+                <MiniControl label="alinhar">
+                  <select value={ov.textAlign ?? 'center'} onChange={(e) => onUpdate(ov.id, { textAlign: e.target.value as OverlayPlacement['textAlign'] })} style={tinySelect}>
+                    <option value="left">esquerda</option>
+                    <option value="center">centro</option>
+                    <option value="right">direita</option>
+                  </select>
+                </MiniControl>
+                <MiniControl label="entrada">
+                  <select value={ov.entryTransition ?? 'fade'} onChange={(e) => onUpdate(ov.id, { entryTransition: e.target.value as OverlayPlacement['entryTransition'] })} style={tinySelect}>
+                    <option value="fade">fade</option>
+                    <option value="slide-up">deslizar ↑</option>
+                    <option value="slide-down">deslizar ↓</option>
+                    <option value="slide-left">deslizar ←</option>
+                    <option value="slide-right">deslizar →</option>
+                    <option value="zoom-pop">zoom pop</option>
+                    <option value="none">nenhuma</option>
+                  </select>
+                </MiniControl>
+                <MiniControl label="saída">
+                  <select value={ov.exitTransition ?? 'none'} onChange={(e) => onUpdate(ov.id, { exitTransition: e.target.value as OverlayPlacement['exitTransition'] })} style={tinySelect}>
+                    <option value="none">nenhuma</option>
+                    <option value="fade">fade</option>
+                    <option value="slide-up">deslizar ↑</option>
+                    <option value="slide-down">deslizar ↓</option>
+                    <option value="slide-left">deslizar ←</option>
+                    <option value="slide-right">deslizar →</option>
+                    <option value="zoom-pop">zoom pop</option>
+                  </select>
+                </MiniControl>
+              </div>
+            </div>
+          )}
+
+          {selectedId === ov.id && ov.type !== 'text' && (
             <div style={{
               borderTop: '1px solid rgba(255,255,255,.08)',
               paddingTop: 8,

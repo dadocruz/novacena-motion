@@ -16,9 +16,11 @@ import {
 
 export type OverlayBlendMode = 'screen' | 'overlay' | 'lighten' | 'soft' | 'soft-light' | 'normal';
 
+export type OverlayTransition = 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-pop';
+
 export type OverlayItem = {
   src: string;
-  type?: 'image' | 'video';
+  type?: 'image' | 'video' | 'text';
   startSec?: number;
   durationSec?: number;
   opacity?: number;
@@ -33,6 +35,18 @@ export type OverlayItem = {
   rotate?: number;
   entryTransition?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'zoom-pop' | 'bounce-left';
   entryDurationFrames?: number;
+  /** transição de SAÍDA (usada por camadas de texto) */
+  exitTransition?: OverlayTransition;
+  exitDurationFrames?: number;
+  /** ── Camada de texto (type: 'text') ── */
+  text?: string;
+  fontSizePx?: number;
+  fontColor?: string;
+  fontWeight?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  textShadow?: boolean;
+  textBgColor?: string;
+  textBgOpacity?: number;
   wigglePosition?: number;
   wiggleRotate?: number;
   wiggleSpeed?: number;
@@ -472,12 +486,98 @@ const CoverVideoTinted: React.FC<{
   );
 };
 
+// suaviza 0..1 (smoothstep)
+function smooth(p: number) {
+  const c = Math.min(1, Math.max(0, p));
+  return c * c * (3 - 2 * c);
+}
+
+// Offset de uma transição em função de "shown" (0=escondido/deslocado, 1=visível).
+function transitionOffset(t: OverlayItem['exitTransition'] | OverlayItem['entryTransition'], shown: number) {
+  const p = smooth(shown);
+  const inv = 1 - p;
+  switch (t) {
+    case 'fade': return { opacity: p, tx: 0, ty: 0, scale: 1 };
+    case 'slide-up': return { opacity: p, tx: 0, ty: inv * 80, scale: 1 };
+    case 'slide-down': return { opacity: p, tx: 0, ty: -inv * 80, scale: 1 };
+    case 'slide-left': return { opacity: p, tx: inv * 110, ty: 0, scale: 1 };
+    case 'slide-right': return { opacity: p, tx: -inv * 110, ty: 0, scale: 1 };
+    case 'zoom-pop': return { opacity: p, tx: 0, ty: 0, scale: 0.7 + 0.3 * p };
+    case 'bounce-left': return { opacity: p, tx: inv * 110, ty: 0, scale: 1 };
+    default: return { opacity: 1, tx: 0, ty: 0, scale: 1 };
+  }
+}
+
+// Camada de texto livre, com entrada e saída independentes. Renderiza igual no
+// preview e no render (texto é barato; sem OffthreadVideo). A posição (x/y/scale/
+// rotate) vem do wrapper do pai (coverTransform).
+const TextOverlay: React.FC<{ overlay: OverlayItem; sequenceDurationInFrames: number }> = ({
+  overlay,
+  sequenceDurationInFrames,
+}) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const entryDur = Math.max(1, overlay.entryDurationFrames ?? Math.round(0.45 * fps));
+  const exitDur = Math.max(1, overlay.exitDurationFrames ?? Math.round(0.45 * fps));
+  const hasExit = overlay.exitTransition && overlay.exitTransition !== 'none';
+
+  const entryShown = Math.min(1, frame / entryDur);
+  const exitShown = hasExit ? Math.min(1, Math.max(0, (sequenceDurationInFrames - frame) / exitDur)) : 1;
+
+  const e = transitionOffset(overlay.entryTransition ?? 'fade', entryShown);
+  const x = transitionOffset(overlay.exitTransition ?? 'none', exitShown);
+
+  const opacity = e.opacity * x.opacity * (overlay.opacity ?? 1);
+  const tx = e.tx + x.tx;
+  const ty = e.ty + x.ty;
+  const scale = e.scale * x.scale;
+
+  const align = overlay.textAlign ?? 'center';
+  const bg = overlay.textBgColor && (overlay.textBgOpacity ?? 0) > 0;
+
+  return (
+    <AbsoluteFill
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center',
+        padding: '0 6%',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          opacity,
+          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+          color: overlay.fontColor ?? '#ffffff',
+          fontSize: overlay.fontSizePx ?? 96,
+          fontWeight: overlay.fontWeight ?? 800,
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          lineHeight: 1.05,
+          letterSpacing: '-0.01em',
+          textAlign: align,
+          whiteSpace: 'pre-wrap',
+          textShadow: (overlay.textShadow ?? true) ? '0 4px 24px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.6)' : undefined,
+          background: bg
+            ? `${overlay.textBgColor}${Math.round((overlay.textBgOpacity ?? 1) * 255).toString(16).padStart(2, '0')}`
+            : undefined,
+          padding: bg ? '0.25em 0.6em' : undefined,
+          borderRadius: bg ? '0.18em' : undefined,
+          maxWidth: '100%',
+        }}
+      >
+        {overlay.text || 'TÍTULO'}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
   const { fps, durationInFrames } = useVideoConfig();
 
   const normalized = overlays
     .map(normalizeOverlay)
-    .filter((item) => Boolean(item.src));
+    .filter((item) => Boolean(item.src) || item.type === 'text');
 
   if (normalized.length === 0) return null;
   const lightPreviewVideoCount = normalized.filter((item) => item.type === 'video' && item.previewQuality === 'light').length;
@@ -538,7 +638,9 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
             durationInFrames={sequenceDuration}
           >
             <AbsoluteFill style={overlay.layout === 'element' ? undefined : { transform: coverTransform }}>
-              {overlay.type === 'video' && !isRendering && overlay.previewQuality === 'light' && lightPreviewVideoCount > 1 && lightPreviewVideoIndex > 0 ? (
+              {overlay.type === 'text' ? (
+                <TextOverlay overlay={overlay} sequenceDurationInFrames={sequenceDuration} />
+              ) : overlay.type === 'video' && !isRendering && overlay.previewQuality === 'light' && lightPreviewVideoCount > 1 && lightPreviewVideoIndex > 0 ? (
                 <AbsoluteFill
                   style={{
                     background: 'rgba(255,255,255,0.03)',
