@@ -91,10 +91,11 @@ function ColorSwatches({
 }
 
 export function OverlayTimeline({
-  overlays, durationSeconds, selectedId, onSelect, onUpdate, onRemove,
+  overlays, durationSeconds, selectedId, onSelect, onUpdate, onRemove, fonts = [],
 }: {
   overlays: OverlayPlacement[]; durationSeconds: number;
   selectedId?: string | null;
+  fonts?: Array<{ id: string; family: string; label: string }>;
   onSelect?: (id: string) => void;
   onUpdate: (id: string, patch: Partial<OverlayPlacement>) => void;
   onRemove: (id: string) => void;
@@ -221,7 +222,32 @@ export function OverlayTimeline({
                 placeholder="Nome da música / título"
                 style={{ width: '100%', resize: 'vertical', borderRadius: 6, padding: '6px 8px', background: 'var(--bg-1)', color: 'var(--text-1)', border: '1px solid var(--border-1)', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }}
               />
+              {fonts.length > 0 && (
+                <MiniControl label="fonte">
+                  <select
+                    value={ov.fontId ?? ''}
+                    onChange={(e) => {
+                      const f = fonts.find((x) => x.id === e.target.value);
+                      onUpdate(ov.id, { fontId: e.target.value, fontFamily: f?.family });
+                    }}
+                    style={tinySelect}
+                  >
+                    {!ov.fontId && <option value="">(padrão)</option>}
+                    {fonts.map((f) => (
+                      <option key={f.id} value={f.id}>{f.label}</option>
+                    ))}
+                  </select>
+                </MiniControl>
+              )}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, alignItems: 'end' }}>
+                <MiniControl label="posição X">
+                  <input type="range" min={-540} max={540} step={2} value={ov.x ?? 0}
+                    onChange={(e) => onUpdate(ov.id, { x: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                </MiniControl>
+                <MiniControl label="posição Y">
+                  <input type="range" min={-960} max={960} step={2} value={ov.y ?? 0}
+                    onChange={(e) => onUpdate(ov.id, { y: parseFloat(e.target.value) })} style={{ width: '100%' }} />
+                </MiniControl>
                 <MiniControl label="tamanho">
                   <input type="number" min={20} max={300} step={2} value={ov.fontSizePx ?? 96}
                     onChange={(e) => onUpdate(ov.id, { fontSizePx: clampNumber(parseFloat(e.target.value), 300) })}

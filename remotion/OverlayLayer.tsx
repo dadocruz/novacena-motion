@@ -40,6 +40,7 @@ export type OverlayItem = {
   exitDurationFrames?: number;
   /** ── Camada de texto (type: 'text') ── */
   text?: string;
+  fontFamily?: string;
   fontSizePx?: number;
   fontColor?: string;
   fontWeight?: number;
@@ -552,7 +553,9 @@ const TextOverlay: React.FC<{ overlay: OverlayItem; sequenceDurationInFrames: nu
           color: overlay.fontColor ?? '#ffffff',
           fontSize: overlay.fontSizePx ?? 96,
           fontWeight: overlay.fontWeight ?? 800,
-          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          fontFamily: overlay.fontFamily
+            ? `'${overlay.fontFamily}', Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`
+            : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           lineHeight: 1.05,
           letterSpacing: '-0.01em',
           textAlign: align,

@@ -4282,6 +4282,8 @@ export default function Home() {
         fontWeight: 800,
         textAlign: 'center',
         textShadow: true,
+        fontId: fontHeadline,
+        fontFamily: currentFontHeadline?.family,
         entryTransition: 'slide-up',
         entryDurationFrames: 14,
         exitTransition: 'fade',
@@ -8755,6 +8757,7 @@ return (
                     overlays={overlays}
                     durationSeconds={durationSeconds}
                     selectedId={selectedOverlayId}
+                    fonts={allFonts.map((f) => ({ id: f.id, family: f.family, label: f.label }))}
                     onSelect={(id) => {
                       const overlay = overlays.find((item) => item.id === id);
                       setSelectedOverlayId(id);

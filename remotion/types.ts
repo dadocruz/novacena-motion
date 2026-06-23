@@ -152,6 +152,8 @@ export type OverlayPlacement = {
   exitDurationFrames?: number;
   /** ── Camada de texto (type: 'text') ── */
   text?: string;
+  fontFamily?: string;
+  fontId?: string;
   fontSizePx?: number;
   fontColor?: string;
   fontWeight?: number;
