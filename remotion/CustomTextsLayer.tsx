@@ -106,7 +106,9 @@ export const CustomTextsLayer: React.FC<{ texts?: CustomTextLayer[]; customFonts
   const activeFontIds = texts.map((t) => t.fontId).filter(Boolean);
 
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    // zIndex acima do conteúdo do template (headline/capa/CTAs) — um texto de
+    // título adicionado deve ficar visível por cima. Fica abaixo do poster (9999).
+    <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 200 }}>
       <FontFaces fonts={customFonts} activeFontIds={activeFontIds} />
       {ordered.map((ct) => {
         const startFrame = Math.max(0, Math.round((ct.startSec ?? 0) * fps));
