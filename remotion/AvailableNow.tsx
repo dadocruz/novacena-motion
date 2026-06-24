@@ -5,6 +5,8 @@ import { easings, eased, getTextTransition } from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
+import { CustomTextsLayer } from './CustomTextsLayer';
+import { CoverPosterLayer } from './CoverPosterLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
@@ -134,6 +136,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
         <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={0} background={motion.background} />
         <OverlayLayer overlays={motion.overlays} />
+        <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
+      <CoverPosterLayer poster={motion.poster} />
         {renderText(props.headline || 'LANÇAMENTO', 360, fontHeadline, {
           fontSize: 92,
           lineHeight: 0.94,
@@ -170,6 +174,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
       <FontFaces fonts={motion.customFonts} activeFontIds={[motion.fontHeadline ?? '', motion.fontDate ?? '', motion.fontCta ?? '', motion.fontCta1 ?? '', motion.fontCta2 ?? '']} />
       <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={particlesEnabled ? 1 : 0} background={motion.background} />
       <OverlayLayer overlays={motion.overlays} />
+      <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
+      <CoverPosterLayer poster={motion.poster} />
       <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>
         <div style={{ width: '100%' }}>
           <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible' }}>

@@ -170,8 +170,16 @@ export const CinematicBackground: React.FC<Props> = ({
     (acc, f) => acc + hitPulse(frame, f, 20),
     0
   );
-  const bgZoom = kbZoom + accentBoost * 0.02;
-  const previewZoom = lightPreview ? 1.08 : bgZoom;
+  // Reenquadramento manual do BG (pan + zoom) — pra não cortar a cabeça dos
+  // cantores no feed. Pan via objectPosition (não interfere no Ken Burns);
+  // zoom multiplica a escala animada.
+  const userOffsetX = Math.max(-50, Math.min(50, bg.bgOffsetX ?? 0));
+  const userOffsetY = Math.max(-50, Math.min(50, bg.bgOffsetY ?? 0));
+  const userZoom = Math.max(1, Math.min(4, bg.bgZoom ?? 1));
+  const bgObjectPosition = `${50 + userOffsetX}% ${50 + userOffsetY}%`;
+
+  const bgZoom = (kbZoom + accentBoost * 0.02) * userZoom;
+  const previewZoom = (lightPreview ? 1.08 * userZoom : bgZoom);
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
   const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
   const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
@@ -209,9 +217,10 @@ export const CinematicBackground: React.FC<Props> = ({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
+              objectPosition: bgObjectPosition,
               filter: stillPreviewFilter,
               transform: lightPreview
-                ? 'scale(1.05)'
+                ? `scale(${1.05 * userZoom})`
                 : `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px)`,
             }}
           />
@@ -231,6 +240,7 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                objectPosition: bgObjectPosition,
                 filter: renderVideoFilter,
                 transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
               }}
@@ -247,6 +257,7 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                objectPosition: bgObjectPosition,
                 // Blur capado no preview: custo de GPU cresce com o raio² e
                 // blur grande num vídeo 1080×1920 a 30fps trava o editor.
                 // O render usa o blur cheio (branch OffthreadVideo acima).

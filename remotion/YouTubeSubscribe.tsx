@@ -5,6 +5,8 @@ import { easings, eased, getTextTransition, type TextTransitionId } from './moti
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
+import { CustomTextsLayer } from './CustomTextsLayer';
+import { CoverPosterLayer } from './CoverPosterLayer';
 import { StyledText } from './StyledText';
 import { findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
@@ -98,6 +100,8 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
 
       {/* Seu overlay alpha (animação do After) entra aqui, por cima do BG */}
       <OverlayLayer overlays={motion.overlays} />
+      <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
+      <CoverPosterLayer poster={motion.poster} />
 
       {/* Leve escurecimento só no rodapé, p/ legibilidade dos textos */}
       <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.5) 100%)', pointerEvents: 'none' }} />

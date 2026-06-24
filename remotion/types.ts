@@ -221,6 +221,12 @@ export type BackgroundConfig = {
   bgColor?: string;
   videoBlur?: number;
   videoSaturation?: number;
+  /** Reenquadramento do BG (vídeo/imagem) sem cortar cabeças no feed.
+   *  bgOffsetX/Y: pan do recorte em % (-50..50, 0 = centro).
+   *  bgZoom: zoom extra sobre o "cover" (1 = sem zoom). */
+  bgOffsetX?: number;
+  bgOffsetY?: number;
+  bgZoom?: number;
   /** Caminho do áudio (mp3/wav/m4a) — independente do vídeo */
   audioSrc?: string;
   /** Segundo do áudio onde começar a tocar (refrão) */
@@ -281,6 +287,29 @@ export type TextStyle = {
 /**
  * Configurações do motion controláveis pelo usuário.
  */
+/** Camada de texto livre — usa o MESMO motor dos textos do template (StyledText
+ *  + applyTextStyle + userTextTransform + transições). Posição/escala via o
+ *  próprio style (offsetX/Y/scale), igual aos roles. z = ordem de empilhamento. */
+export type CustomTextLayer = {
+  id: string;
+  text: string;
+  fontId: string;
+  fontFamily?: string;      // resolvido do catálogo (igual aos roles)
+  fontSizePx?: number;      // tamanho
+  style?: TextStyle;        // cor (style.color), gradiente, etc.
+  stroke?: TextStroke;
+  /** posição livre (px a partir do centro) + escala — arrastável no player */
+  x?: number;
+  y?: number;
+  scale?: number;
+  startSec: number;
+  durationSec?: number;     // vazio = até o fim
+  transitionIn?: TextTransitionId;
+  transitionOut?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom-pop';
+  exitDurationFrames?: number;
+  z?: number;
+};
+
 export type MotionConfig = {
   /**
    * Preset interno de composição baseado nas artes de referência NovaCena.
@@ -374,6 +403,17 @@ export type MotionConfig = {
 
   /** Overlays na timeline */
   overlays?: OverlayPlacement[];
+  /** Camadas de TEXTO livres (mesmo motor dos textos do template) */
+  customTexts?: CustomTextLayer[];
+  /** Capa segurada nos frames iniciais/finais (poster no render Lambda).
+   *  Só age quando mode === 'composition' (Lambda); desktop usa ffmpeg. */
+  poster?: {
+    enabled?: boolean;
+    mode?: 'composition' | 'ffmpeg';
+    holdSec?: number;
+    outroEnabled?: boolean;
+    cover?: string;
+  };
   /** Timing da primeira CTA (frame de entrada) */
   cta1InFrame?: number;
   /** Timing da troca CTA1 -> CTA2 */

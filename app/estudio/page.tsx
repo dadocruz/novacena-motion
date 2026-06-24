@@ -13,6 +13,7 @@ import { Player } from '@remotion/player';
 import {
   type PlatformName,
   type OverlayPlacement,
+  type CustomTextLayer,
   type TextStyle,
   type CoverMotionId,
   type TemplateId,
@@ -644,6 +645,10 @@ export default function Home() {
   const [bgColor, setBgColor] = useState<string>(factoryBackground.bgColor ?? '#030205');
   const [bgVideoBlur, setBgVideoBlur] = useState<number>(factoryBackground.videoBlur ?? 22);
   const [bgVideoSaturation, setBgVideoSaturation] = useState<number>(factoryBackground.videoSaturation ?? 1.15);
+  // Reenquadramento do BG (pan + zoom) — evita cortar a cabeça dos cantores no feed.
+  const [bgOffsetX, setBgOffsetX] = useState<number>(factoryBackground.bgOffsetX ?? 0);
+  const [bgOffsetY, setBgOffsetY] = useState<number>(factoryBackground.bgOffsetY ?? 0);
+  const [bgZoom, setBgZoom] = useState<number>(factoryBackground.bgZoom ?? 1);
 
   // ─── ÁUDIO ────────────────────────────────────────────────
   const [audioSrc, setAudioSrc] = useState<string>(factoryBackground.audioSrc ?? '');
@@ -697,6 +702,11 @@ export default function Home() {
   const [overlayPresets, setOverlayPresets] = useState<OverlayPresetItem[]>([]);
   const [savingOverlayPreset, setSavingOverlayPreset] = useState(false);
   const [overlays, setOverlays] = useState<OverlayPlacement[]>([]);
+  // Camadas de TEXTO livres (mesmo motor dos textos do template). Selecionável/
+  // arrastável no player; controlada no menu Texto; clonável; z-order na timeline.
+  const [customTexts, setCustomTexts] = useState<CustomTextLayer[]>([]);
+  const [selectedCustomTextId, setSelectedCustomTextId] = useState<string | null>(null);
+  const ctLayerBtn: React.CSSProperties = { width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border-1)', background: 'var(--surface-1)', color: 'var(--text-2)', fontSize: 12, cursor: 'pointer', display: 'grid', placeItems: 'center', padding: 0 };
 
   // User fonts
   const [userFonts, setUserFonts] = useState<UserFontRecord[]>([]);
@@ -803,9 +813,10 @@ export default function Home() {
   const lastTextPreviewRoleRef = useRef<TextPreviewRole>('headline');
   const previewDragRef = useRef<{
     layerId: string;
-    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element';
+    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element' | 'ctext';
     role?: FontRole;
     overlayId?: string;
+    ctextId?: string;
     mode?: 'move' | 'scale';
     pointerId: number;
     startClientX: number;
@@ -821,6 +832,7 @@ export default function Home() {
   const [editPreviewLoop, setEditPreviewLoop] = useState<EditPreviewLoop | null>(null);
   const [previewDraggingLayerId, setPreviewDraggingLayerId] = useState<string | null>(null);
   const [editingPreviewTextRole, setEditingPreviewTextRole] = useState<FontRole | null>(null);
+  const [editingPreviewCustomTextId, setEditingPreviewCustomTextId] = useState<string | null>(null);
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [txScale, setTxScale] = React.useState<Record<string,number>>(factoryTextMetrics.scale);
   const [txLS, setTxLS] = React.useState<Record<string,number>>(factoryTextMetrics.letterSpacing);
@@ -1021,6 +1033,27 @@ export default function Home() {
         return;
       }
 
+      // Apagar layer selecionada (texto livre ou overlay) — Premiere-like.
+      if (e.key === 'Delete' || e.key === 'Backspace' || e.key === '4' || e.code === 'Digit4' || e.code === 'Numpad4') {
+        if (selectedCustomTextId) {
+          e.preventDefault();
+          removeCustomText(selectedCustomTextId);
+          return;
+        }
+        if (selectedOverlayId) {
+          e.preventDefault();
+          removeOverlay(selectedOverlayId);
+          return;
+        }
+      }
+
+      // S = liga/desliga safe zone.
+      if (e.key === 's' || e.key === 'S' || e.code === 'KeyS') {
+        e.preventDefault();
+        setShowSafeArea((v) => !v);
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         togglePlayerPlayback();
@@ -1028,7 +1061,7 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlayerPlayback]);
+  }, [togglePlayerPlayback, selectedCustomTextId, selectedOverlayId]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1557,6 +1590,9 @@ export default function Home() {
     setBgColor(bg.bgColor ?? '#030205');
     setBgVideoBlur(bg.videoBlur ?? 22);
     setBgVideoSaturation(bg.videoSaturation ?? 1.15);
+    setBgOffsetX(bg.bgOffsetX ?? 0);
+    setBgOffsetY(bg.bgOffsetY ?? 0);
+    setBgZoom(bg.bgZoom ?? 1);
     setAudioSrc('');
     setAudioStartSec(bg.audioStartSec ?? 0);
     setAudioVolume(bg.audioVolume ?? 0.8);
@@ -1580,6 +1616,7 @@ export default function Home() {
     setPlatformLogoTintEnabled(m.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(m.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(m.overlays ?? []));
+    setCustomTexts(cloneHistoryValue(m.customTexts ?? []));
 
     const sharedCoverPatch = coverPatchForTemplate(tid);
     if (sharedCoverPatch) {
@@ -1937,6 +1974,9 @@ export default function Home() {
       bgColor,
       bgVideoBlur,
       bgVideoSaturation,
+      bgOffsetX,
+      bgOffsetY,
+      bgZoom,
       audioSrc,
       audioStartSec,
       audioVolume,
@@ -1958,6 +1998,7 @@ export default function Home() {
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
+      customTexts,
       favoriteFontIds,
       studioMode,
       typoSubTab,
@@ -2073,6 +2114,9 @@ export default function Home() {
     setBgColor(snapshot.bgColor ?? '#030205');
     setBgVideoBlur(snapshot.bgVideoBlur ?? 22);
     setBgVideoSaturation(snapshot.bgVideoSaturation ?? 1.15);
+    setBgOffsetX(snapshot.bgOffsetX ?? 0);
+    setBgOffsetY(snapshot.bgOffsetY ?? 0);
+    setBgZoom(snapshot.bgZoom ?? 1);
     setAudioSrc(snapshot.audioSrc ?? '');
     setAudioStartSec(snapshot.audioStartSec ?? 0);
     setAudioVolume(snapshot.audioVolume ?? 0.8);
@@ -2096,6 +2140,7 @@ export default function Home() {
     setPlatformLogoTintEnabled(snapshot.platformLogoTintEnabled ?? false);
     setPlatformLogoTintColor(snapshot.platformLogoTintColor ?? '#ffffff');
     setOverlays(cloneHistoryValue(snapshot.overlays ?? []));
+    setCustomTexts(cloneHistoryValue(snapshot.customTexts ?? []));
     setFavoriteFontIds(cloneHistoryValue(snapshot.favoriteFontIds ?? []));
     setStudioMode((snapshot.studioMode ?? 'simple') as StudioMode);
     setTypoSubTab((snapshot.typoSubTab ?? 'char') as 'char' | 'layout');
@@ -2317,6 +2362,9 @@ export default function Home() {
         bgColor,
         videoBlur: bgVideoBlur,
         videoSaturation: bgVideoSaturation,
+        bgOffsetX,
+        bgOffsetY,
+        bgZoom,
         audioSrc: audioSrc || undefined,
         audioStartSec,
         audioDurationSec: audioDuration || undefined,
@@ -2341,6 +2389,7 @@ export default function Home() {
       platformLogoWiggle: factoryMotion.platformLogoWiggle ?? 0.065,
       platformLogoWiggleSpeed: factoryMotion.platformLogoWiggleSpeed ?? 1,
       overlays,
+      customTexts,
     }),
     [
       fontHeadline,
@@ -2408,6 +2457,9 @@ export default function Home() {
       bgColor,
       bgVideoBlur,
       bgVideoSaturation,
+      bgOffsetX,
+      bgOffsetY,
+      bgZoom,
       audioSrc,
       audioStartSec,
       audioDuration,
@@ -2429,6 +2481,7 @@ export default function Home() {
       platformLogoTintEnabled,
       platformLogoTintColor,
       overlays,
+      customTexts,
       phoneSize,
       phoneX,
       phoneY,
@@ -3383,8 +3436,12 @@ export default function Home() {
         setBgColor(m.background.bgColor ?? '#030205');
         setBgVideoBlur(m.background.videoBlur ?? 22);
         setBgVideoSaturation(m.background.videoSaturation ?? 1.15);
+        setBgOffsetX(m.background.bgOffsetX ?? 0);
+        setBgOffsetY(m.background.bgOffsetY ?? 0);
+        setBgZoom(m.background.bgZoom ?? 1);
       }
       setOverlays(m.overlays ?? []);
+      setCustomTexts(m.customTexts ?? []);
     }
     setActiveTab('studio');
   }
@@ -4252,46 +4309,100 @@ export default function Home() {
     if (isElement) {
       setSelectedOverlayId(id);
       selectStudioTool('overlay');
+      // Se o PNG já vem no tamanho/proporção do quadro (arte full-frame com o
+      // logo posicionado), respeita a arte: preenche o quadro inteiro, sem
+      // encolher nem aplicar wiggle/bounce. Senão, mantém o default de logo.
+      if (typeof window !== 'undefined') {
+        const img = new window.Image();
+        img.onload = () => {
+          const natW = img.naturalWidth || 0;
+          const natH = img.naturalHeight || 0;
+          if (natW > 0 && natH > 0) {
+            const imgAspect = natW / natH;
+            const compAspect = 1080 / compositionHeight;
+            const isFullFrame = Math.abs(imgAspect - compAspect) <= compAspect * 0.05;
+            if (isFullFrame) {
+              const FULL_FRAME_SCALE = 1080 / 320; // base do elemento = 320px
+              updateOverlay(id, {
+                scale: FULL_FRAME_SCALE,
+                x: 0,
+                y: 0,
+                opacity: 1,
+                blendMode: 'normal',
+                entryTransition: 'none',
+                wigglePosition: 0,
+                wiggleRotate: 0,
+              });
+            }
+          }
+        };
+        img.src = asset.path;
+      }
     }
   }
 
   // Cria uma camada de TÍTULO (texto livre) com entrada/saída — pra sinalizar
   // músicas num poupourri, créditos, etc. Aparece na timeline como faixa
   // (arrastar início/duração) e tem controle total no painel Overlay.
-  function addTextOverlay() {
-    const id = `txt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  function updateCustomText(id: string, patch: Partial<CustomTextLayer>) {
+    setCustomTexts((arr) => arr.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  function removeCustomText(id: string) {
+    setCustomTexts((arr) => arr.filter((t) => t.id !== id));
+    if (selectedCustomTextId === id) setSelectedCustomTextId(null);
+  }
+
+  // Sobe/desce a camada de texto na ordem de empilhamento (z). +1 = mais por cima.
+  function moveCustomTextZ(id: string, dir: 1 | -1) {
+    setCustomTexts((arr) => {
+      const sorted = [...arr].sort((a, b) => (a.z ?? 0) - (b.z ?? 0));
+      const idx = sorted.findIndex((t) => t.id === id);
+      const swap = idx + dir;
+      if (idx < 0 || swap < 0 || swap >= sorted.length) return arr;
+      const za = sorted[idx].z ?? idx;
+      const zb = sorted[swap].z ?? swap;
+      return arr.map((t) => (t.id === sorted[idx].id ? { ...t, z: zb } : t.id === sorted[swap].id ? { ...t, z: za } : t));
+    });
+  }
+
+  // Cria uma camada de TÍTULO nativa. Clona o texto selecionado COM toda a config
+  // (fonte, cor, tamanho, transições) — só muda o título depois; senão usa padrão.
+  function addCustomText() {
+    const id = `ct_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const start = Math.max(0, Math.min(Math.round(timelineSec || 0), Math.max(0, durationSeconds - 1)));
-    setOverlays((arr) => [
-      ...arr,
-      {
-        id,
-        src: '',
-        type: 'text' as const,
-        text: 'NOVO TÍTULO',
-        startSec: start,
-        durationSec: Math.min(3, Math.max(1, durationSeconds - start)),
-        opacity: 1,
-        blendMode: 'normal',
-        layout: 'cover',
-        x: 0,
-        y: 0,
-        scale: 1,
-        rotate: 0,
-        fontSizePx: 96,
-        fontColor: '#ffffff',
-        fontWeight: 800,
-        textAlign: 'center',
-        textShadow: true,
-        fontId: fontHeadline,
-        fontFamily: currentFontHeadline?.family,
-        entryTransition: 'slide-up',
-        entryDurationFrames: 14,
-        exitTransition: 'fade',
-        exitDurationFrames: 12,
-      } as OverlayPlacement,
-    ]);
-    setSelectedOverlayId(id);
-    selectStudioTool('overlay');
+    const maxZ = customTexts.reduce((m, t) => Math.max(m, t.z ?? 0), 0);
+    const sel = customTexts.find((t) => t.id === selectedCustomTextId);
+    const layer: CustomTextLayer = sel
+      ? {
+          ...sel,
+          id,
+          z: maxZ + 1,
+          startSec: start,
+          x: (sel.x ?? 0) + 24,
+          y: (sel.y ?? 0) + 24,
+        }
+      : {
+          id,
+          text: 'NOVO TÍTULO',
+          fontId: fontHeadline,
+          fontFamily: currentFontHeadline?.family,
+          fontSizePx: 96,
+          style: { color: '#ffffff' } as CustomTextLayer['style'],
+          x: 0,
+          y: 0,
+          scale: 1,
+          z: maxZ + 1,
+          startSec: start,
+          durationSec: Math.min(3, Math.max(1, durationSeconds - start)),
+          transitionIn: 'mask_reveal',
+          transitionOut: 'fade',
+          exitDurationFrames: 12,
+        };
+    setCustomTexts((arr) => [...arr, layer]);
+    setSelectedCustomTextId(id);
+    setActiveTextRole('headline');
+    selectStudioTool('text', { keepTimelineOpen: true });
   }
 
   async function deleteOverlayAsset(id: string) {
@@ -4701,6 +4812,9 @@ export default function Home() {
     setBgColor(bg.bgColor ?? '#030205');
     setBgVideoBlur(bg.videoBlur ?? 22);
     setBgVideoSaturation(bg.videoSaturation ?? 1.15);
+    setBgOffsetX(bg.bgOffsetX ?? 0);
+    setBgOffsetY(bg.bgOffsetY ?? 0);
+    setBgZoom(bg.bgZoom ?? 1);
     setOverlays((m as any).overlays ?? []);
     setAudioSrc(bg.audioSrc ?? '');
     setAudioStartSec(bg.audioStartSec ?? 0);
@@ -4894,6 +5008,9 @@ export default function Home() {
       setBgVideoOpacity(1.0);     // 100% visível
       setBgVideoBlur(2);           // blur mínimo (era 22 = manchão)
       setBgVideoSaturation(1.05);  // saturação quase normal
+      setBgOffsetX(0);             // novo fundo = reenquadramento neutro
+      setBgOffsetY(0);
+      setBgZoom(1);
       setAiBgMessage(`✨ Fundo aplicado (mood: ${data.visual.mood?.[0] ?? 'auto'}) · ~$${data.bg.costEstimateUsd.toFixed(3)} · recarregue se não aparecer (Cmd+R)`);
     } catch (e) {
       setAiBgMessage(`❌ ${e instanceof Error ? e.message : 'erro'}`);
@@ -5328,15 +5445,17 @@ export default function Home() {
 
   type PreviewLayerHotspot = {
     id: string;
-    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element';
+    kind: 'text' | 'cover' | 'phone' | 'logos' | 'element' | 'ctext';
     role?: FontRole;
     overlayId?: string;
+    ctextId?: string;
     label: string;
     rect: React.CSSProperties;
   };
 
   function previewLayerAccent(kind: PreviewLayerHotspot['kind']) {
     if (kind === 'text') return '#ff4fd8';
+    if (kind === 'ctext') return '#f472b6';
     if (kind === 'cover') return '#38bdf8';
     if (kind === 'logos') return '#22c55e';
     if (kind === 'phone') return '#f59e0b';
@@ -5345,6 +5464,7 @@ export default function Home() {
 
   function previewLayerKindLabel(layer: PreviewLayerHotspot) {
     if (layer.kind === 'text') return `Texto · ${layer.label}`;
+    if (layer.kind === 'ctext') return `Texto · ${layer.label}`;
     if (layer.kind === 'cover') return 'Capa';
     if (layer.kind === 'logos') return 'Logos';
     if (layer.kind === 'phone') return 'Celular';
@@ -5532,6 +5652,29 @@ export default function Home() {
         };
       });
 
+    // Hotspots das camadas de texto livres (selecionar/arrastar/escalar no player).
+    const customTextHotspots: PreviewLayerHotspot[] = customTexts.map((ct) => {
+      const size = (ct.fontSizePx ?? 96) * (ct.scale ?? 1);
+      const lines = String(ct.text || 'Título').split('\n');
+      const longest = Math.max(1, ...lines.map((l) => l.length));
+      const widthPct = clamp(((Math.min(1040, longest * size * 0.56)) / 1080) * 100, 8, 96);
+      const heightPct = clamp(((lines.length * size * 1.15) / compositionHeight) * 100, 3, 60);
+      const centerXPct = 50 + (((ct.x ?? 0) / 1080) * 100);
+      const centerYPct = 50 + (((ct.y ?? 0) / compositionHeight) * 100);
+      return {
+        id: `ctext-${ct.id}`,
+        kind: 'ctext' as const,
+        ctextId: ct.id,
+        label: ct.text || 'Título',
+        rect: {
+          left: pct(clamp(centerXPct - widthPct / 2, -20, 116)),
+          top: pct(clamp(centerYPct - heightPct / 2, -20, 116)),
+          width: pct(widthPct),
+          height: pct(heightPct),
+        },
+      };
+    });
+
     if (template === 'spotify_print') {
       const phoneWidthPct = clamp((phoneSize / 1080) * 100, 26, 78);
       return [
@@ -5541,6 +5684,7 @@ export default function Home() {
         { id: 'spotify-phone', kind: 'phone', label: 'Celular', rect: measuredRect('spotify-phone', mediaRect(50, 62, phoneWidthPct, 40, phoneX, phoneY)) },
         { id: 'spotify-logo', kind: 'logos', label: 'Logos', rect: { left: '34%', top: '82%', width: '32%', height: '8%' } },
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5556,6 +5700,7 @@ export default function Home() {
         { id: 'milestone-label', kind: 'text', role: 'cta1', label: 'Métrica', rect: measuredRect('milestone-label', roleRect(14, 68, 72, 9, 'cta1')) },
         { id: 'milestone-logo', kind: 'logos', label: 'Logo Spotify', rect: measuredRect('milestone-logo', mediaRect(50, 74, milestoneLogoPct, milestoneLogoHeightPct, milestoneLogoX, milestoneLogoY)) },
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5587,6 +5732,7 @@ export default function Home() {
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: measuredRect('youtube-channel', roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date')) },
         ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) }] : []),
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5596,6 +5742,7 @@ export default function Home() {
         { id: 'ytsub-text1', kind: 'text', role: 'cta1', label: 'Texto 1', rect: measuredRect('ytsub-text1', roleRect(14, 75, 72, 7, 'cta1')) },
         { id: 'ytsub-channel', kind: 'text', role: 'date', label: '@ do canal', rect: measuredRect('ytsub-channel', roleRect(20, 82, 60, 6, 'date')) },
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5606,6 +5753,7 @@ export default function Home() {
         { id: 'ytviews-label', kind: 'text', role: 'cta1', label: 'Metrica', rect: measuredRect('ytviews-label', roleRect(16, 69, 68, 5, 'cta1')) },
         { id: 'ytviews-channel', kind: 'text', role: 'cta2', label: '@ do canal', rect: measuredRect('ytviews-channel', roleRect(24, 76, 52, 5, 'cta2')) },
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5616,6 +5764,7 @@ export default function Home() {
         { id: 'outnow-cta', kind: 'text' as const, role: 'cta2' as const, label: template === 'listen_deezer' ? 'CTA Deezer' : 'CTA de plataformas', rect: measuredRect('outnow-cta', roleRect(10, 72, 80, 8, 'cta2')) },
         { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', { left: '30%', top: '84%', width: '40%', height: '8%' }) },
         ...elementHotspots,
+        ...customTextHotspots,
       ];
     }
 
@@ -5627,8 +5776,9 @@ export default function Home() {
       ...(showCta2 ? [{ id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: measuredRect('cta2', roleRect(8, 77, 84, 8, 'cta2')) }] : []),
       { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
+      ...customTextHotspots,
     ];
-  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, normalizedCoverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
+  }, [template, platformsSel, effectiveCustomLogos, platformLogoSize, platformLogoGap, platformLogoScales, platformLogoX, platformLogoY, milestoneLogoSize, milestoneLogoX, milestoneLogoY, platformLogoPack, target, headline, releaseDate, cta, cta2, metricNumber, metricPrefix, metricLabel, channelName, showCta1, showCta2, showCover, coverSize, normalizedCoverSize, coverX, coverY, phoneSize, phoneX, phoneY, compositionHeight, overlays, customTexts, txScale, txOX, txOY, textRoleLabels, measuredPreviewRects]);
 
   // ── TIMELINE: playhead sincronizado com o player (só roda com o painel aberto)
   React.useEffect(() => {
@@ -5797,12 +5947,35 @@ export default function Home() {
       });
     });
 
+    // Camadas de texto livres (mais por cima = z maior → no topo da timeline)
+    [...customTexts].sort((a, b) => (b.z ?? 0) - (a.z ?? 0)).forEach((ct) => {
+      const start = Math.max(0, ct.startSec ?? 0);
+      const ctDur = ct.durationSec && ct.durationSec > 0 ? ct.durationSec : Math.max(0.2, dur - start);
+      tracks.push({
+        id: `ct-${ct.id}`,
+        label: `🔤 ${ct.text || 'Título'}`,
+        color: '#f472b6',
+        startSec: start,
+        endSec: Math.min(dur, start + ctDur),
+        resizable: true,
+        selected: selectedCustomTextId === ct.id,
+        onChangeStart: (sec) => updateCustomText(ct.id, { startSec: Math.max(0, Math.round(sec * 10) / 10) }),
+        onChangeEnd: (sec) => updateCustomText(ct.id, { durationSec: Math.max(0.2, Math.round((sec - (ct.startSec ?? 0)) * 10) / 10) }),
+        onSelect: () => {
+          setSelectedCustomTextId(ct.id);
+          selectStudioTool('text', { keepTimelineOpen: true });
+        },
+      });
+    });
+
     return tracks;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     previewLayerHotspots,
     effectiveTextInFrames,
     overlays,
+    customTexts,
+    selectedCustomTextId,
     logosInFrame,
     coverInFrame,
     phoneInFrame,
@@ -5844,6 +6017,11 @@ export default function Home() {
   ];
 
   function selectPreviewLayer(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'ctext' && layer.ctextId) {
+      setSelectedCustomTextId(layer.ctextId);
+      selectStudioTool('text', { keepTimelineOpen: true });
+      return;
+    }
     if (layer.kind === 'text' && layer.role) {
       setActiveTextRole(layer.role);
       selectStudioTool('text', { textPanelTab: 'entrada', textRole: layer.role, keepTimelineOpen: true });
@@ -5872,6 +6050,10 @@ export default function Home() {
   }
 
   function getPreviewLayerOffset(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'ctext' && layer.ctextId) {
+      const ct = customTexts.find((t) => t.id === layer.ctextId);
+      return { x: ct?.x ?? 0, y: ct?.y ?? 0 };
+    }
     if (layer.kind === 'text' && layer.role) {
       return {
         x: Number(txOX[layer.role] ?? 0),
@@ -5903,6 +6085,10 @@ export default function Home() {
   }
 
   function setPreviewLayerOffset(layer: PreviewLayerHotspot, x: number, y: number) {
+    if (layer.kind === 'ctext' && layer.ctextId) {
+      updateCustomText(layer.ctextId, { x: Math.round(x), y: Math.round(y) });
+      return;
+    }
     if (layer.kind === 'text' && layer.role) {
       updTxN(setTxOX, layer.role, x);
       updTxN(setTxOY, layer.role, y);
@@ -5938,6 +6124,9 @@ export default function Home() {
   }
 
   function getPreviewLayerScale(layer: PreviewLayerHotspot) {
+    if (layer.kind === 'ctext' && layer.ctextId) {
+      return customTexts.find((t) => t.id === layer.ctextId)?.scale ?? 1;
+    }
     if (layer.kind === 'text' && layer.role) {
       return Number(txScale[layer.role] ?? 1);
     }
@@ -5957,6 +6146,10 @@ export default function Home() {
   }
 
   function setPreviewLayerScale(layer: PreviewLayerHotspot, scale: number) {
+    if (layer.kind === 'ctext' && layer.ctextId) {
+      updateCustomText(layer.ctextId, { scale: Math.max(0.2, Math.min(4, Math.round(scale * 100) / 100)) });
+      return;
+    }
     if (layer.kind === 'text' && layer.role) {
       updTxN(setTxScale, layer.role, Math.max(0.2, Math.min(4, Math.round(scale * 100) / 100)));
       return;
@@ -5989,7 +6182,8 @@ export default function Home() {
       kind: layer.kind,
       role: layer.role,
       overlayId: layer.overlayId,
-      mode: (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos') && event.shiftKey ? 'scale' : 'move',
+      ctextId: layer.ctextId,
+      mode: (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos' || layer.kind === 'ctext') && event.shiftKey ? 'scale' : 'move',
       pointerId: event.pointerId,
       startClientX: event.clientX,
       startClientY: event.clientY,
@@ -6019,7 +6213,7 @@ export default function Home() {
     const dx = dxPreview * (1080 / drag.previewWidth);
     const dy = dyPreview * (compositionHeight / drag.previewHeight);
 
-    if (drag.mode === 'scale' && (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos')) {
+    if (drag.mode === 'scale' && (layer.kind === 'element' || layer.kind === 'text' || layer.kind === 'logos' || layer.kind === 'ctext')) {
       const delta = (dxPreview - dyPreview) / Math.max(120, drag.previewWidth * 0.35);
       setPreviewLayerScale(layer, (drag.startScale ?? 1) + delta);
     } else {
@@ -6138,6 +6332,11 @@ export default function Home() {
         motionSource.fontCta,
         motionSource.fontCta1,
         motionSource.fontCta2,
+        // Fontes usadas pelas camadas de texto nativas — precisam ir no bundle
+        // do render, senão a fonte do preview != fonte renderizada.
+        ...(Array.isArray(motionSource.customTexts)
+          ? motionSource.customTexts.map((ct: any) => ct?.fontId)
+          : []),
       ].filter((id): id is string => typeof id === 'string' && id.length > 0)
     );
     const customFontsForRender = Array.isArray(motionSource.customFonts)
@@ -6151,6 +6350,16 @@ export default function Home() {
         ...motionSource,
         background: renderBackground,
         customFonts: customFontsForRender,
+        // Poster da capa: no Lambda (SAAS) a composição segura a capa nos frames
+        // iniciais/finais (mode 'composition'); no desktop fica inerte e o poster
+        // sai via ffmpeg (posterFrame top-level, abaixo).
+        poster: {
+          enabled: posterFrameEnabled,
+          mode: SAAS_EXPORT_MODE ? ('composition' as const) : ('ffmpeg' as const),
+          holdSec: posterHoldSec,
+          outroEnabled: posterOutroEnabled,
+          cover: (project as { coverImage?: string })?.coverImage,
+        },
         previewMode: false,
       },
       renderTarget: target,
@@ -6881,6 +7090,7 @@ export default function Home() {
     if (typeof m.platformLogoPack === 'string') setPlatformLogoPack(m.platformLogoPack as PlatformLogoPackId);
     if (m.customLogos && typeof m.customLogos === 'object') setCustomLogos(m.customLogos);
     if (Array.isArray(m.overlays)) setOverlays(m.overlays);
+    if (Array.isArray(m.customTexts)) setCustomTexts(m.customTexts);
 
     const background = m.background ?? m;
     if (typeof background.videoSrc === 'string') setBgVideo(background.videoSrc);
@@ -6893,6 +7103,9 @@ export default function Home() {
     if (typeof background.bgColor === 'string') setBgColor(background.bgColor);
     if (typeof background.videoBlur === 'number') setBgVideoBlur(background.videoBlur);
     if (typeof background.videoSaturation === 'number') setBgVideoSaturation(background.videoSaturation);
+    if (typeof background.bgOffsetX === 'number') setBgOffsetX(background.bgOffsetX);
+    if (typeof background.bgOffsetY === 'number') setBgOffsetY(background.bgOffsetY);
+    if (typeof background.bgZoom === 'number') setBgZoom(background.bgZoom);
     if (typeof background.audioSrc === 'string') setAudioSrc(background.audioSrc);
     if (typeof background.audioStartSec === 'number') {
       setAudioStartSec(background.audioStartSec);
@@ -7957,6 +8170,7 @@ return (
               {previewLayerHotspots.map((layer) => {
                 const selected =
                   (layer.kind === 'text' && layer.role === activeTextRole && activeStudioTool === 'text') ||
+                  (layer.kind === 'ctext' && layer.ctextId === selectedCustomTextId && activeStudioTool === 'text') ||
                   (layer.kind === 'cover' && activeStudioTool === 'cover') ||
                   (layer.kind === 'logos' && activeStudioTool === 'logos') ||
                   (layer.kind === 'phone' && activeStudioTool === 'motion') ||
@@ -7966,6 +8180,7 @@ return (
                 const draggableLayer =
                   layer.kind === 'element' ||
                   layer.kind === 'text' ||
+                  layer.kind === 'ctext' ||
                   layer.kind === 'cover' ||
                   layer.kind === 'phone' ||
                   layer.id === 'milestone-logo';
@@ -7987,6 +8202,10 @@ return (
                       if (layer.kind === 'text' && layer.role) {
                         setActiveTextRole(layer.role);
                         setEditingPreviewTextRole(layer.role);
+                        selectStudioTool('text');
+                      } else if (layer.kind === 'ctext' && layer.ctextId) {
+                        setSelectedCustomTextId(layer.ctextId);
+                        setEditingPreviewCustomTextId(layer.ctextId);
                         selectStudioTool('text');
                       }
                     }}
@@ -8070,6 +8289,45 @@ return (
                       borderRadius: 10,
                       border: '1px solid rgba(255,255,255,0.55)',
                       outline: '2px solid rgba(255,80,200,0.55)',
+                      background: 'rgba(10,10,14,0.72)',
+                      color: '#fff',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      lineHeight: 1.15,
+                      textAlign: 'center',
+                      boxShadow: '0 14px 36px rgba(0,0,0,0.42)',
+                    }}
+                  />
+                );
+              })()}
+              {editingPreviewCustomTextId && (() => {
+                const editingLayer = previewLayerHotspots.find((layer) => layer.kind === 'ctext' && layer.ctextId === editingPreviewCustomTextId);
+                const ct = customTexts.find((c) => c.id === editingPreviewCustomTextId);
+                if (!editingLayer || !ct) return null;
+
+                return (
+                  <textarea
+                    autoFocus
+                    data-preview-inline-editor="true"
+                    value={ct.text}
+                    onChange={(event) => updateCustomText(ct.id, { text: event.target.value })}
+                    onBlur={() => setEditingPreviewCustomTextId(null)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setEditingPreviewCustomTextId(null);
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      zIndex: 120,
+                      ...editingLayer.rect,
+                      minHeight: 34,
+                      padding: 8,
+                      resize: 'none',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.55)',
+                      outline: '2px solid rgba(244,114,182,0.7)',
                       background: 'rgba(10,10,14,0.72)',
                       color: '#fff',
                       fontSize: 13,
@@ -8691,13 +8949,6 @@ return (
             <div data-right-panel-section="Overlay" style={{ marginTop: 12, scrollMarginTop: 78 }}>
               <div style={miniLabel}>Overlays / elementos livres</div>
               <button
-                onClick={addTextOverlay}
-                style={{ ...dashedUpload, marginBottom: 8, borderColor: 'rgba(168,85,247,0.5)', color: 'var(--text-1)' }}
-                title="Cria uma camada de título/texto com entrada e saída — pra sinalizar músicas num poupourri, créditos, etc."
-              >
-                + Camada de título (texto)
-              </button>
-              <button
                 onClick={() => overlayInputRef.current?.click()}
                 style={{ ...dashedUpload, opacity: uploadingOverlay ? 0.72 : 1, cursor: uploadingOverlay ? 'wait' : 'pointer' }}
                 disabled={uploadingOverlay}
@@ -9063,6 +9314,26 @@ return (
                   onChange={setBgVideoBlur} format={(v) => `${v}px`} />
                 <SliderRow label="Saturação" value={bgVideoSaturation} min={0} max={2} step={0.05}
                   onChange={setBgVideoSaturation} format={(v) => `${v.toFixed(2)}×`} />
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>
+                    Reenquadrar fundo {target === 'feed' ? '(evita cortar cabeças no feed)' : ''}
+                  </div>
+                  <SliderRow label="Posição ↔" value={bgOffsetX} min={-50} max={50} step={1}
+                    onChange={setBgOffsetX} format={(v) => `${v > 0 ? '+' : ''}${v}%`} />
+                  <SliderRow label="Posição ↕" value={bgOffsetY} min={-50} max={50} step={1}
+                    onChange={setBgOffsetY} format={(v) => `${v > 0 ? '+' : ''}${v}%`} />
+                  <SliderRow label="Zoom" value={bgZoom} min={1} max={3} step={0.05}
+                    onChange={setBgZoom} format={(v) => `${v.toFixed(2)}×`} />
+                  {(bgOffsetX !== 0 || bgOffsetY !== 0 || bgZoom !== 1) && (
+                    <button
+                      type="button"
+                      onClick={() => { setBgOffsetX(0); setBgOffsetY(0); setBgZoom(1); }}
+                      style={{ ...smallBtn, justifySelf: 'start', marginTop: 4 }}
+                    >
+                      ↺ Resetar enquadramento
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
@@ -9735,6 +10006,113 @@ return (
             }}
           />
 
+          {/* ── TEXTOS EXTRAS (camadas livres, mesmo motor) ─────────── */}
+          <div style={{ marginTop: 14, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={miniLabel}>Textos extras (camadas livres)</div>
+              <button
+                onClick={addCustomText}
+                style={tinyAddBtn}
+                title="Cria uma camada de texto. Se houver uma selecionada, duplica com a mesma config (só troca o título)."
+              >
+                + Novo texto
+              </button>
+            </div>
+
+            {customTexts.length === 0 && (
+              <div style={{ fontSize: 10.5, color: 'var(--text-3)', lineHeight: 1.4 }}>
+                Pra poupourri/créditos: clique em <strong>+ Novo texto</strong>, escolha fonte/cor/posição, ajuste o tempo na timeline e a entrada/saída. Duplique pra criar os próximos rápido.
+              </div>
+            )}
+
+            {[...customTexts].sort((a, b) => (b.z ?? 0) - (a.z ?? 0)).map((ct) => {
+              const sel = selectedCustomTextId === ct.id;
+              return (
+                <div key={ct.id} style={{ marginTop: 8, padding: '8px 10px', borderRadius: 8, background: sel ? 'var(--surface-active)' : 'var(--bg-2)', border: sel ? '1px solid var(--border-3)' : '1px solid transparent', display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 6, alignItems: 'center' }}>
+                    <button type="button" onClick={() => { setSelectedCustomTextId(ct.id); seekTimeline(ct.startSec ?? 0); }}
+                      style={{ textAlign: 'left', background: 'none', border: 'none', color: 'var(--text-1)', fontSize: 11, fontWeight: sel ? 800 : 600, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      🔤 {ct.text || 'Título'}
+                    </button>
+                    <button type="button" title="Subir (mais por cima)" onClick={() => moveCustomTextZ(ct.id, 1)} style={ctLayerBtn}>↑</button>
+                    <button type="button" title="Descer" onClick={() => moveCustomTextZ(ct.id, -1)} style={ctLayerBtn}>↓</button>
+                    <button type="button" title="Apagar" onClick={() => removeCustomText(ct.id)} style={{ ...ctLayerBtn, color: 'var(--danger)' }}>✕</button>
+                  </div>
+
+                  {sel && (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <textarea value={ct.text} onChange={(e) => updateCustomText(ct.id, { text: e.target.value })} rows={2}
+                        placeholder="Nome da música / título"
+                        style={{ width: '100%', resize: 'vertical', borderRadius: 6, padding: '6px 8px', background: 'var(--bg-1)', color: 'var(--text-1)', border: '1px solid var(--border-1)', fontSize: 12, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+
+                      <FontPicker label="Fonte" sampleText={ct.text || 'Aa'} value={ct.fontId} fonts={allFonts}
+                        onChange={(id) => { const f = allFonts.find((x) => x.id === id); updateCustomText(ct.id, { fontId: id, fontFamily: f?.family }); }} />
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'end' }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>tamanho</span>
+                          <input type="number" min={20} max={300} step={2} value={ct.fontSizePx ?? 96}
+                            onChange={(e) => updateCustomText(ct.id, { fontSizePx: Math.max(10, Math.min(400, parseFloat(e.target.value) || 96)) })}
+                            style={fieldInputStyle} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>cor</span>
+                          <input type="color" value={(ct.style as { color?: string } | undefined)?.color ?? '#ffffff'}
+                            onChange={(e) => updateCustomText(ct.id, { style: { ...(ct.style ?? {}), color: e.target.value } as CustomTextLayer['style'] })}
+                            style={{ width: '100%', height: 30, border: 'none', background: 'none', cursor: 'pointer' }} />
+                        </label>
+                      </div>
+
+                      <SliderRow label="posição X" value={ct.x ?? 0} min={-540} max={540} step={2} onChange={(v) => updateCustomText(ct.id, { x: v })} format={(v) => `${Math.round(v)}px`} />
+                      <SliderRow label="posição Y" value={ct.y ?? 0} min={-960} max={960} step={2} onChange={(v) => updateCustomText(ct.id, { y: v })} format={(v) => `${Math.round(v)}px`} />
+                      <SliderRow label="escala" value={ct.scale ?? 1} min={0.2} max={4} step={0.05} onChange={(v) => updateCustomText(ct.id, { scale: v })} format={(v) => `${v.toFixed(2)}x`} />
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'end' }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>início (s)</span>
+                          <input type="number" min={0} max={Math.max(0, durationSeconds - 0.1)} step={0.1} value={(ct.startSec ?? 0).toFixed(1)}
+                            onChange={(e) => updateCustomText(ct.id, { startSec: Math.max(0, Math.min(durationSeconds, parseFloat(e.target.value) || 0)) })}
+                            style={fieldInputStyle} />
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>duração (s)</span>
+                          <input type="number" min={0.2} step={0.1} value={(ct.durationSec ?? durationSeconds).toFixed(1)}
+                            onChange={(e) => updateCustomText(ct.id, { durationSec: Math.max(0.2, parseFloat(e.target.value) || durationSeconds) })}
+                            style={fieldInputStyle} />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'end' }}>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>entrada</span>
+                          <select value={ct.transitionIn ?? 'mask_reveal'} onChange={(e) => updateCustomText(ct.id, { transitionIn: e.target.value as CustomTextLayer['transitionIn'] })} style={fieldInputStyle}>
+                            <option value="mask_reveal">revelar</option>
+                            <option value="scale_pop">pop</option>
+                            <option value="slide_stagger">deslizar</option>
+                            <option value="blur_focus">foco</option>
+                            <option value="type_writer">máquina</option>
+                            <option value="split_letters">letras</option>
+                          </select>
+                        </label>
+                        <label style={{ display: 'grid', gap: 4 }}>
+                          <span style={miniInputLabel}>saída</span>
+                          <select value={ct.transitionOut ?? 'fade'} onChange={(e) => updateCustomText(ct.id, { transitionOut: e.target.value as CustomTextLayer['transitionOut'] })} style={fieldInputStyle}>
+                            <option value="none">nenhuma</option>
+                            <option value="fade">fade</option>
+                            <option value="slide-up">deslizar ↑</option>
+                            <option value="slide-down">deslizar ↓</option>
+                            <option value="slide-left">deslizar ←</option>
+                            <option value="slide-right">deslizar →</option>
+                            <option value="zoom-pop">zoom</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
         </Section>
 

@@ -8,6 +8,8 @@ import {
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
+import { CustomTextsLayer } from './CustomTextsLayer';
+import { CoverPosterLayer } from './CoverPosterLayer';
 import { PhoneMockup } from './PhoneMockup';
 import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
@@ -137,6 +139,9 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
       />
 
       <OverlayLayer overlays={props.motion?.overlays} />
+
+      <CustomTextsLayer texts={props.motion?.customTexts} customFonts={props.motion?.customFonts} />
+      <CoverPosterLayer poster={props.motion?.poster} />
 
       <AbsoluteFill
         style={{
