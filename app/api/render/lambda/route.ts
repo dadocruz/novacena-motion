@@ -111,10 +111,12 @@ function supportedCompositionCandidates(candidates: string[], availableIds: Set<
 }
 
 function maxWorkersPerRender(accountConcurrencyLimit: number) {
-  // Deixa 2 de folga abaixo do limite da conta (1 p/ a função orquestradora +
-  // 1 de margem). Com limite 10 → 8 workers. Default = esse teto da conta; só
-  // cai pra menos se REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER for definido.
-  const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - 2);
+  // Folga MAIOR abaixo do limite da conta pra NÃO estourar concorrência durante
+  // o render ("serviço ocupado" que travava entrega pro cliente). Com limite 10
+  // e folga 4 → 6 workers (6 + orquestrador = 7 ≤ 10, margem 3). Quando a AWS
+  // aprovar a quota (5000), isso escala sozinho. Ajustável por env.
+  const headroom = Math.max(2, Number(process.env.REMOTION_LAMBDA_CONCURRENCY_HEADROOM || 4));
+  const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - headroom);
   const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || accountWorkerLimit);
   const appWorkerLimit = Math.max(1, Math.floor(Number.isFinite(configured) ? configured : accountWorkerLimit));
   return Math.max(1, Math.min(accountWorkerLimit, appWorkerLimit));
