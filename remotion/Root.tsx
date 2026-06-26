@@ -13,8 +13,10 @@ import { getProject } from './project';
 const FPS = 30;
 
 // Lê a config de poster (capa segurada no início/fim) de onde estiver nos props.
+// Prioriza o TOP-LEVEL `poster` (o Lambda lê props top-level de boa; o aninhado
+// motion.poster às vezes não chega no calculateMetadata do Lambda).
 function readPosterConfig(props: any) {
-  const p = props?.motion?.poster ?? props?.posterFrame ?? null;
+  const p = props?.poster ?? props?.motion?.poster ?? null;
   if (!p || !p.enabled || p.mode !== 'composition') return null;
   const holdFrames = Math.max(1, Math.round((Number(p.holdSec) || 1) * FPS));
   return {
@@ -24,17 +26,13 @@ function readPosterConfig(props: any) {
   };
 }
 
+// A duração já vem ESTENDIDA do cliente (durationSeconds = base + capa início +
+// capa fim) quando há poster — assim não dependemos do Lambda ler o poster aqui.
 const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
   const seconds = Number(props?.durationSeconds ?? 8);
   const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 8;
-  let frames = Math.round(safeSeconds * FPS);
-  // Poster (modo composição/Lambda): estica a duração pra caber a capa segurada
-  // no início (e fim, se "repetir") SEM comer a animação — igual o desktop prepend.
-  const poster = readPosterConfig(props);
-  if (poster) frames += poster.holdFrames + poster.outroFrames;
-
   return {
-    durationInFrames: frames,
+    durationInFrames: Math.round(safeSeconds * FPS),
   };
 };
 

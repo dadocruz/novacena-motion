@@ -6343,24 +6343,34 @@ export default function Home() {
       ? motionSource.customFonts.filter((font: any) => activeFontIds.has(font.id))
       : [];
 
+    // Poster = FRAME COMPLETO escolhido (textos/logos/animação no segundo exato),
+    // congelado no início/fim. No Lambda (SAAS) a composição faz o freeze (mode
+    // 'composition'); no desktop fica inerte e o poster sai via ffmpeg.
+    const posterComposition = {
+      enabled: posterFrameEnabled,
+      mode: (SAAS_EXPORT_MODE ? 'composition' : 'ffmpeg') as 'composition' | 'ffmpeg',
+      holdSec: posterHoldSec,
+      outroEnabled: posterOutroEnabled,
+      frameSec: posterFrameSec,
+    };
+    // A duração do render JÁ vem estendida quando há poster no modo composição
+    // (base + capa início + capa fim), pra o Lambda não depender de ler o poster
+    // no calculateMetadata — ele lê o durationSeconds top-level sem problema.
+    const posterExtendSec =
+      SAAS_EXPORT_MODE && posterFrameEnabled
+        ? posterHoldSec + (posterOutroEnabled ? posterHoldSec : 0)
+        : 0;
+
     return {
       ...project,
-      durationSeconds,
+      durationSeconds: durationSeconds + posterExtendSec,
+      // Top-level (lido pelo HOC withPoster e pelo calculateMetadata no Lambda).
+      poster: posterComposition,
       motion: {
         ...motionSource,
         background: renderBackground,
         customFonts: customFontsForRender,
-        // Poster = FRAME COMPLETO escolhido (textos/logos/animação no segundo
-        // exato), congelado no início/fim. No Lambda (SAAS) a composição faz o
-        // freeze (mode 'composition'); no desktop fica inerte e o poster sai via
-        // ffmpeg (posterFrame top-level, abaixo). frameSec = segundo escolhido.
-        poster: {
-          enabled: posterFrameEnabled,
-          mode: SAAS_EXPORT_MODE ? ('composition' as const) : ('ffmpeg' as const),
-          holdSec: posterHoldSec,
-          outroEnabled: posterOutroEnabled,
-          frameSec: posterFrameSec,
-        },
+        poster: posterComposition,
         previewMode: false,
       },
       renderTarget: target,
