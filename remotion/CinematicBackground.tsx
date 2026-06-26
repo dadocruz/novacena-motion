@@ -140,7 +140,7 @@ export const CinematicBackground: React.FC<Props> = ({
   const audioFadeOutFrames = Math.floor((bg.audioFadeOutSec ?? 1) * 30);
   // Audio do BG vem LIGADO por padrao. Toggle na UI = mute (useVideoAudio=false).
   const useVideoAudio = bg.audioSrc ? false : (bg.useVideoAudio ?? true);
-  const { durationInFrames } = useVideoConfig();
+  const { durationInFrames, width: compW, height: compH } = useVideoConfig();
 
   // Calculo do volume com fade in/out (callback p/ Audio/Video evitar warning)
   const calcVolume = (f: number) => {
@@ -171,15 +171,35 @@ export const CinematicBackground: React.FC<Props> = ({
     0
   );
   // Reenquadramento manual do BG (pan + zoom) — pra não cortar a cabeça dos
-  // cantores no feed. Pan via objectPosition (não interfere no Ken Burns);
-  // zoom multiplica a escala animada.
+  // cantores no feed. O pan é feito por TRANSFORM TRANSLATE (não objectPosition),
+  // porque o clip otimizado já vem no tamanho EXATO do quadro (1080×1350) e aí
+  // objectFit:cover não tem o que recortar → objectPosition viraria no-op. O
+  // translate usa o overflow do zoom (Ken Burns + zoom do usuário) e é limitado
+  // a esse overflow pra nunca aparecer borda preta.
   const userOffsetX = Math.max(-50, Math.min(50, bg.bgOffsetX ?? 0));
   const userOffsetY = Math.max(-50, Math.min(50, bg.bgOffsetY ?? 0));
   const userZoom = Math.max(1, Math.min(4, bg.bgZoom ?? 1));
-  const bgObjectPosition = `${50 + userOffsetX}% ${50 + userOffsetY}%`;
 
-  const bgZoom = (kbZoom + accentBoost * 0.02) * userZoom;
-  const previewZoom = (lightPreview ? 1.08 * userZoom : bgZoom);
+  // Pra a Posição aparecer de verdade num clip já no tamanho do quadro, a escala
+  // precisa de overflow >= deslocamento pedido. Aumentamos a escala o suficiente
+  // (auto-boost) quando o pan passa do overflow já existente. Assim −X% sempre
+  // move (e o slider de Zoom soma por cima, se quiser mais).
+  const reqFrac = Math.max(Math.abs(userOffsetX), Math.abs(userOffsetY)) / 100;
+  const panBoost = 1 + 2 * reqFrac;
+  const bgZoom = Math.max((kbZoom + accentBoost * 0.02) * userZoom, panBoost);
+
+  // Translate pré-escala (o CSS multiplica pela escala): retorna o deslocamento
+  // já dividido pela escala e limitado ao overflow disponível.
+  const panTranslate = (scale: number) => {
+    const maxX = Math.max(0, (scale - 1) / 2) * compW;
+    const maxY = Math.max(0, (scale - 1) / 2) * compH;
+    const wantX = -(userOffsetX / 100) * compW; // offset<0 → mostra a esquerda
+    const wantY = -(userOffsetY / 100) * compH; // offset<0 → mostra o topo (cabeças)
+    const sx = Math.max(-maxX, Math.min(maxX, wantX));
+    const sy = Math.max(-maxY, Math.min(maxY, wantY));
+    return { x: sx / scale, y: sy / scale };
+  };
+  const previewZoom = (lightPreview ? Math.max(1.08 * userZoom, panBoost) : bgZoom);
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
   const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
   const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;
@@ -217,11 +237,10 @@ export const CinematicBackground: React.FC<Props> = ({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              objectPosition: bgObjectPosition,
               filter: stillPreviewFilter,
               transform: lightPreview
-                ? `scale(${1.05 * userZoom})`
-                : `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px)`,
+                ? `scale(${1.05 * userZoom}) translate(${panTranslate(1.05 * userZoom).x}px, ${panTranslate(1.05 * userZoom).y}px)`
+                : `scale(${previewZoom}) translate(${previewDrift.x * 0.6 + panTranslate(previewZoom).x}px, ${previewDrift.y * 0.6 + panTranslate(previewZoom).y}px)`,
             }}
           />
         </AbsoluteFill>
@@ -240,9 +259,8 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: bgObjectPosition,
                 filter: renderVideoFilter,
-                transform: `scale(${bgZoom}) translate(${drift.x * 0.6}px, ${drift.y * 0.6}px)`,
+                transform: `scale(${bgZoom}) translate(${drift.x * 0.6 + panTranslate(bgZoom).x}px, ${drift.y * 0.6 + panTranslate(bgZoom).y}px)`,
               }}
             />
           ) : (
@@ -257,14 +275,13 @@ export const CinematicBackground: React.FC<Props> = ({
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: bgObjectPosition,
                 // Blur capado no preview: custo de GPU cresce com o raio² e
                 // blur grande num vídeo 1080×1920 a 30fps trava o editor.
                 // O render usa o blur cheio (branch OffthreadVideo acima).
                 filter: lightPreview ? lightPreviewVideoFilter : previewVideoFilter,
                 transform: lightPreview
-                  ? 'none'
-                  : `scale(${previewZoom}) translate(${previewDrift.x * 0.6}px, ${previewDrift.y * 0.6}px) translateZ(0)`,
+                  ? `scale(${previewZoom}) translate(${panTranslate(previewZoom).x}px, ${panTranslate(previewZoom).y}px) translateZ(0)`
+                  : `scale(${previewZoom}) translate(${previewDrift.x * 0.6 + panTranslate(previewZoom).x}px, ${previewDrift.y * 0.6 + panTranslate(previewZoom).y}px) translateZ(0)`,
                 backfaceVisibility: 'hidden',
                 willChange: 'auto',
               }}

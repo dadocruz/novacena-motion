@@ -6,7 +6,6 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { CustomTextsLayer } from './CustomTextsLayer';
-import { CoverPosterLayer } from './CoverPosterLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { DEFAULT_FONTS, findFont, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
@@ -93,7 +92,6 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
       <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={particlesEnabled ? 1 : 0} background={motion.background} />
       <OverlayLayer overlays={motion.overlays} />
       <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
-      <CoverPosterLayer poster={motion.poster} />
 
       {/* Layout idêntico ao PRÉ-SAVE, sem data e sem CTA de pré-save */}
       <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>

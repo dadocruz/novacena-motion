@@ -12,7 +12,6 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { CustomTextsLayer } from './CustomTextsLayer';
-import { CoverPosterLayer } from './CoverPosterLayer';
 import { PremiumCover } from './PremiumCover';
 import { PlatformLogo } from './PlatformLogo';
 import { StyledText } from './StyledText';
@@ -223,7 +222,6 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={M.particlesEnabled ? 0.72 : 0} background={M.background} />
         <OverlayLayer overlays={props.motion?.overlays} />
         <CustomTextsLayer texts={props.motion?.customTexts} customFonts={props.motion?.customFonts} />
-      <CoverPosterLayer poster={props.motion?.poster} />
         {renderYTIcons(20)}
         <div
           style={{
@@ -327,7 +325,6 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
       />
       <OverlayLayer overlays={props.motion?.overlays} />
       <CustomTextsLayer texts={props.motion?.customTexts} customFonts={props.motion?.customFonts} />
-      <CoverPosterLayer poster={props.motion?.poster} />
 
       {renderYTIcons(28)}
 

@@ -6,7 +6,6 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { CustomTextsLayer } from './CustomTextsLayer';
-import { CoverPosterLayer } from './CoverPosterLayer';
 import { StyledText } from './StyledText';
 import { findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
 import type { TemplateProps } from './types';
@@ -127,7 +126,6 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
       {/* Seu overlay alpha (animação do After) por cima do BG */}
       <OverlayLayer overlays={motion.overlays} />
       <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
-      <CoverPosterLayer poster={motion.poster} />
 
       {/* Leve escurecimento topo/rodapé só p/ legibilidade dos textos */}
       <AbsoluteFill style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0) 38%, rgba(0,0,0,0) 62%, rgba(0,0,0,0.5) 100%)', pointerEvents: 'none' }} />

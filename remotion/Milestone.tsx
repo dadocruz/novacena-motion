@@ -11,7 +11,6 @@ import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
 import { CustomTextsLayer } from './CustomTextsLayer';
-import { CoverPosterLayer } from './CoverPosterLayer';
 import { PremiumCover } from './PremiumCover';
 import { StyledText } from './StyledText';
 import { DEFAULT_FONTS, findFont, resolveMotion, ff, applyTextStyle, userTextTransform } from '../lib/fontCatalog';
@@ -108,7 +107,6 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
       {/* OVERLAY / TEXTURA — acima do BG e abaixo de capa/textos/logos */}
       <OverlayLayer overlays={props.motion?.overlays} />
       <CustomTextsLayer texts={props.motion?.customTexts} customFonts={props.motion?.customFonts} />
-      <CoverPosterLayer poster={props.motion?.poster} />
 
       <AbsoluteFill
         style={{

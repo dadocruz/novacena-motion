@@ -405,14 +405,15 @@ export type MotionConfig = {
   overlays?: OverlayPlacement[];
   /** Camadas de TEXTO livres (mesmo motor dos textos do template) */
   customTexts?: CustomTextLayer[];
-  /** Capa segurada nos frames iniciais/finais (poster no render Lambda).
-   *  Só age quando mode === 'composition' (Lambda); desktop usa ffmpeg. */
+  /** Capa = FRAME COMPLETO escolhido (textos/logos/animação no segundo exato),
+   *  congelado no início/fim. Só age quando mode === 'composition' (Lambda);
+   *  desktop usa ffmpeg. frameSec = segundo do vídeo escolhido como capa. */
   poster?: {
     enabled?: boolean;
     mode?: 'composition' | 'ffmpeg';
     holdSec?: number;
     outroEnabled?: boolean;
-    cover?: string;
+    frameSec?: number;
   };
   /** Timing da primeira CTA (frame de entrada) */
   cta1InFrame?: number;

@@ -6350,15 +6350,16 @@ export default function Home() {
         ...motionSource,
         background: renderBackground,
         customFonts: customFontsForRender,
-        // Poster da capa: no Lambda (SAAS) a composição segura a capa nos frames
-        // iniciais/finais (mode 'composition'); no desktop fica inerte e o poster
-        // sai via ffmpeg (posterFrame top-level, abaixo).
+        // Poster = FRAME COMPLETO escolhido (textos/logos/animação no segundo
+        // exato), congelado no início/fim. No Lambda (SAAS) a composição faz o
+        // freeze (mode 'composition'); no desktop fica inerte e o poster sai via
+        // ffmpeg (posterFrame top-level, abaixo). frameSec = segundo escolhido.
         poster: {
           enabled: posterFrameEnabled,
           mode: SAAS_EXPORT_MODE ? ('composition' as const) : ('ffmpeg' as const),
           holdSec: posterHoldSec,
           outroEnabled: posterOutroEnabled,
-          cover: (project as { coverImage?: string })?.coverImage,
+          frameSec: posterFrameSec,
         },
         previewMode: false,
       },

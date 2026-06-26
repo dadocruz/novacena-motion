@@ -1,5 +1,5 @@
 import React from 'react';
-import { Composition, continueRender, delayRender, staticFile } from 'remotion';
+import { Composition, Freeze, Sequence, continueRender, delayRender, staticFile, useVideoConfig } from 'remotion';
 import { AvailableNow } from './AvailableNow';
 import { WatchOnYouTube } from './WatchOnYouTube';
 import { YouTubeSubscribe } from './YouTubeSubscribe';
@@ -12,13 +12,67 @@ import { getProject } from './project';
 
 const FPS = 30;
 
+// Lê a config de poster (capa segurada no início/fim) de onde estiver nos props.
+function readPosterConfig(props: any) {
+  const p = props?.motion?.poster ?? props?.posterFrame ?? null;
+  if (!p || !p.enabled || p.mode !== 'composition') return null;
+  const holdFrames = Math.max(1, Math.round((Number(p.holdSec) || 1) * FPS));
+  return {
+    holdFrames,
+    outroFrames: p.outroEnabled ? holdFrames : 0,
+    frameSec: Math.max(0, Number(p.frameSec) || 0),
+  };
+}
+
 const resolveDurationInFramesFromProps = ({ props }: { props: any }) => {
   const seconds = Number(props?.durationSeconds ?? 8);
   const safeSeconds = Number.isFinite(seconds) && seconds > 0 ? seconds : 8;
+  let frames = Math.round(safeSeconds * FPS);
+  // Poster (modo composição/Lambda): estica a duração pra caber a capa segurada
+  // no início (e fim, se "repetir") SEM comer a animação — igual o desktop prepend.
+  const poster = readPosterConfig(props);
+  if (poster) frames += poster.holdFrames + poster.outroFrames;
 
   return {
-    durationInFrames: Math.round(safeSeconds * FPS),
+    durationInFrames: frames,
   };
+};
+
+// HOC que injeta a CAPA = FRAME COMPLETO escolhido (com textos/logos/animação no
+// segundo exato), congelado no início (e fim, se "repetir"), depois a animação
+// toca inteira. Só age no modo 'composition' (Lambda); no desktop o poster sai
+// por ffmpeg e isto fica inerte.
+const withPoster = (Comp: React.FC<any>): React.FC<any> => {
+  const Wrapped: React.FC<any> = (props) => {
+    const poster = readPosterConfig(props);
+    const { durationInFrames } = useVideoConfig();
+    if (!poster) return <Comp {...props} />;
+
+    const { holdFrames, outroFrames } = poster;
+    const baseF = Math.max(1, durationInFrames - holdFrames - outroFrames);
+    const posterFrame = Math.max(0, Math.min(baseF - 1, Math.round(poster.frameSec * FPS)));
+
+    return (
+      <>
+        <Sequence from={0} durationInFrames={holdFrames} layout="none">
+          <Freeze frame={posterFrame}>
+            <Comp {...props} />
+          </Freeze>
+        </Sequence>
+        <Sequence from={holdFrames} durationInFrames={baseF} layout="none">
+          <Comp {...props} />
+        </Sequence>
+        {outroFrames > 0 ? (
+          <Sequence from={holdFrames + baseF} durationInFrames={outroFrames} layout="none">
+            <Freeze frame={posterFrame}>
+              <Comp {...props} />
+            </Freeze>
+          </Sequence>
+        ) : null}
+      </>
+    );
+  };
+  return Wrapped;
 };
 
 // ============================================================
@@ -150,14 +204,14 @@ const SpotifyPrintWithFonts: React.FC<any> = (props) => (
 );
 
 const templates = [
-  { id: 'AvailableNow', component: AvailableNowWithFonts, project: getProject('available_now') },
-  { id: 'WatchOnYouTube', component: WatchOnYouTubeWithFonts, project: getProject('watch_youtube') },
-  { id: 'YouTubeSubscribe', component: YouTubeSubscribeWithFonts, project: getProject('youtube_subscribe') },
-  { id: 'YouTubeViews', component: YouTubeViewsWithFonts, project: getProject('youtube_views') },
-  { id: 'Milestone', component: MilestoneWithFonts, project: getProject('milestone') },
-  { id: 'OutNow', component: OutNowWithFonts, project: getProject('out_now') },
-  { id: 'ListenDeezer', component: ListenDeezerWithFonts, project: getProject('listen_deezer') },
-  { id: 'SpotifyPrint', component: SpotifyPrintWithFonts, project: getProject('spotify_print') },
+  { id: 'AvailableNow', component: withPoster(AvailableNowWithFonts), project: getProject('available_now') },
+  { id: 'WatchOnYouTube', component: withPoster(WatchOnYouTubeWithFonts), project: getProject('watch_youtube') },
+  { id: 'YouTubeSubscribe', component: withPoster(YouTubeSubscribeWithFonts), project: getProject('youtube_subscribe') },
+  { id: 'YouTubeViews', component: withPoster(YouTubeViewsWithFonts), project: getProject('youtube_views') },
+  { id: 'Milestone', component: withPoster(MilestoneWithFonts), project: getProject('milestone') },
+  { id: 'OutNow', component: withPoster(OutNowWithFonts), project: getProject('out_now') },
+  { id: 'ListenDeezer', component: withPoster(ListenDeezerWithFonts), project: getProject('listen_deezer') },
+  { id: 'SpotifyPrint', component: withPoster(SpotifyPrintWithFonts), project: getProject('spotify_print') },
 ] as const;
 
 export const RemotionRoot: React.FC = () => {
