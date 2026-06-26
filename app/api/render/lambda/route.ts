@@ -111,11 +111,13 @@ function supportedCompositionCandidates(candidates: string[], availableIds: Set<
 }
 
 function maxWorkersPerRender(accountConcurrencyLimit: number) {
-  // Folga MAIOR abaixo do limite da conta pra NÃO estourar concorrência durante
-  // o render ("serviço ocupado" que travava entrega pro cliente). Com limite 10
-  // e folga 4 → 6 workers (6 + orquestrador = 7 ≤ 10, margem 3). Quando a AWS
-  // aprovar a quota (5000), isso escala sozinho. Ajustável por env.
-  const headroom = Math.max(2, Number(process.env.REMOTION_LAMBDA_CONCURRENCY_HEADROOM || 4));
+  // Folga abaixo do limite da conta. Com limite 10 e folga 2 → 8 workers (8 +
+  // orquestrador = 9 ≤ 10). Chunks MENORES = cada chunk cabe no timeout de 900s
+  // da Lambda, essencial pra vídeo longo (50s+) — com 6 workers o chunk ficava
+  // com ~265 frames e estourava os 900s (render morria ~90% com "timeout").
+  // Seguro porque a fila serializa 1 render por vez (NOVACENA_MAX_ACTIVE=1).
+  // Quando a AWS aprovar a quota (5000), escala sozinho. Ajustável por env.
+  const headroom = Math.max(2, Number(process.env.REMOTION_LAMBDA_CONCURRENCY_HEADROOM || 2));
   const accountWorkerLimit = Math.max(1, Math.floor(accountConcurrencyLimit) - headroom);
   const configured = Number(process.env.REMOTION_LAMBDA_MAX_WORKERS_PER_RENDER || accountWorkerLimit);
   const appWorkerLimit = Math.max(1, Math.floor(Number.isFinite(configured) ? configured : accountWorkerLimit));

@@ -193,6 +193,13 @@ function trimArgs(
     '-c:v', 'libx264',
     '-preset', 'ultrafast',
     '-crf', '22',
+    // Keyframes densos (1 por segundo) — o OffthreadVideo no render faz seek
+    // frame-a-frame; sem isso o x264 (ultrafast) põe keyframe a cada ~250 frames
+    // e o seek fica lento → frames passam de vários segundos → o chunk estoura os
+    // 900s da Lambda e o render morre ~90% com "timeout". -g 30 deixa o seek rápido.
+    '-g', '30',
+    '-keyint_min', '30',
+    '-sc_threshold', '0',
     '-pix_fmt', 'yuv420p',
     ...audioArgs,
     '-movflags', '+faststart',
