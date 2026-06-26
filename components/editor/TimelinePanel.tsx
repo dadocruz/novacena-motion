@@ -174,7 +174,9 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
       if (!pressedZoomIn && !pressedZoomOut && !pressedPlay) return;
 
       const panel = panelRef.current;
-      const targetIsInsideTimeline = Boolean(panel && target && panel.contains(target));
+      // target pode ser window/document (não-Node) em alguns eventos → guarda
+      // com instanceof Node, senão panel.contains() lança TypeError.
+      const targetIsInsideTimeline = Boolean(panel && target instanceof Node && panel.contains(target));
       if (!timelineKeyboardActiveRef.current && !targetIsInsideTimeline) return;
       if (isTypingTarget && !timelineKeyboardActiveRef.current) return;
       if (isTypingTarget) return; // nunca sequestra espaço/dígitos enquanto digita
@@ -190,8 +192,8 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
 
     const onPointerDown = (event: PointerEvent) => {
       const panel = panelRef.current;
-      const target = event.target as Node | null;
-      timelineKeyboardActiveRef.current = Boolean(panel && target && panel.contains(target));
+      const target = event.target;
+      timelineKeyboardActiveRef.current = Boolean(panel && target instanceof Node && panel.contains(target));
     };
 
     window.addEventListener('keydown', onKeyDown, true);
