@@ -170,36 +170,31 @@ export const CinematicBackground: React.FC<Props> = ({
     (acc, f) => acc + hitPulse(frame, f, 20),
     0
   );
-  // Reenquadramento manual do BG (pan + zoom) — pra não cortar a cabeça dos
-  // cantores no feed. O pan é feito por TRANSFORM TRANSLATE (não objectPosition),
-  // porque o clip otimizado já vem no tamanho EXATO do quadro (1080×1350) e aí
-  // objectFit:cover não tem o que recortar → objectPosition viraria no-op. O
-  // translate usa o overflow do zoom (Ken Burns + zoom do usuário) e é limitado
-  // a esse overflow pra nunca aparecer borda preta.
+  // Reenquadramento manual do BG — controles 100% INDEPENDENTES:
+  //  • Zoom (bgZoom): só zooma (escala). NÃO é alterado pela Posição.
+  //  • Posição X/Y: só desloca (transform translate). NÃO altera o zoom.
+  // O pan usa TRANSFORM TRANSLATE (não objectPosition), porque o clip otimizado
+  // vem no tamanho EXATO do quadro e objectPosition viraria no-op. O slider
+  // −50..50 mapeia pra −100%..100% do espaço disponível (o overflow do zoom). Em
+  // zoom 1 o espaço é pequeno (só o Ken Burns); pra mover MAIS, aumenta o Zoom —
+  // são coisas separadas, cada uma com sua função.
   const userOffsetX = Math.max(-50, Math.min(50, bg.bgOffsetX ?? 0));
   const userOffsetY = Math.max(-50, Math.min(50, bg.bgOffsetY ?? 0));
   const userZoom = Math.max(1, Math.min(4, bg.bgZoom ?? 1));
 
-  // Pra a Posição aparecer de verdade num clip já no tamanho do quadro, a escala
-  // precisa de overflow >= deslocamento pedido. Aumentamos a escala o suficiente
-  // (auto-boost) quando o pan passa do overflow já existente. Assim −X% sempre
-  // move (e o slider de Zoom soma por cima, se quiser mais).
-  const reqFrac = Math.max(Math.abs(userOffsetX), Math.abs(userOffsetY)) / 100;
-  const panBoost = 1 + 2 * reqFrac;
-  const bgZoom = Math.max((kbZoom + accentBoost * 0.02) * userZoom, panBoost);
+  // Zoom = Ken Burns × zoom do usuário. SEM auto-boost (a Posição não mexe aqui).
+  const bgZoom = (kbZoom + accentBoost * 0.02) * userZoom;
 
-  // Translate pré-escala (o CSS multiplica pela escala): retorna o deslocamento
-  // já dividido pela escala e limitado ao overflow disponível.
-  const panTranslate = (scale: number) => {
-    const maxX = Math.max(0, (scale - 1) / 2) * compW;
-    const maxY = Math.max(0, (scale - 1) / 2) * compH;
-    const wantX = -(userOffsetX / 100) * compW; // offset<0 → mostra a esquerda
-    const wantY = -(userOffsetY / 100) * compH; // offset<0 → mostra o topo (cabeças)
-    const sx = Math.max(-maxX, Math.min(maxX, wantX));
-    const sy = Math.max(-maxY, Math.min(maxY, wantY));
-    return { x: sx / scale, y: sy / scale };
-  };
-  const previewZoom = (lightPreview ? Math.max(1.08 * userZoom, panBoost) : bgZoom);
+  // Espaço de pan estável (base no mínimo da escala, 1.16×zoom) pra não vazar
+  // borda preta nem oscilar com o Ken Burns. offset/50 = fração do espaço.
+  const panRoomX = Math.max(0, (1.16 * userZoom - 1) / 2) * compW;
+  const panRoomY = Math.max(0, (1.16 * userZoom - 1) / 2) * compH;
+  const panScreenX = -(userOffsetX / 50) * panRoomX; // offset<0 → mostra a esquerda
+  const panScreenY = -(userOffsetY / 50) * panRoomY; // offset<0 → mostra o topo (cabeças)
+
+  // Translate pré-escala (o CSS multiplica pela escala) → divide pela escala usada.
+  const panTranslate = (scale: number) => ({ x: panScreenX / scale, y: panScreenY / scale });
+  const previewZoom = (lightPreview ? 1.08 * userZoom : bgZoom);
   const previewDrift = lightPreview ? { x: 0, y: 0 } : drift;
   const renderVideoFilter = `blur(${videoBlur}px) saturate(${videoSaturation}) brightness(0.92)`;
   const previewVideoFilter = `blur(${Math.min(videoBlur, 8)}px) saturate(${videoSaturation}) brightness(0.92)`;

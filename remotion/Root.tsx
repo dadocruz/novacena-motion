@@ -1,5 +1,5 @@
 import React from 'react';
-import { Composition, Freeze, Sequence, continueRender, delayRender, staticFile, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Composition, Freeze, Img, Sequence, continueRender, delayRender, staticFile, useVideoConfig } from 'remotion';
 import { AvailableNow } from './AvailableNow';
 import { WatchOnYouTube } from './WatchOnYouTube';
 import { YouTubeSubscribe } from './YouTubeSubscribe';
@@ -8,6 +8,7 @@ import { Milestone } from './Milestone';
 import { OutNow } from './OutNow';
 import { SpotifyPrint } from './SpotifyPrint';
 import { getProject } from './project';
+import { PosterFreezeContext } from './posterContext';
 
 
 const FPS = 30;
@@ -50,21 +51,34 @@ const withPoster = (Comp: React.FC<any>): React.FC<any> => {
     const baseF = Math.max(1, durationInFrames - holdFrames - outroFrames);
     const posterFrame = Math.max(0, Math.min(baseF - 1, Math.round(poster.frameSec * FPS)));
 
+    // Capa: usa o STILL renderizado (imagem do frame escolhido, com overlay/
+    // textos/logos — feito pela rota antes do render). É o caminho confiável.
+    // Fallback (sem stillUrl): congela a composição (pode perder overlay de
+    // vídeo, mas mantém textos/capa).
+    const stillUrl = (props?.poster?.stillUrl ?? props?.motion?.poster?.stillUrl) as string | undefined;
+    const posterNode = stillUrl ? (
+      <AbsoluteFill style={{ background: '#000' }}>
+        <Img src={stillUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </AbsoluteFill>
+    ) : (
+      <Freeze frame={posterFrame}>
+        <PosterFreezeContext.Provider value={true}>
+          <Comp {...props} />
+        </PosterFreezeContext.Provider>
+      </Freeze>
+    );
+
     return (
       <>
         <Sequence from={0} durationInFrames={holdFrames} layout="none">
-          <Freeze frame={posterFrame}>
-            <Comp {...props} />
-          </Freeze>
+          {posterNode}
         </Sequence>
         <Sequence from={holdFrames} durationInFrames={baseF} layout="none">
           <Comp {...props} />
         </Sequence>
         {outroFrames > 0 ? (
           <Sequence from={holdFrames + baseF} durationInFrames={outroFrames} layout="none">
-            <Freeze frame={posterFrame}>
-              <Comp {...props} />
-            </Freeze>
+            {posterNode}
           </Sequence>
         ) : null}
       </>

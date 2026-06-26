@@ -414,6 +414,9 @@ export type MotionConfig = {
     holdSec?: number;
     outroEnabled?: boolean;
     frameSec?: number;
+    /** URL do still renderizado do frame escolhido (injetado pela rota de render
+     *  Lambda). Quando presente, a capa usa essa imagem em vez de congelar a comp. */
+    stillUrl?: string;
   };
   /** Timing da primeira CTA (frame de entrada) */
   cta1InFrame?: number;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { PosterFreezeContext } from './posterContext';
 import {
   AbsoluteFill,
   Img,
@@ -376,6 +377,7 @@ const FrameControlledVideo: React.FC<{
 }> = ({ src, sourceDurationInFrames, loopEnabled, loopMode, style, previewQuality = 'full' }) => {
   const frame = useCurrentFrame();
   const lastFrame = Math.max(1, sourceDurationInFrames - 1);
+  const insidePosterFreeze = React.useContext(PosterFreezeContext);
 
   // PREVIEW (Player): reprodução nativa, suave. Frame-controlar via <Freeze>
   // força um seek por frame e TRAVA o editor. Aqui o vídeo toca em tempo real;
@@ -421,16 +423,19 @@ const FrameControlledVideo: React.FC<{
   // estourava o delayRender). transparent=true preserva o alpha dos overlays
   // .webm (o upload converte os alpha pra -alpha.webm); .mp4 é opaco.
   const isAlphaOverlay = /\.webm(\?|#|$)/i.test(src);
-  return (
-    <Freeze frame={mediaFrame}>
-      <OffthreadVideo
-        src={src}
-        muted
-        transparent={isAlphaOverlay}
-        style={style}
-      />
-    </Freeze>
+  const offthread = (
+    <OffthreadVideo
+      src={src}
+      muted
+      transparent={isAlphaOverlay}
+      style={style}
+    />
   );
+  // Dentro do poster (capa congelada) o frame já está fixado pelo Freeze do
+  // poster — aninhar OUTRO Freeze aqui faz o OffthreadVideo sumir (overlay some
+  // da capa). Renderiza direto; o Freeze do poster cuida do frame.
+  if (insidePosterFreeze) return offthread;
+  return <Freeze frame={mediaFrame}>{offthread}</Freeze>;
 };
 
 // Vídeo overlay com tint/degradê. Sem gradiente => 1 cópia (leve).

@@ -412,6 +412,52 @@ export async function POST(req: NextRequest) {
     );
     const renderCompositionCandidates = supportedCompositionCandidates(compositionCandidates, availableCompositionIds);
 
+    // POSTER / CAPA: renderiza um STILL REAL do frame escolhido (com overlay,
+    // textos, logos — tudo, igual o preview) e injeta como imagem da capa. É bem
+    // mais confiável que congelar a composição: OffthreadVideo (overlay de vídeo)
+    // NÃO renderiza dentro de Freeze aninhado/Sequence, então a capa saía sem o
+    // overlay. O still é um render normal de 1 frame → pega tudo certo.
+    const posterCfg = (resolvedProps as Record<string, any>)?.poster;
+    if (posterCfg?.enabled && posterCfg?.mode === 'composition' && !posterCfg?.stillUrl && renderCompositionCandidates[0]) {
+      try {
+        const holdSec = Number(posterCfg.holdSec) || 1;
+        const outroSec = posterCfg.outroEnabled ? holdSec : 0;
+        const baseDurationSec = Math.max(1, durationSec - holdSec - outroSec);
+        const baseFrames = Math.ceil(baseDurationSec * 30);
+        const posterFrame = Math.max(0, Math.min(baseFrames - 1, Math.round((Number(posterCfg.frameSec) || 0) * 30)));
+        // Props da still: composição BASE no frame escolhido, SEM poster (sem
+        // freeze nem extensão de duração) → render normal daquele frame.
+        const stillProps = {
+          ...resolvedProps,
+          durationSeconds: baseDurationSec,
+          poster: { ...posterCfg, enabled: false },
+          motion: { ...(resolvedProps as Record<string, any>).motion, poster: { ...posterCfg, enabled: false } },
+        };
+        const { renderStillOnLambda } = await import('@remotion/lambda/client');
+        const stillRes = await renderStillOnLambda({
+          region: region as 'us-east-1',
+          functionName,
+          serveUrl,
+          composition: renderCompositionCandidates[0],
+          inputProps: stillProps,
+          imageFormat: 'png',
+          frame: posterFrame,
+          forceBucketName: bucketName,
+          privacy: 'public',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any) as { url?: string };
+        if (stillRes?.url) {
+          (resolvedProps as Record<string, any>).poster = { ...posterCfg, stillUrl: stillRes.url };
+          if ((resolvedProps as Record<string, any>).motion) {
+            (resolvedProps as Record<string, any>).motion.poster = { ...posterCfg, stillUrl: stillRes.url };
+          }
+        }
+      } catch (stillError) {
+        // Se a still falhar, segue sem ela (fallback: freeze da composição).
+        console.error('[render/lambda] poster still failed', stillError);
+      }
+    }
+
     let result: { renderId: string; bucketName: string } | null = null;
     let composition = primaryComposition;
     let fallbackFrom: string | undefined;
