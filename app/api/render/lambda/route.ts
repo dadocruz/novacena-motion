@@ -164,6 +164,7 @@ function lookupContentType(filePath: string) {
     '.mov': 'video/quicktime',
     '.mp3': 'audio/mpeg',
     '.mp4': 'video/mp4',
+    '.otf': 'font/otf',
     '.png': 'image/png',
     '.svg': 'image/svg+xml',
     '.ttf': 'font/ttf',

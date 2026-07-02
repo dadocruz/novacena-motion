@@ -41,7 +41,11 @@ export function inertialPop(
   const overshoot = options.overshoot ?? 0.16;
   const waves = options.waves ?? 1.15;
   const decay = options.decay ?? 2.8;
-  const ring = Math.sin(t * Math.PI * waves) * Math.exp(-decay * t);
+  // O envelope (1 - t) força o "ring" a ZERAR exatamente em t=1. Sem isso, com
+  // waves não-inteiro sin(π·waves)≠0 deixava um resíduo (~0.03) no fim → a escala
+  // parava em ~0.97 e, quando a transição terminava (vira sem-transição = escala
+  // 1), o texto DAVA UM PULO/oscilação. Agora converge limpo pra 1.
+  const ring = Math.sin(t * Math.PI * waves) * Math.exp(-decay * t) * (1 - t);
 
   return t + ring * overshoot;
 }
