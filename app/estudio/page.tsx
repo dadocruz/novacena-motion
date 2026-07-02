@@ -512,6 +512,10 @@ export default function Home() {
   const [showCta1, setShowCta1] = useState<boolean>(factoryAvailableNow.showCta1 ?? true);
   const [showCta2, setShowCta2] = useState<boolean>(factoryAvailableNow.showCta2 ?? true);
   const [showCover, setShowCover] = useState<boolean>(factoryAvailableNow.showCover ?? true);
+  // Olho estilo Premiere: oculta QUALQUER layer do template (true = oculta).
+  // headline/date/logos/phone vivem aqui; cta1/cta2/capa mapeiam pros toggles
+  // existentes (showCta1/showCta2/showCover) — fonte única, sem estado duplicado.
+  const [hiddenLayers, setHiddenLayers] = useState<NonNullable<MotionConfig['hiddenLayers']>>({});
 
   const [channelName, setChannelName] = useState(factoryAvailableNow.channelName ?? '');
   const [metricPrefix, setMetricPrefix] = useState(factoryAvailableNow.metricPrefix ?? 'ULTRAPASSAMOS');
@@ -1033,7 +1037,9 @@ export default function Home() {
         return;
       }
 
-      // Apagar layer selecionada (texto livre ou overlay) — Premiere-like.
+      // Apagar layer selecionada — Premiere-like. Texto livre/overlay = exclui;
+      // layer do template (título/data/CTA/capa/logos) = OCULTA (olho fechado;
+      // reexibe pela timeline).
       if (e.key === 'Delete' || e.key === 'Backspace' || e.key === '4' || e.code === 'Digit4' || e.code === 'Numpad4') {
         if (selectedCustomTextId) {
           e.preventDefault();
@@ -1043,6 +1049,24 @@ export default function Home() {
         if (selectedOverlayId) {
           e.preventDefault();
           removeOverlay(selectedOverlayId);
+          return;
+        }
+        if (activeStudioTool === 'text' && activeTextRole) {
+          e.preventDefault();
+          const role = activeTextRole === 'cta' ? 'cta1' : activeTextRole;
+          if (role === 'cta1') setShowCta1(false);
+          else if (role === 'cta2') setShowCta2(false);
+          else setHiddenLayers((prev) => ({ ...prev, [role]: true }));
+          return;
+        }
+        if (activeStudioTool === 'cover') {
+          e.preventDefault();
+          setShowCover(false);
+          return;
+        }
+        if (activeStudioTool === 'logos') {
+          e.preventDefault();
+          setHiddenLayers((prev) => ({ ...prev, logos: true }));
           return;
         }
       }
@@ -1061,7 +1085,7 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlayerPlayback, selectedCustomTextId, selectedOverlayId]);
+  }, [togglePlayerPlayback, selectedCustomTextId, selectedOverlayId, activeStudioTool, activeTextRole]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1289,6 +1313,7 @@ export default function Home() {
     setShowCta1(next.showCta1 ?? true);
     setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
+    setHiddenLayers({});
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -1519,6 +1544,7 @@ export default function Home() {
     setShowCta1(next.showCta1 ?? true);
     setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
+    setHiddenLayers((m.hiddenLayers as MotionConfig['hiddenLayers']) ?? {});
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -1903,6 +1929,7 @@ export default function Home() {
       showCta1,
       showCta2,
       showCover,
+      hiddenLayers,
       channelName,
       metricPrefix,
       metricNumber,
@@ -2046,6 +2073,7 @@ export default function Home() {
     setShowCta1(snapshot.showCta1 ?? true);
     setShowCta2(snapshot.showCta2 ?? true);
     setShowCover(snapshot.showCover ?? true);
+    setHiddenLayers(snapshot.hiddenLayers ?? {});
     setChannelName(snapshot.channelName ?? '');
     setMetricPrefix(snapshot.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(snapshot.metricNumber ?? '100.000');
@@ -2390,6 +2418,7 @@ export default function Home() {
       platformLogoWiggleSpeed: factoryMotion.platformLogoWiggleSpeed ?? 1,
       overlays,
       customTexts,
+      hiddenLayers,
     }),
     [
       fontHeadline,
@@ -2482,6 +2511,7 @@ export default function Home() {
       platformLogoTintColor,
       overlays,
       customTexts,
+      hiddenLayers,
       phoneSize,
       phoneX,
       phoneY,
@@ -3357,6 +3387,7 @@ export default function Home() {
     setCoverImage(snap.coverImage ?? '');
     if (snap.motion) {
       const m = snap.motion;
+      setHiddenLayers((m.hiddenLayers as MotionConfig['hiddenLayers']) ?? {});
       setFontHeadline(m.fontHeadline ?? DEFAULT_FONTS.headline);
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
@@ -5728,9 +5759,10 @@ export default function Home() {
 
       return [
         { id: 'youtube-title', kind: 'text', role: 'headline', label: 'Titulo fixo', rect: measuredRect('youtube-title', roleRect(12, 16, 76, 13, 'headline')) },
-        ...(showCover ? [{ id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, youtubeGeometry.coverLeftOffset, 0)) }] : []),
+        // Sempre inclui (mesmo oculto) — a track fica na timeline pro olho reexibir.
+        { id: 'cover', kind: 'cover' as const, label: 'Capa', rect: measuredRect('cover', mediaRect(50, youtubeCoverCenterY, youtubeCoverWidthPct, youtubeCoverHeightPct, youtubeGeometry.coverLeftOffset, 0)) },
         { id: 'youtube-channel', kind: 'text', role: 'date', label: 'Canal do YouTube', rect: measuredRect('youtube-channel', roleRect((100 - channelWidthPct) / 2, channelTopPct, channelWidthPct, 4.8, 'date')) },
-        ...(showCta1 ? [{ id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) }] : []),
+        { id: 'youtube-cta', kind: 'text' as const, role: 'cta1' as const, label: 'CTA do video', rect: measuredRect('youtube-cta', roleRect(12, ctaTopPct, 76, 5.8, 'cta1')) },
         ...elementHotspots,
         ...customTextHotspots,
       ];
@@ -5772,8 +5804,9 @@ export default function Home() {
       { id: 'headline', kind: 'text', role: 'headline', label: textRoleLabels.headline ?? 'Headline', rect: measuredRect('headline', roleRect(8, 11, 84, 9, 'headline')) },
       { id: 'date', kind: 'text', role: 'date', label: textRoleLabels.date ?? 'Data', rect: measuredRect('date', roleRect(22, 19, 56, 6, 'date')) },
       { id: 'cover', kind: 'cover', label: 'Capa', rect: measuredRect('cover', mediaRect(50, 49, coverPct, coverHeightPct, coverX, coverY)) },
-      ...(showCta1 ? [{ id: 'cta1', kind: 'text' as const, role: 'cta1' as const, label: textRoleLabels.cta1 ?? 'Chamada 1', rect: measuredRect('cta1', roleRect(8, 68, 84, 8, 'cta1')) }] : []),
-      ...(showCta2 ? [{ id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: measuredRect('cta2', roleRect(8, 77, 84, 8, 'cta2')) }] : []),
+      // Sempre inclui (mesmo ocultas) — a track fica na timeline pro olho reexibir.
+      { id: 'cta1', kind: 'text' as const, role: 'cta1' as const, label: textRoleLabels.cta1 ?? 'Chamada 1', rect: measuredRect('cta1', roleRect(8, 68, 84, 8, 'cta1')) },
+      { id: 'cta2', kind: 'text' as const, role: 'cta2' as const, label: textRoleLabels.cta2 ?? 'Chamada 2', rect: measuredRect('cta2', roleRect(8, 77, 84, 8, 'cta2')) },
       { id: 'logos', kind: 'logos', label: 'Logos', rect: measuredRect('logos', makeAvailableNowLogosRect()) },
       ...elementHotspots,
       ...customTextHotspots,
@@ -5813,6 +5846,35 @@ export default function Home() {
   // Faixas da timeline: textos (entram no tempo X), logos e overlays (start +
   // duração arrastável). Reaproveita previewLayerHotspots p/ saber as layers do
   // template atual. Atualiza tudo AO VIVO via inputProps (sem resetar o player).
+  // ── Visibilidade por layer (olho estilo Premiere) ─────────────────────────
+  // Mapeia cada hotspot pra sua "chave de visibilidade". Capa/CTAs usam os
+  // toggles existentes (fonte única); headline/date/logos/phone usam hiddenLayers.
+  function layerVisibilityKey(layer: PreviewLayerHotspot): 'headline' | 'date' | 'cta1' | 'cta2' | 'logos' | 'phone' | 'cover' | null {
+    if (layer.kind === 'cover') return 'cover';
+    if (layer.kind === 'logos') return 'logos';
+    if (layer.kind === 'phone') return 'phone';
+    if (layer.kind === 'text' && layer.role) return (layer.role === 'cta' ? 'cta1' : layer.role) as 'headline' | 'date' | 'cta1' | 'cta2';
+    return null; // element/ctext já têm exclusão própria (✕/Delete)
+  }
+
+  function isPreviewLayerHidden(layer: PreviewLayerHotspot): boolean {
+    const key = layerVisibilityKey(layer);
+    if (!key) return false;
+    if (key === 'cover') return !showCover;
+    if (key === 'cta1') return !showCta1;
+    if (key === 'cta2') return !showCta2;
+    return Boolean(hiddenLayers[key]);
+  }
+
+  function togglePreviewLayerVisibility(layer: PreviewLayerHotspot) {
+    const key = layerVisibilityKey(layer);
+    if (!key) return;
+    if (key === 'cover') { setShowCover((v) => !v); return; }
+    if (key === 'cta1') { setShowCta1((v) => !v); return; }
+    if (key === 'cta2') { setShowCta2((v) => !v); return; }
+    setHiddenLayers((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   const timelineTracks = React.useMemo<TimelineTrack[]>(() => {
     const dur = durationSeconds;
     const tracks: TimelineTrack[] = [];
@@ -5860,10 +5922,16 @@ export default function Home() {
     }
 
     for (const layer of previewLayerHotspots) {
+      // Olho estilo Premiere em toda layer do template (texto/capa/celular/logos).
+      const eye = {
+        hidden: isPreviewLayerHidden(layer),
+        onToggleHidden: () => togglePreviewLayerVisibility(layer),
+      };
       if (layer.kind === 'text' && layer.role) {
         const role = (layer.role === 'cta' ? 'cta1' : layer.role) as TextPreviewRole;
         const f = effectiveTextInFrames[role] ?? 0;
         tracks.push({
+          ...eye,
           id: layer.id,
           label: layer.label,
           color: '#c084fc',
@@ -5883,6 +5951,7 @@ export default function Home() {
         });
       } else if (layer.kind === 'cover') {
         tracks.push({
+          ...eye,
           id: layer.id,
           label: layer.label,
           color: '#38bdf8',
@@ -5898,6 +5967,7 @@ export default function Home() {
         });
       } else if (layer.kind === 'phone') {
         tracks.push({
+          ...eye,
           id: layer.id,
           label: layer.label,
           color: '#f59e0b',
@@ -5913,6 +5983,7 @@ export default function Home() {
         });
       } else if (layer.kind === 'logos') {
         tracks.push({
+          ...eye,
           id: layer.id,
           label: layer.label,
           color: '#fbbf24',
@@ -5972,6 +6043,10 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     previewLayerHotspots,
+    hiddenLayers,
+    showCover,
+    showCta1,
+    showCta2,
     effectiveTextInFrames,
     overlays,
     customTexts,
@@ -8179,6 +8254,9 @@ return (
                 </div>
               )}
               {previewLayerHotspots.map((layer) => {
+                // Layer oculta (olho fechado): player limpo, sem hotspot.
+                // Reexibe pela timeline (a track continua lá com o olho).
+                if (isPreviewLayerHidden(layer)) return null;
                 const selected =
                   (layer.kind === 'text' && layer.role === activeTextRole && activeStudioTool === 'text') ||
                   (layer.kind === 'ctext' && layer.ctextId === selectedCustomTextId && activeStudioTool === 'text') ||
@@ -10676,6 +10754,7 @@ return (
           onSeek={seekTimeline}
           onTogglePlay={togglePlayerPlayback}
           onClose={() => setShowTimeline(false)}
+          onAddTextLayer={addCustomText}
         />
       )}
 

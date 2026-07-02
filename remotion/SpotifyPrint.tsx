@@ -43,6 +43,8 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(30, 215, 96, 0.40)');
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const phoneIn = Math.max(0, Math.round(props.motion?.phoneInFrame ?? PHONE_IN));
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
@@ -173,7 +175,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(props.motion?.styleDate, { transform: prefixWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.date ? null : (<StyledText
             previewLayerId="spotify-date"
             text={prefixText}
             transition={showAll ? undefined : prefixTransition}
@@ -181,7 +183,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             stroke={M.strokeDate}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         {/* NÚMERO GIGANTE */}
@@ -215,7 +217,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
               ),
             }}
           >
-            <StyledText
+            {hiddenL.headline ? null : (<StyledText
               previewLayerId="spotify-number"
               text={numberText}
               transition={showAll ? undefined : numberTransition}
@@ -223,7 +225,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
               stroke={M.strokeHeadline}
               preserveFontShape={false}
               previewMode={false}
-            />
+            />)}
           </div>
         </div>
 
@@ -249,7 +251,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(labelStyle, { transform: labelWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.cta1 ? null : (<StyledText
             previewLayerId="spotify-metric"
             text={labelText}
             transition={showAll ? undefined : labelTransition}
@@ -257,10 +259,11 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             stroke={labelStroke}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         {/* IPHONE COM O PRINT DO SPOTIFY DENTRO */}
+        {hiddenL.phone ? null : (
         <div
           data-cover-position-wrapper
           data-novacena-preview-layer="spotify-phone"
@@ -289,6 +292,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
             dynamicIsland={phoneDynamicIsland}
           />
         </div>
+        )}
       </AbsoluteFill>
       <AbsoluteFill
         style={{

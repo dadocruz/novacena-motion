@@ -25,6 +25,9 @@ const FINAL_POSTER_BASE = 222;
 export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (motion.hiddenLayers ?? {}) as Record<string, boolean>;
+  const coverVisible = props.showCover !== false;
   const durationSeconds = motion.durationSeconds ?? 8;
   const durationFrames = durationSeconds * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
@@ -136,13 +139,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         <CinematicBackground coverImage={props.coverImage} accentFrames={accents} intensity={0} background={motion.background} />
         <OverlayLayer overlays={motion.overlays} />
         <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
-        {renderText(props.headline || 'LANÇAMENTO', 360, fontHeadline, {
+        {hiddenL.headline ? null : renderText(props.headline || 'LANÇAMENTO', 360, fontHeadline, {
           fontSize: 92,
           lineHeight: 0.94,
           letterSpacing: 0,
           textTransform: 'uppercase',
         }, showAll ? {} : tH, motion.styleHeadline)}
-        {props.releaseDate ? renderText(props.releaseDate, 472, fontDate, {
+        {!hiddenL.date && props.releaseDate ? renderText(props.releaseDate, 472, fontDate, {
           fontSize: 62,
           lineHeight: 0.98,
           letterSpacing: 0,
@@ -175,6 +178,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
       <CustomTextsLayer texts={motion.customTexts} customFonts={motion.customFonts} />
       <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>
         <div style={{ width: '100%' }}>
+          {hiddenL.headline ? null : (
           <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible' }}>
             <div style={{
               fontFamily: `'${fontHeadline?.family ?? 'Arial'}', Arial, sans-serif`,
@@ -191,7 +195,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
               <StyledText previewLayerId="headline" text={props.headline || 'LANÇAMENTO'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
-          {props.releaseDate ? (
+          )}
+          {!hiddenL.date && props.releaseDate ? (
             <div style={{
               fontFamily: `'${fontDate?.family ?? 'Arial'}', Arial, sans-serif`,
               marginTop: 4,
@@ -207,11 +212,13 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
             </div>
           ) : null}
         </div>
+        {coverVisible ? (
         <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <div data-cover-position-wrapper data-novacena-preview-layer="cover" style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
             <PremiumCover src={props.coverImage} size={coverSize} entryFrame={coverIn} spinStart={coverIn + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
+        ) : null}
         <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{
             fontFamily: `'${fontCta1?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
@@ -245,7 +252,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           }}>
             <StyledText previewLayerId="cta2" text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
-          {visiblePlatforms.length > 0 ? (
+          {!hiddenL.logos && visiblePlatforms.length > 0 ? (
             <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto', transform: `translate(${motion.platformLogoX ?? 0}px, ${motion.platformLogoY ?? 0}px)`, willChange: 'transform' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo

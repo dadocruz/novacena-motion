@@ -405,6 +405,11 @@ export type MotionConfig = {
   overlays?: OverlayPlacement[];
   /** Camadas de TEXTO livres (mesmo motor dos textos do template) */
   customTexts?: CustomTextLayer[];
+  /** Visibilidade por layer (olho estilo Premiere). true = OCULTA a layer.
+   *  Chaves por papel: headline/date/cta1/cta2 (textos do template, mapeados
+   *  pelo papel em cada template), logos (fileira de plataformas), phone
+   *  (celular do spotify_print). Capa usa o showCover existente. */
+  hiddenLayers?: Partial<Record<'headline' | 'date' | 'cta1' | 'cta2' | 'logos' | 'phone', boolean>>;
   /** Capa = FRAME COMPLETO escolhido (textos/logos/animação no segundo exato),
    *  congelado no início/fim. Só age quando mode === 'composition' (Lambda);
    *  desktop usa ffmpeg. frameSec = segundo do vídeo escolhido como capa. */

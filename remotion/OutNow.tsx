@@ -31,6 +31,9 @@ const FINAL_POSTER_BASE = 222;
 export const OutNow: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (motion.hiddenLayers ?? {}) as Record<string, boolean>;
+  const coverVisible = props.showCover !== false;
   const durationSeconds = motion.durationSeconds ?? 8;
   const durationFrames = durationSeconds * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
@@ -97,6 +100,7 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
       <AbsoluteFill style={{ padding: isStory ? '0 82px' : '0 86px', top: isStory ? 245 : 88, height: isStory ? 1450 : 1220, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: isStory ? 42 : 34, alignItems: 'center', textAlign: 'center' }}>
         {/* HEADLINE */}
         <div style={{ width: '100%' }}>
+          {hiddenL.headline ? null : (
           <div style={{ width: '100%', paddingBottom: 10, overflow: 'visible' }}>
             <div style={{
               fontFamily: `'${fontHeadline?.family ?? 'Arial'}', Arial, sans-serif`,
@@ -113,19 +117,23 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
               <StyledText previewLayerId="outnow-title" text={props.headline || 'DISPONÍVEL'} transition={showAll ? undefined : tH} style={motion.styleHeadline} stroke={motion.strokeHeadline} preserveFontShape={false} previewMode={false} />
             </div>
           </div>
+          )}
           {/* SEM DATA — a música já saiu */}
         </div>
 
         {/* CAPA */}
+        {coverVisible ? (
         <div style={{ marginTop: 0, marginBottom: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <div data-cover-position-wrapper data-novacena-preview-layer="cover" style={{ transform: `translate(${motion.coverX ?? 0}px, ${motion.coverY ?? 0}px)`, willChange: 'transform' }}>
             <PremiumCover src={props.coverImage} size={coverSize} entryFrame={coverIn} spinStart={coverIn + 70} spinEnd={FINAL_HIT - 4} motionId={motion.coverMotion ?? 'slide_up_glow'} spinTurns={spinTurns} wiggleIntensity={wiggleIntensity} accentFrames={accents} glowColor={glowColor} />
           </div>
         </div>
+        ) : null}
 
         {/* CTA (ex: "EM TODAS AS PLATAFORMAS DIGITAIS") — sem "FAÇA O PRÉ-SAVE" */}
         <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ width: '100%', minHeight: 44, opacity: 0 }} />
+          {hiddenL.cta2 ? null : (
           <div style={{
             fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
             width: '100%',
@@ -142,9 +150,10 @@ export const OutNow: React.FC<TemplateProps> = (props) => {
           }}>
             <StyledText previewLayerId="outnow-cta" text={ctaText} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
+          )}
 
           {/* LOGOS */}
-          {visiblePlatforms.length > 0 ? (
+          {!hiddenL.logos && visiblePlatforms.length > 0 ? (
             <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto', transform: `translate(${motion.platformLogoX ?? 0}px, ${motion.platformLogoY ?? 0}px)`, willChange: 'transform' }}>
               {visiblePlatforms.map((p, idx) => (
                 <PlatformLogo

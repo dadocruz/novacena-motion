@@ -32,6 +32,8 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(60, 220, 130, 0.32)');
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
   const labelIn = props.motion?.cta1InFrame ?? LABEL_IN;
@@ -132,7 +134,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(props.motion?.styleDate, { transform: prefixWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.date ? null : (<StyledText
             previewLayerId="milestone-date"
             text={prefixText}
             transition={showAll ? undefined : prefixTransition}
@@ -140,10 +142,11 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             stroke={M.strokeDate}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         {/* CAPA */}
+        {props.showCover !== false ? (
         <div style={{ marginTop: 50 }}>
           <div
 
@@ -175,6 +178,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
 
           </div>
         </div>
+        ) : null}
 
         {/* NÚMERO GIGANTE */}
         <div
@@ -198,7 +202,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(props.motion?.styleHeadline, { transform: numberWiggle.transform }),
             }}
           >
-            <StyledText
+            {hiddenL.headline ? null : (<StyledText
               previewLayerId="milestone-number"
               text={numberText}
               transition={showAll ? undefined : numberTransition}
@@ -206,7 +210,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
               stroke={M.strokeHeadline}
               preserveFontShape={false}
               previewMode={false}
-            />
+            />)}
           </div>
         </div>
 
@@ -225,7 +229,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(labelStyle, { transform: labelWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.cta1 ? null : (<StyledText
             previewLayerId="milestone-label"
             text={labelText}
             transition={showAll ? undefined : labelTransition}
@@ -233,7 +237,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
             stroke={labelStroke}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         {/* Logo da plataforma: inserido pelo usuário via Overlays / elementos livres

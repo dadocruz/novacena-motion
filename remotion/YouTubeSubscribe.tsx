@@ -53,6 +53,8 @@ const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => 
 export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
   const durationFrames = (motion.durationSeconds ?? 8) * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
@@ -120,7 +122,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(motion.styleHeadline, { transform: headlineWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.headline ? null : (<StyledText
             previewLayerId="ytsub-headline"
             text={props.headline || 'INSCREVA-SE'}
             transition={showAll ? undefined : tH}
@@ -128,7 +130,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
             stroke={motion.strokeHeadline}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         <div
@@ -147,7 +149,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: text1Wiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.cta1 ? null : (<StyledText
             previewLayerId="ytsub-text1"
             text={text1}
             transition={showAll ? undefined : tText1}
@@ -155,7 +157,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
             stroke={motion.strokeCta1 ?? motion.strokeCta}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
 
         <div
@@ -201,7 +203,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
                 ...channelTextStyle,
               }}
             >
-              <StyledText
+              {hiddenL.date ? null : (<StyledText
                 previewLayerId="ytsub-channel"
                 text={channelText}
                 transition={showAll ? undefined : tC}
@@ -209,7 +211,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
                 stroke={motion.strokeDate}
                 preserveFontShape={false}
                 previewMode={false}
-              />
+              />)}
             </span>
           </div>
         </div>

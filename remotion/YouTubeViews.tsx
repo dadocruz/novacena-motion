@@ -55,6 +55,8 @@ const keepTextOnlyStyle = (style?: React.CSSProperties): React.CSSProperties => 
 export const YouTubeViews: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
   const durationFrames = (motion.durationSeconds ?? 8) * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
@@ -146,7 +148,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(motion.styleDate, { transform: prefixWiggle.transform }),
           }}
         >
-          <StyledText previewLayerId="ytviews-prefix" text={prefixText} transition={showAll ? undefined : tPrefix} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />
+          {hiddenL.date ? null : (<StyledText previewLayerId="ytviews-prefix" text={prefixText} transition={showAll ? undefined : tPrefix} style={motion.styleDate} stroke={motion.strokeDate} preserveFontShape={false} previewMode={false} />)}
         </div>
 
         <div
@@ -166,7 +168,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(motion.styleHeadline, { transform: numberWiggle.transform }),
           }}
         >
-          <StyledText previewLayerId="ytviews-number" text={numberText} transition={showAll ? undefined : tNumber} style={motion.styleHeadline} stroke={M.strokeHeadline} preserveFontShape={false} previewMode={false} />
+          {hiddenL.headline ? null : (<StyledText previewLayerId="ytviews-number" text={numberText} transition={showAll ? undefined : tNumber} style={motion.styleHeadline} stroke={M.strokeHeadline} preserveFontShape={false} previewMode={false} />)}
         </div>
 
         <div
@@ -184,7 +186,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(motion.styleCta1 ?? motion.styleCta, { transform: labelWiggle.transform }),
           }}
         >
-          <StyledText previewLayerId="ytviews-label" text={labelText} transition={showAll ? undefined : tLabel} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
+          {hiddenL.cta1 ? null : (<StyledText previewLayerId="ytviews-label" text={labelText} transition={showAll ? undefined : tLabel} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />)}
         </div>
 
         <div
@@ -230,7 +232,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
                 ...channelTextStyle,
               }}
             >
-              <StyledText
+              {hiddenL.cta2 ? null : (<StyledText
                 previewLayerId="ytviews-channel"
                 text={channelText}
                 transition={showAll ? undefined : tChannel}
@@ -238,7 +240,7 @@ export const YouTubeViews: React.FC<TemplateProps> = (props) => {
                 stroke={motion.strokeCta2}
                 preserveFontShape={false}
                 previewMode={false}
-              />
+              />)}
             </span>
           </div>
         </div>

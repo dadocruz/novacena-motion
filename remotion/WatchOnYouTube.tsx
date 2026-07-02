@@ -61,6 +61,8 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const accents = [MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(255, 40, 40, 0.32)');
+  // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
+  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
   const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
   const channelIn = props.motion?.dateInFrame ?? CHANNEL_IN;
   const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;
@@ -201,7 +203,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             ...channelTextStyle,
           }}
         >
-          <StyledText
+          {hiddenL.date ? null : (<StyledText
             previewLayerId="youtube-channel"
             text={channel}
             transition={showAll ? undefined : channelTransition}
@@ -209,7 +211,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             stroke={props.motion?.strokeDate}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </span>
       </div>
     </div>
@@ -244,7 +246,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
           }}
         >
-          <StyledText
+          {hiddenL.headline ? null : (<StyledText
             previewLayerId="youtube-title"
             text={'ASSISTA NO\nYOUTUBE'}
             transition={showAll ? undefined : headlineTransition}
@@ -252,7 +254,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             stroke={M.strokeHeadline}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
         {showCover && (
           <div data-cover-position-wrapper style={{ position: 'absolute', top: coverTop, left: 0, right: 0, display: 'flex', justifyContent: 'center', transform: `translateX(${coverLeftOffset}px)` }}>
@@ -292,7 +294,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
             }}
           >
-            <StyledText
+            {hiddenL.cta1 ? null : (<StyledText
               previewLayerId="youtube-cta"
               text={cta}
               transition={showAll ? undefined : ctaTransition}
@@ -300,7 +302,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
               stroke={ctaStroke}
               preserveFontShape={false}
               previewMode={false}
-            />
+            />)}
           </div>
         )}
         <AbsoluteFill style={{ background: '#fff', opacity: finalFlash, pointerEvents: 'none' }} />
@@ -350,7 +352,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
         ...userTextTransform(props.motion?.styleHeadline, { transform: headlineWiggle.transform }),
       }}
     >
-        <StyledText
+        {hiddenL.headline ? null : (<StyledText
           previewLayerId="youtube-title"
           text={'ASSISTA NO\nYOUTUBE'}
           transition={showAll ? undefined : headlineTransition}
@@ -358,7 +360,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           stroke={M.strokeHeadline}
           preserveFontShape={false}
           previewMode={false}
-        />
+        />)}
       </div>
 
       {/* CAPA — centralizada */}
@@ -403,7 +405,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
           ...userTextTransform(ctaStyle, { transform: ctaWiggle.transform }),
         }}
       >
-          <StyledText
+          {hiddenL.cta1 ? null : (<StyledText
             previewLayerId="youtube-cta"
             text={cta}
             transition={showAll ? undefined : ctaTransition}
@@ -411,7 +413,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
             stroke={ctaStroke}
             preserveFontShape={false}
             previewMode={false}
-          />
+          />)}
         </div>
       )}
 

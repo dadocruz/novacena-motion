@@ -22,6 +22,10 @@ export interface TimelineTrack {
   onChangeEnd?: (sec: number) => void;
   onSelect?: () => void;
   selected?: boolean;
+  /** Olho estilo Premiere: true = layer OCULTA no vídeo (a track continua aqui). */
+  hidden?: boolean;
+  /** Alterna a visibilidade da layer (o olho). Sem callback = sem olho. */
+  onToggleHidden?: () => void;
 }
 
 export interface TimelineTool {
@@ -49,6 +53,8 @@ interface TimelinePanelProps {
   onSeek: (sec: number) => void;
   onTogglePlay?: () => void;
   onClose: () => void;
+  /** Cria uma layer de texto nova no playhead (botão "+ Texto" na barra). */
+  onAddTextLayer?: () => void;
 }
 
 const LABEL_W = 108;
@@ -74,6 +80,7 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
   onSeek,
   onTogglePlay,
   onClose,
+  onAddTextLayer,
 }) => {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
   const areaRef = React.useRef<HTMLDivElement | null>(null);
@@ -341,6 +348,32 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
               })}
             </div>
           )}
+          {onAddTextLayer ? (
+            <button
+              type="button"
+              onClick={onAddTextLayer}
+              title="Nova layer de texto no playhead"
+              aria-label="Nova layer de texto"
+              style={{
+                border: '1px solid rgba(255,255,255,0.16)',
+                background: 'linear-gradient(135deg, rgba(244,114,182,0.32), rgba(190,80,255,0.28))',
+                color: '#fff',
+                borderRadius: 8,
+                height: 30,
+                padding: '0 10px',
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: 0.3,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              + Texto
+            </button>
+          ) : null}
           <div
             style={{
               display: 'flex',
@@ -564,37 +597,75 @@ export const TimelinePanel: React.FC<TimelinePanelProps> = ({
                     alignItems: 'center',
                     height: ROW_H,
                     borderRadius: 7,
+                    // Layer oculta (olho fechado): linha esmaecida, estilo Premiere.
+                    opacity: track.hidden ? 0.45 : 1,
                     background: selected ? `linear-gradient(90deg, ${track.color}3d, rgba(255,255,255,0.06) 42%, transparent)` : 'transparent',
                     boxShadow: selected ? `inset 3px 0 0 ${track.color}` : undefined,
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={track.onSelect}
-                    title={track.label}
+                  <div
                     style={{
                       width: LABEL_W,
                       flex: '0 0 auto',
                       position: 'sticky',
                       left: 0,
                       zIndex: 8,
-                      textAlign: 'left',
-                      border: selected ? `1px solid ${track.color}80` : '1px solid transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
                       borderRadius: 7,
+                      border: selected ? `1px solid ${track.color}80` : '1px solid transparent',
                       background: selected ? 'rgba(255,255,255,0.10)' : 'transparent',
-                      color: selected ? '#fff' : 'rgba(255,255,255,0.82)',
-                      fontSize: 10,
-                      fontWeight: selected ? 900 : 700,
-                      paddingRight: 6,
-                      cursor: track.onSelect ? 'pointer' : 'default',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
                     }}
                   >
-                    <span style={{ color: track.color, marginRight: 5 }}>●</span>
-                    {track.label}
-                  </button>
+                    {track.onToggleHidden ? (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); track.onToggleHidden?.(); }}
+                        title={track.hidden ? 'Mostrar layer no vídeo' : 'Ocultar layer do vídeo'}
+                        style={{
+                          flex: '0 0 auto',
+                          width: 17,
+                          height: 16,
+                          padding: 0,
+                          border: 'none',
+                          borderRadius: 4,
+                          background: 'transparent',
+                          color: track.hidden ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.9)',
+                          fontSize: 10,
+                          lineHeight: 1,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {track.hidden ? '✕' : '👁'}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={track.onSelect}
+                      title={track.label}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        textAlign: 'left',
+                        border: 'none',
+                        background: 'transparent',
+                        color: selected ? '#fff' : 'rgba(255,255,255,0.82)',
+                        fontSize: 10,
+                        fontWeight: selected ? 900 : 700,
+                        paddingRight: 6,
+                        paddingLeft: track.onToggleHidden ? 0 : 4,
+                        cursor: track.onSelect ? 'pointer' : 'default',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        textDecoration: track.hidden ? 'line-through' : 'none',
+                      }}
+                    >
+                      <span style={{ color: track.color, marginRight: 5 }}>●</span>
+                      {track.label}
+                    </button>
+                  </div>
 
                   <div
                     onPointerDown={(e) => {
