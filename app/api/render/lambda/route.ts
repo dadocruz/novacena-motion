@@ -251,6 +251,55 @@ async function uploadLocalAssetToS3(
 const uploadCache = new Map<string, string>();
 
 /**
+ * Embute as fontes de USUÁRIO ativas como data: URI direto nos props.
+ * Motivo: @font-face carregada de outra origem (bucket S3) exige CORS; o
+ * Chrome do Lambda bloqueia silenciosamente e o texto renderiza na fonte de
+ * fallback — "no preview era uma fonte, no export saiu outra". Com data: URI
+ * não há rede nem CORS: a fonte SEMPRE carrega. Fontes são pequenas (50–400KB)
+ * e o Remotion move inputProps grandes pro S3 sozinho.
+ */
+async function inlineActiveUserFonts(motion: Record<string, unknown> | undefined) {
+  if (!motion || !Array.isArray(motion.customFonts)) return;
+  const activeIds = new Set(
+    [
+      motion.fontHeadline,
+      motion.fontDate,
+      motion.fontCta,
+      motion.fontCta1,
+      motion.fontCta2,
+      ...(Array.isArray(motion.customTexts)
+        ? (motion.customTexts as Array<{ fontId?: string }>).map((ct) => ct?.fontId)
+        : []),
+    ].filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+
+  const userFontsDir = path.join(process.cwd(), 'public', 'uploads', 'user-fonts');
+  const inlined: unknown[] = [];
+  for (const font of motion.customFonts as Array<{ id?: string; file?: string }>) {
+    if (!font || typeof font.file !== 'string' || !font.file) continue;
+    if (activeIds.size > 0 && typeof font.id === 'string' && !activeIds.has(font.id)) continue;
+    if (font.file.startsWith('data:')) { inlined.push(font); continue; }
+    try {
+      const filename = font.file.replace(/^\/+/, '').split('/').pop();
+      if (!filename) continue;
+      const buffer = await readFile(path.join(userFontsDir, filename));
+      const ext = (filename.split('.').pop() || '').toLowerCase();
+      const mime =
+        ext === 'otf' ? 'font/otf' :
+        ext === 'ttf' ? 'font/ttf' :
+        ext === 'woff2' ? 'font/woff2' :
+        ext === 'woff' ? 'font/woff' :
+        'application/octet-stream';
+      inlined.push({ ...font, file: `data:${mime};base64,${buffer.toString('base64')}` });
+    } catch (error) {
+      console.warn('[render/lambda] não consegui embutir fonte custom:', font.file, error);
+      inlined.push(font); // mantém a URL — melhor tentar que sumir com a fonte
+    }
+  }
+  motion.customFonts = inlined;
+}
+
+/**
  * Recursively walk any object/array and replace local /api/uploads/ URLs
  * with public S3 URLs. Uploads files on first encounter, caches for reuse.
  */
@@ -385,6 +434,11 @@ export async function POST(req: NextRequest) {
       );
     }
     reservationId = slot.reservationId;
+
+    // Fontes de usuário viram data: URI ANTES do upload de assets (senão a
+    // fonte sobe pro S3 e o @font-face cross-origin é bloqueado por CORS no
+    // Chrome do Lambda → fonte errada no export).
+    await inlineActiveUserFonts((inputProps as { motion?: Record<string, unknown> } | undefined)?.motion);
 
     // Upload local assets to S3 so Lambda workers can access them
     uploadCache.clear();

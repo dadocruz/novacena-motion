@@ -48,6 +48,11 @@ function activeFontIdsFromMotion(motion: any) {
       motion?.fontCta,
       motion?.fontCta1,
       motion?.fontCta2,
+      // Fontes das camadas de texto livres — sem isso a fonte de usuário usada
+      // num texto nativo não é embutida e o render cai no fallback (fonte errada).
+      ...(Array.isArray(motion?.customTexts)
+        ? motion.customTexts.map((ct: any) => ct?.fontId)
+        : []),
     ].filter((id): id is string => typeof id === 'string' && id.length > 0)
   );
 }

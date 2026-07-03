@@ -514,6 +514,44 @@ function transitionOffset(t: OverlayItem['exitTransition'] | OverlayItem['entryT
   }
 }
 
+// Entrada/saída GENÉRICAS de overlay: antes o exitTransition só valia pro
+// overlay de texto — imagem/vídeo sumiam em CORTE SECO quando a janela acabava
+// ("erro de saída de elementos"), e cover (tela cheia) nem tinha entrada.
+// Este wrapper aplica entrada (opcional — o elemento-imagem já tem a própria)
+// e saída (fade/slide/zoom) nos primeiros/últimos frames da janela.
+const OverlayInOutWrapper: React.FC<{
+  overlay: OverlayItem;
+  sequenceDurationInFrames: number;
+  applyEntry: boolean;
+  children: React.ReactNode;
+}> = ({ overlay, sequenceDurationInFrames, applyEntry, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const hasEntry = applyEntry && overlay.entryTransition && overlay.entryTransition !== 'none';
+  const hasExit = overlay.exitTransition && overlay.exitTransition !== 'none';
+  if (!hasEntry && !hasExit) return <>{children}</>;
+
+  const entryDur = Math.max(1, overlay.entryDurationFrames ?? Math.round(0.45 * fps));
+  const exitDur = Math.max(1, overlay.exitDurationFrames ?? Math.round(0.45 * fps));
+  const entryShown = hasEntry ? Math.min(1, Math.max(0, frame / entryDur)) : 1;
+  const exitShown = hasExit ? Math.min(1, Math.max(0, (sequenceDurationInFrames - frame) / exitDur)) : 1;
+  if (entryShown >= 1 && exitShown >= 1) return <>{children}</>;
+
+  const e = transitionOffset(hasEntry ? overlay.entryTransition : 'none', entryShown);
+  const x = transitionOffset(hasExit ? overlay.exitTransition : 'none', exitShown);
+  return (
+    <AbsoluteFill
+      style={{
+        opacity: e.opacity * x.opacity,
+        transform: `translate(${e.tx + x.tx}px, ${e.ty + x.ty}px) scale(${e.scale * x.scale})`,
+        pointerEvents: 'none',
+      }}
+    >
+      {children}
+    </AbsoluteFill>
+  );
+};
+
 // Camada de texto livre, com entrada e saída independentes. Renderiza igual no
 // preview e no render (texto é barato; sem OffthreadVideo). A posição (x/y/scale/
 // rotate) vem do wrapper do pai (coverTransform).
@@ -647,25 +685,36 @@ export const OverlayLayer: React.FC<Props> = ({ overlays = [] }) => {
           >
             <AbsoluteFill style={overlay.layout === 'element' ? undefined : { transform: coverTransform }}>
               {overlay.type === 'text' ? (
+                // Texto já aplica a própria saída (entry+exit combinados) — sem wrapper.
                 <TextOverlay overlay={overlay} sequenceDurationInFrames={sequenceDuration} />
-              ) : overlay.type === 'video' && !isRendering && overlay.previewQuality === 'light' && lightPreviewVideoCount > 1 && lightPreviewVideoIndex > 0 ? (
-                <AbsoluteFill
-                  style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    opacity: Math.min(0.22, overlay.opacity ?? 0.2),
-                    mixBlendMode: normalizeBlendMode(overlay.blendMode),
-                  }}
-                />
-              ) : overlay.type === 'video' ? (
-                <CoverVideoTinted
-                  overlay={overlay}
-                  sourceDurationInFrames={sourceDurationInFrames}
-                  baseStyle={commonStyle}
-                />
-              ) : overlay.layout === 'element' ? (
-                <ElementImage overlay={overlay} />
               ) : (
-                <CoverImage overlay={overlay} style={commonStyle} />
+                // Elemento-imagem já tem entrada própria (elementEntryStyle) → só saída.
+                // Cover imagem/vídeo ganham entrada E saída aqui.
+                <OverlayInOutWrapper
+                  overlay={overlay}
+                  sequenceDurationInFrames={sequenceDuration}
+                  applyEntry={!(overlay.layout === 'element' && overlay.type === 'image')}
+                >
+                  {overlay.type === 'video' && !isRendering && overlay.previewQuality === 'light' && lightPreviewVideoCount > 1 && lightPreviewVideoIndex > 0 ? (
+                    <AbsoluteFill
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        opacity: Math.min(0.22, overlay.opacity ?? 0.2),
+                        mixBlendMode: normalizeBlendMode(overlay.blendMode),
+                      }}
+                    />
+                  ) : overlay.type === 'video' ? (
+                    <CoverVideoTinted
+                      overlay={overlay}
+                      sourceDurationInFrames={sourceDurationInFrames}
+                      baseStyle={commonStyle}
+                    />
+                  ) : overlay.layout === 'element' ? (
+                    <ElementImage overlay={overlay} />
+                  ) : (
+                    <CoverImage overlay={overlay} style={commonStyle} />
+                  )}
+                </OverlayInOutWrapper>
               )}
             </AbsoluteFill>
           </Sequence>

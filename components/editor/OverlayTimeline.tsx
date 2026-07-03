@@ -210,6 +210,40 @@ export function OverlayTimeline({
               )}
           </div>
 
+          {selectedId === ov.id && ov.type !== 'text' && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <MiniControl label="entrada">
+                <select value={ov.entryTransition ?? (ov.layout === 'element' ? 'bounce-left' : 'none')} onChange={(e) => onUpdate(ov.id, { entryTransition: e.target.value as OverlayPlacement['entryTransition'] })} style={tinySelect}>
+                  <option value="none">nenhuma</option>
+                  <option value="fade">fade</option>
+                  <option value="slide-up">deslizar ↑</option>
+                  <option value="slide-down">deslizar ↓</option>
+                  <option value="slide-left">deslizar ←</option>
+                  <option value="slide-right">deslizar →</option>
+                  <option value="bounce-left">bounce ←</option>
+                  <option value="zoom-pop">zoom pop</option>
+                </select>
+              </MiniControl>
+              <MiniControl label="saída">
+                <select value={ov.exitTransition ?? 'none'} onChange={(e) => onUpdate(ov.id, { exitTransition: e.target.value as OverlayPlacement['exitTransition'] })} style={tinySelect}>
+                  <option value="none">nenhuma</option>
+                  <option value="fade">fade</option>
+                  <option value="slide-up">deslizar ↑</option>
+                  <option value="slide-down">deslizar ↓</option>
+                  <option value="slide-left">deslizar ←</option>
+                  <option value="slide-right">deslizar →</option>
+                  <option value="zoom-pop">zoom pop</option>
+                </select>
+              </MiniControl>
+              <MiniControl label="saída (s)">
+                <input type="number" step="0.1" min={0.1} max={3}
+                  value={((ov.exitDurationFrames ?? 14) / 30).toFixed(1)}
+                  onChange={(e) => onUpdate(ov.id, { exitDurationFrames: Math.max(3, Math.round((parseFloat(e.target.value) || 0.5) * 30)) })}
+                  style={tinyNumInput} />
+              </MiniControl>
+            </div>
+          )}
+
           {selectedId === ov.id && ov.type === 'text' && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', paddingTop: 8, display: 'grid', gap: 8 }}>
               <div style={{ fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-3)', fontWeight: 800 }}>
