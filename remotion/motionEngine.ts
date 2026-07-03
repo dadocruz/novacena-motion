@@ -454,7 +454,11 @@ function composeLayerExit(style: TextTransitionStyle, frame: number, tuning?: Te
   if (out === undefined || out === null || !Number.isFinite(out)) return style;
 
   if (frame >= out) {
-    return { ...style, wrapStyle: { ...style.wrapStyle, opacity: 0 } };
+    // visibility além de opacity: o preview do Studio (previewMode) força
+    // opacity mínima em textos "invisíveis" pra eles não sumirem durante a
+    // edição — mas um texto CORTADO tem que sumir de verdade também no player.
+    // getPreviewSafeWrapStyle não toca em visibility.
+    return { ...style, wrapStyle: { ...style.wrapStyle, opacity: 0, visibility: 'hidden' } };
   }
 
   const exitId = tuning?.exitId ?? 'none';

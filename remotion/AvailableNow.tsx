@@ -151,14 +151,14 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           letterSpacing: 0,
           textTransform: 'uppercase',
         }, showAll ? {} : tD, motion.styleDate) : null}
-        {renderText(cta1Text, 1398, fontCta1, {
+        {hiddenL.cta1 ? null : renderText(cta1Text, 1398, fontCta1, {
           fontSize: 58,
           lineHeight: 0.96,
           letterSpacing: 0,
           textTransform: 'uppercase',
           opacity: showAll ? 1 : cta1Opacity,
         }, showAll ? {} : tC1, motion.styleCta1 ?? motion.styleCta)}
-        {renderText(cta2Text, 1568, fontCta2, {
+        {hiddenL.cta2 ? null : renderText(cta2Text, 1568, fontCta2, {
           fontSize: 28,
           lineHeight: 1.1,
           letterSpacing: 1.4,
@@ -220,6 +220,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
         </div>
         ) : null}
         <div style={{ width: '100%', marginTop: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {hiddenL.cta1 ? null : (
           <div style={{
             fontFamily: `'${fontCta1?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
             width: '100%',
@@ -236,6 +237,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           }}>
             <StyledText previewLayerId="cta1" text={cta1Text} transition={showAll ? undefined : tC1} style={motion.styleCta1 ?? motion.styleCta} stroke={motion.strokeCta1 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
+          )}
+          {hiddenL.cta2 ? null : (
           <div style={{
             fontFamily: `'${fontCta2?.family ?? fontCta?.family ?? 'Arial'}', Arial, sans-serif`,
             width: '100%',
@@ -252,6 +255,7 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
           }}>
             <StyledText previewLayerId="cta2" text={cta2Text} transition={showAll ? undefined : tC2} style={motion.styleCta2 ?? motion.styleCta} stroke={motion.strokeCta2 ?? motion.strokeCta} preserveFontShape={false} previewMode={false} />
           </div>
+          )}
           {!hiddenL.logos && visiblePlatforms.length > 0 ? (
             <div data-novacena-preview-layer="logos" style={{ marginTop: 16, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: fittedLogoGap, flexWrap: 'nowrap', opacity: showAll ? 1 : logosAppear, width: 'fit-content', maxWidth: maxLogosWidth, marginLeft: 'auto', marginRight: 'auto', transform: `translate(${motion.platformLogoX ?? 0}px, ${motion.platformLogoY ?? 0}px)`, willChange: 'transform' }}>
               {visiblePlatforms.map((p, idx) => (
