@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
-import { easings, eased, getTextTransition } from './motionEngine';
+import { easings, eased, getTextTransition, effectiveHiddenLayers} from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
@@ -26,8 +26,8 @@ export const AvailableNow: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
   // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
-  const hiddenL = (motion.hiddenLayers ?? {}) as Record<string, boolean>;
-  const coverVisible = props.showCover !== false;
+  const hiddenL = effectiveHiddenLayers(motion as never, frame);
+  const coverVisible = props.showCover !== false && !hiddenL.cover;
   const durationSeconds = motion.durationSeconds ?? 8;
   const durationFrames = durationSeconds * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);

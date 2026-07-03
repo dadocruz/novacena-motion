@@ -47,7 +47,11 @@ function clampRange(value: number | undefined, min: number, max: number, fallbac
   return Math.max(min, Math.min(max, next));
 }
 
-function resolveTuning(tuning?: TextTransitionTuning): Required<TextTransitionTuning> {
+// Só os knobs de ENTRADA são resolvidos com default; outFrame/exit ficam no
+// objeto original (lidos por composeLayerExit).
+type ResolvedTuning = { intensity: number; speed: number; stagger: number };
+
+function resolveTuning(tuning?: TextTransitionTuning): ResolvedTuning {
   return {
     intensity: clampRange(tuning?.intensity, 0.15, 2.4, 1),
     speed: clampRange(tuning?.speed, 0.35, 2.4, 1),
@@ -55,15 +59,15 @@ function resolveTuning(tuning?: TextTransitionTuning): Required<TextTransitionTu
   };
 }
 
-function tunedDuration(base: number, tuning: Required<TextTransitionTuning>) {
+function tunedDuration(base: number, tuning: ResolvedTuning) {
   return Math.max(3, base / tuning.speed);
 }
 
-function tunedDelay(base: number, tuning: Required<TextTransitionTuning>) {
+function tunedDelay(base: number, tuning: ResolvedTuning) {
   return Math.max(0, (base * tuning.stagger) / Math.sqrt(tuning.speed));
 }
 
-function tunedStartScale(baseDelta: number, tuning: Required<TextTransitionTuning>, min = 0.18) {
+function tunedStartScale(baseDelta: number, tuning: ResolvedTuning, min = 0.18) {
   return Math.max(min, 1 - baseDelta * tuning.intensity);
 }
 
@@ -439,28 +443,92 @@ function tMaskReveal(frame: number, start: number, options?: TextTransitionTunin
   return { wrapStyle: maskReveal(frame, start, 26, options) };
 }
 
+// ── Corte/saída de layer (estilo Premiere) ─────────────────────────────────
+// A saída chega via tuning (outFrame/exitId/exitDurationFrames) — o mesmo
+// objeto que TODOS os templates já passam pro getTextTransition — então o corte
+// vale em todo template sem tocar em nenhum. 'none' = corte seco (o gate de
+// hiddenLayers desmonta a layer no outFrame); os demais animam a saída nos
+// últimos exitDurationFrames antes do outFrame.
+function composeLayerExit(style: TextTransitionStyle, frame: number, tuning?: TextTransitionTuning): TextTransitionStyle {
+  const out = tuning?.outFrame;
+  if (out === undefined || out === null || !Number.isFinite(out)) return style;
+
+  if (frame >= out) {
+    return { ...style, wrapStyle: { ...style.wrapStyle, opacity: 0 } };
+  }
+
+  const exitId = tuning?.exitId ?? 'none';
+  if (exitId === 'none') return style;
+
+  const dur = Math.max(1, tuning?.exitDurationFrames ?? 12);
+  const shown = Math.min(1, Math.max(0, (out - frame) / dur));
+  if (shown >= 1) return style;
+
+  const p = shown * shown * (3 - 2 * shown); // smoothstep
+  const inv = 1 - p;
+  let tx = 0; let ty = 0; let scale = 1;
+  if (exitId === 'slide-up') ty = -inv * 90;
+  else if (exitId === 'slide-down') ty = inv * 90;
+  else if (exitId === 'slide-left') tx = -inv * 120;
+  else if (exitId === 'slide-right') tx = inv * 120;
+  else if (exitId === 'zoom-pop') scale = 0.7 + 0.3 * p;
+
+  const baseOpacity = typeof style.wrapStyle.opacity === 'number' ? style.wrapStyle.opacity : 1;
+  const baseTransform = style.wrapStyle.transform ? `${style.wrapStyle.transform} ` : '';
+  return {
+    ...style,
+    wrapStyle: {
+      ...style.wrapStyle,
+      opacity: baseOpacity * p,
+      transform: `${baseTransform}translate(${tx}px, ${ty}px) scale(${scale})`,
+    },
+  };
+}
+
+/** Merge do olho (hiddenLayers) com o corte por tempo (layerOutFrames):
+ *  layer some do render quando oculta OU quando o playhead passou do corte.
+ *  Frame-aware — os templates chamam por render de frame. */
+export function effectiveHiddenLayers(
+  motion: { hiddenLayers?: Record<string, boolean | undefined>; layerOutFrames?: Record<string, number | undefined> } | undefined,
+  frame: number,
+): Record<string, boolean> {
+  const hidden: Record<string, boolean> = {};
+  const eyes = motion?.hiddenLayers ?? {};
+  for (const k of Object.keys(eyes)) if (eyes[k]) hidden[k] = true;
+  const outs = motion?.layerOutFrames ?? {};
+  for (const k of Object.keys(outs)) {
+    const out = outs[k];
+    if (typeof out === 'number' && Number.isFinite(out) && frame >= out) hidden[k] = true;
+  }
+  return hidden;
+}
+
 export function getTextTransition(
   id: TextTransitionId
 ): TextTransitionFn {
-  switch (id) {
-    case 'blur_focus':
-      return tBlurFocus;
-    case 'split_letters':
-      return tSplitLetters;
-    case 'type_writer':
-      return tTypeWriter;
-    case 'slide_stagger':
-      return tSlideStagger;
-    case 'glitch_rgb':
-      return tGlitchRGB;
-    case 'scale_pop':
-      return tScalePop;
-    case 'rise_clean':
-      return tRiseClean;
-    case 'mask_reveal':
-    default:
-      return tMaskReveal;
-  }
+  const base = (() => {
+    switch (id) {
+      case 'blur_focus':
+        return tBlurFocus;
+      case 'split_letters':
+        return tSplitLetters;
+      case 'type_writer':
+        return tTypeWriter;
+      case 'slide_stagger':
+        return tSlideStagger;
+      case 'glitch_rgb':
+        return tGlitchRGB;
+      case 'scale_pop':
+        return tScalePop;
+      case 'rise_clean':
+        return tRiseClean;
+      case 'mask_reveal':
+      default:
+        return tMaskReveal;
+    }
+  })();
+
+  return (frame, start, options) => composeLayerExit(base(frame, start, options), frame, options);
 }
 
 /** Catálogo de transições com nomes pra exibir na UI */

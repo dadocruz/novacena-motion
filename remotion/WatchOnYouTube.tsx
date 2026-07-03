@@ -6,8 +6,7 @@ import {
   eased,
   loopFloat,
   getTextTransition,
-  type TextTransitionId,
-} from './motionEngine';
+  type TextTransitionId, effectiveHiddenLayers} from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
@@ -62,7 +61,7 @@ export const WatchOnYouTube: React.FC<TemplateProps> = (props) => {
   const accents = [MID_HIT, FINAL_HIT];
   const M = resolveMotion(props.motion, 'rgba(255, 40, 40, 0.32)');
   // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
-  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
+  const hiddenL = effectiveHiddenLayers(props.motion as never, frame);
   const headlineIn = props.motion?.headlineInFrame ?? HEADLINE_IN;
   const channelIn = props.motion?.dateInFrame ?? CHANNEL_IN;
   const ctaIn = props.motion?.cta1InFrame ?? CTA_IN;

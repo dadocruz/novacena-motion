@@ -18,7 +18,7 @@ type TextTransitionRole = 'headline' | 'date' | 'cta1' | 'cta2';
 type TextTransitionPreset = {
   id: string;
   label: string;
-  values: Required<TextTransitionTuning>;
+  values: { intensity: number; speed: number; stagger: number };
 };
 
 type Props = {
@@ -73,7 +73,7 @@ type Props = {
   onTxWiggle: (role: string, v: number) => void;
 
   transitionByRole: Record<TextTransitionRole, TextTransitionId>;
-  transitionTuningByRole: Record<TextTransitionRole, Required<TextTransitionTuning>>;
+  transitionTuningByRole: Record<TextTransitionRole, { intensity: number; speed: number; stagger: number }>;
   transitionInFrameByRole?: Record<TextTransitionRole, number>;
   maxTransitionFrame?: number;
   transitionPresets: TextTransitionPreset[];
@@ -288,7 +288,7 @@ function TextTransitionEditor({
   role: TextTransitionRole;
   label: string;
   value: TextTransitionId;
-  tuning: Required<TextTransitionTuning>;
+  tuning: { intensity: number; speed: number; stagger: number };
   inFrame?: number;
   maxFrame?: number;
   presets: TextTransitionPreset[];

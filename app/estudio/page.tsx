@@ -516,6 +516,11 @@ export default function Home() {
   // headline/date/logos/phone vivem aqui; cta1/cta2/capa mapeiam pros toggles
   // existentes (showCta1/showCta2/showCover) — fonte única, sem estado duplicado.
   const [hiddenLayers, setHiddenLayers] = useState<NonNullable<MotionConfig['hiddenLayers']>>({});
+  // Corte estilo Premiere: frame onde cada layer SAI (undefined = até o fim).
+  // Arraste a borda direita da faixa na timeline, ou tecla C no playhead.
+  const [layerOutFrames, setLayerOutFrames] = useState<NonNullable<MotionConfig['layerOutFrames']>>({});
+  // Transição de SAÍDA dos textos do template no corte ('none' = corte seco).
+  const [layerExits, setLayerExits] = useState<NonNullable<MotionConfig['layerExits']>>({});
 
   const [channelName, setChannelName] = useState(factoryAvailableNow.channelName ?? '');
   const [metricPrefix, setMetricPrefix] = useState(factoryAvailableNow.metricPrefix ?? 'ULTRAPASSAMOS');
@@ -1071,6 +1076,60 @@ export default function Home() {
         }
       }
 
+      // Corte estilo Premiere/razor no playhead:
+      //   C = corta a layer SELECIONADA (define onde ela sai)
+      //   E = corta TODAS as layers de uma vez
+      if (e.key === 'c' || e.key === 'C' || e.code === 'KeyC' || e.key === 'e' || e.key === 'E' || e.code === 'KeyE') {
+        const cutAll = e.key === 'e' || e.key === 'E' || e.code === 'KeyE';
+        const player = playerRef.current as { getCurrentFrame?: () => number } | null;
+        const cutFrame = typeof player?.getCurrentFrame === 'function' ? player.getCurrentFrame() : 0;
+        const cutSec = cutFrame / 30;
+        if (cutFrame <= 1) return; // playhead no início: nada a cortar
+
+        const cutRole = (role: 'headline' | 'date' | 'cta1' | 'cta2' | 'cover' | 'logos' | 'phone') => {
+          setLayerOutFrames((prev) => ({ ...prev, [role]: cutFrame }));
+        };
+
+        if (cutAll) {
+          e.preventDefault();
+          // todas as layers do template
+          (['headline', 'date', 'cta1', 'cta2', 'cover', 'logos', 'phone'] as const).forEach(cutRole);
+          // overlays e textos livres que começam antes do corte
+          setOverlays((arr) => arr.map((ov) => (ov.startSec ?? 0) < cutSec - 0.05
+            ? { ...ov, durationSec: Math.round((cutSec - (ov.startSec ?? 0)) * 10) / 10 }
+            : ov));
+          setCustomTexts((arr) => arr.map((ct) => (ct.startSec ?? 0) < cutSec - 0.05
+            ? { ...ct, durationSec: Math.round((cutSec - (ct.startSec ?? 0)) * 10) / 10 }
+            : ct));
+          return;
+        }
+
+        // C: corta só a selecionada
+        if (selectedCustomTextId) {
+          e.preventDefault();
+          setCustomTexts((arr) => arr.map((ct) => ct.id === selectedCustomTextId && (ct.startSec ?? 0) < cutSec - 0.05
+            ? { ...ct, durationSec: Math.round((cutSec - (ct.startSec ?? 0)) * 10) / 10 }
+            : ct));
+          return;
+        }
+        if (selectedOverlayId) {
+          e.preventDefault();
+          setOverlays((arr) => arr.map((ov) => ov.id === selectedOverlayId && (ov.startSec ?? 0) < cutSec - 0.05
+            ? { ...ov, durationSec: Math.round((cutSec - (ov.startSec ?? 0)) * 10) / 10 }
+            : ov));
+          return;
+        }
+        if (activeStudioTool === 'text' && activeTextRole) {
+          e.preventDefault();
+          cutRole(activeTextRole === 'cta' ? 'cta1' : activeTextRole);
+          return;
+        }
+        if (activeStudioTool === 'cover') { e.preventDefault(); cutRole('cover'); return; }
+        if (activeStudioTool === 'logos') { e.preventDefault(); cutRole('logos'); return; }
+        if (activeStudioTool === 'motion' && template === 'spotify_print') { e.preventDefault(); cutRole('phone'); return; }
+        return;
+      }
+
       // S = liga/desliga safe zone.
       if (e.key === 's' || e.key === 'S' || e.code === 'KeyS') {
         e.preventDefault();
@@ -1085,7 +1144,7 @@ export default function Home() {
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [togglePlayerPlayback, selectedCustomTextId, selectedOverlayId, activeStudioTool, activeTextRole]);
+  }, [togglePlayerPlayback, selectedCustomTextId, selectedOverlayId, activeStudioTool, activeTextRole, template]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -1314,6 +1373,8 @@ export default function Home() {
     setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
     setHiddenLayers({});
+    setLayerOutFrames({});
+    setLayerExits({});
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -1545,6 +1606,8 @@ export default function Home() {
     setShowCta2(next.showCta2 ?? (tid === 'available_now'));
     setShowCover(next.showCover ?? true);
     setHiddenLayers((m.hiddenLayers as MotionConfig['hiddenLayers']) ?? {});
+    setLayerOutFrames((m.layerOutFrames as MotionConfig['layerOutFrames']) ?? {});
+    setLayerExits((m.layerExits as MotionConfig['layerExits']) ?? {});
     setChannelName(next.channelName ?? '');
     setMetricPrefix(next.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(next.metricNumber ?? '100.000');
@@ -1930,6 +1993,8 @@ export default function Home() {
       showCta2,
       showCover,
       hiddenLayers,
+      layerOutFrames,
+      layerExits,
       channelName,
       metricPrefix,
       metricNumber,
@@ -2074,6 +2139,8 @@ export default function Home() {
     setShowCta2(snapshot.showCta2 ?? true);
     setShowCover(snapshot.showCover ?? true);
     setHiddenLayers(snapshot.hiddenLayers ?? {});
+    setLayerOutFrames(snapshot.layerOutFrames ?? {});
+    setLayerExits(snapshot.layerExits ?? {});
     setChannelName(snapshot.channelName ?? '');
     setMetricPrefix(snapshot.metricPrefix ?? 'ULTRAPASSAMOS');
     setMetricNumber(snapshot.metricNumber ?? '100.000');
@@ -2364,11 +2431,14 @@ export default function Home() {
       transitionCta2: trCta2,
       headlineInFrame: effectiveTextInFrames.headline,
       dateInFrame: effectiveTextInFrames.date,
-      transitionTuningHeadline: transitionTuning.headline,
-      transitionTuningDate: transitionTuning.date,
-      transitionTuningCta: transitionTuning.cta1,
-      transitionTuningCta1: transitionTuning.cta1,
-      transitionTuningCta2: transitionTuning.cta2,
+      // Corte/saída viaja DENTRO do tuning: é o único objeto que todos os
+      // templates já passam pro getTextTransition — o corte vale em todos
+      // sem tocar em nenhum.
+      transitionTuningHeadline: { ...transitionTuning.headline, outFrame: layerOutFrames.headline, exitId: layerExits.headline?.id, exitDurationFrames: layerExits.headline?.durationFrames },
+      transitionTuningDate: { ...transitionTuning.date, outFrame: layerOutFrames.date, exitId: layerExits.date?.id, exitDurationFrames: layerExits.date?.durationFrames },
+      transitionTuningCta: { ...transitionTuning.cta1, outFrame: layerOutFrames.cta1, exitId: layerExits.cta1?.id, exitDurationFrames: layerExits.cta1?.durationFrames },
+      transitionTuningCta1: { ...transitionTuning.cta1, outFrame: layerOutFrames.cta1, exitId: layerExits.cta1?.id, exitDurationFrames: layerExits.cta1?.durationFrames },
+      transitionTuningCta2: { ...transitionTuning.cta2, outFrame: layerOutFrames.cta2, exitId: layerExits.cta2?.id, exitDurationFrames: layerExits.cta2?.durationFrames },
       styleHeadline,
       styleDate,
       styleCta,
@@ -2419,6 +2489,8 @@ export default function Home() {
       overlays,
       customTexts,
       hiddenLayers,
+      layerOutFrames,
+      layerExits,
     }),
     [
       fontHeadline,
@@ -2512,6 +2584,8 @@ export default function Home() {
       overlays,
       customTexts,
       hiddenLayers,
+      layerOutFrames,
+      layerExits,
       phoneSize,
       phoneX,
       phoneY,
@@ -3143,7 +3217,7 @@ export default function Home() {
       coverMotion: CoverMotionId;
       overlayTransition: NonNullable<OverlayPlacement['entryTransition']>;
       overlayEntryDurationFrames: number;
-      tuning: Required<TextTransitionTuning>;
+      tuning: { intensity: number; speed: number; stagger: number };
       frames: Record<TextPreviewRole, number>;
       coverFrame: number;
       phoneFrame: number;
@@ -3388,6 +3462,8 @@ export default function Home() {
     if (snap.motion) {
       const m = snap.motion;
       setHiddenLayers((m.hiddenLayers as MotionConfig['hiddenLayers']) ?? {});
+      setLayerOutFrames((m.layerOutFrames as MotionConfig['layerOutFrames']) ?? {});
+      setLayerExits((m.layerExits as MotionConfig['layerExits']) ?? {});
       setFontHeadline(m.fontHeadline ?? DEFAULT_FONTS.headline);
       setFontDate(m.fontDate ?? DEFAULT_FONTS.date);
       setFontCta(m.fontCta ?? DEFAULT_FONTS.cta);
@@ -5875,6 +5951,16 @@ export default function Home() {
     setHiddenLayers((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  // Corta a layer do template: define o frame de saída (null = volta a ir até o fim).
+  function setLayerOut(key: 'headline' | 'date' | 'cta1' | 'cta2' | 'cover' | 'logos' | 'phone', sec: number | null, startSec = 0) {
+    setLayerOutFrames((prev) => {
+      const next = { ...prev };
+      if (sec === null || sec >= durationSeconds - 0.05) delete next[key];
+      else next[key] = Math.round(Math.max(startSec + 0.2, sec) * 30);
+      return next;
+    });
+  }
+
   const timelineTracks = React.useMemo<TimelineTrack[]>(() => {
     const dur = durationSeconds;
     const tracks: TimelineTrack[] = [];
@@ -5930,14 +6016,16 @@ export default function Home() {
       if (layer.kind === 'text' && layer.role) {
         const role = (layer.role === 'cta' ? 'cta1' : layer.role) as TextPreviewRole;
         const f = effectiveTextInFrames[role] ?? 0;
+        const roleOut = layerOutFrames[role];
         tracks.push({
           ...eye,
           id: layer.id,
           label: layer.label,
           color: '#c084fc',
           startSec: f / 30,
-          endSec: null,
-          resizable: false,
+          endSec: roleOut != null ? roleOut / 30 : null,
+          resizable: true,
+          onChangeEnd: (sec) => setLayerOut(role, sec, f / 30),
           selected: activeStudioTool === 'text' && activeTextRole === layer.role,
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
@@ -5956,8 +6044,9 @@ export default function Home() {
           label: layer.label,
           color: '#38bdf8',
           startSec: coverInFrame / 30,
-          endSec: null,
-          resizable: false,
+          endSec: layerOutFrames.cover != null ? layerOutFrames.cover / 30 : null,
+          resizable: true,
+          onChangeEnd: (sec) => setLayerOut('cover', sec, coverInFrame / 30),
           selected: activeStudioTool === 'cover',
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
@@ -5972,8 +6061,9 @@ export default function Home() {
           label: layer.label,
           color: '#f59e0b',
           startSec: phoneInFrame / 30,
-          endSec: null,
-          resizable: false,
+          endSec: layerOutFrames.phone != null ? layerOutFrames.phone / 30 : null,
+          resizable: true,
+          onChangeEnd: (sec) => setLayerOut('phone', sec, phoneInFrame / 30),
           selected: activeStudioTool === 'motion',
           onChangeStart: (sec) => {
             const fr = Math.max(0, Math.round(sec * 30));
@@ -5988,8 +6078,9 @@ export default function Home() {
           label: layer.label,
           color: '#fbbf24',
           startSec: (logosInFrame ?? 0) / 30,
-          endSec: null,
-          resizable: false,
+          endSec: layerOutFrames.logos != null ? layerOutFrames.logos / 30 : null,
+          resizable: true,
+          onChangeEnd: (sec) => setLayerOut('logos', sec, (logosInFrame ?? 0) / 30),
           selected: activeStudioTool === 'logos',
           onChangeStart: (sec) => setLogosInFrame(Math.max(0, Math.round(sec * 30))),
           onSelect: () => selectPreviewLayer(layer),
@@ -6044,6 +6135,7 @@ export default function Home() {
   }, [
     previewLayerHotspots,
     hiddenLayers,
+    layerOutFrames,
     showCover,
     showCta1,
     showCta2,
@@ -10094,6 +10186,55 @@ return (
               }
             }}
           />
+
+          {/* ── SAÍDA DO TEXTO (no corte da layer) ─────────────────── */}
+          {(() => {
+            const role = (activeTextRole === 'cta' ? 'cta1' : activeTextRole) as 'headline' | 'date' | 'cta1' | 'cta2';
+            const exit = layerExits[role];
+            const out = layerOutFrames[role];
+            return (
+              <div style={{ marginTop: 12, borderTop: '1px solid var(--border-1)', paddingTop: 10 }}>
+                <div style={{ ...miniLabel, marginBottom: 6 }}>
+                  Saída do texto · {textRoleLabels[activeTextRole] ?? activeTextRole}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={exit?.id ?? 'none'}
+                    onChange={(e2) => {
+                      const id = e2.target.value as NonNullable<MotionConfig['layerExits']>[keyof NonNullable<MotionConfig['layerExits']>] extends infer T ? (T extends { id: infer I } ? I : never) : never;
+                      setLayerExits((prev) => ({ ...prev, [role]: { id, durationFrames: prev[role]?.durationFrames ?? 12 } }));
+                    }}
+                    style={{ flex: 1, minWidth: 150, padding: '7px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-1)', color: '#fff', fontSize: 12 }}
+                  >
+                    <option value="none">Corte seco (some no corte)</option>
+                    <option value="fade">Fade</option>
+                    <option value="slide-up">Deslizar ↑</option>
+                    <option value="slide-down">Deslizar ↓</option>
+                    <option value="slide-left">Deslizar ←</option>
+                    <option value="slide-right">Deslizar →</option>
+                    <option value="zoom-pop">Zoom</option>
+                  </select>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--text-muted)' }}>
+                    duração
+                    <input
+                      type="number" step="0.1" min={0.1} max={3}
+                      value={((exit?.durationFrames ?? 12) / 30).toFixed(1)}
+                      onChange={(e2) => {
+                        const fr = Math.max(3, Math.round((parseFloat(e2.target.value) || 0.4) * 30));
+                        setLayerExits((prev) => ({ ...prev, [role]: { id: prev[role]?.id ?? 'fade', durationFrames: fr } }));
+                      }}
+                      style={{ width: 56, padding: '6px 6px', borderRadius: 7, background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-1)', color: '#fff', fontSize: 12 }}
+                    />s
+                  </label>
+                </div>
+                <div style={{ marginTop: 5, fontSize: 10.5, color: 'var(--text-muted)' }}>
+                  {out != null
+                    ? `Este texto sai em ${(out / 30).toFixed(1)}s. Arraste a borda direita da faixa na timeline pra mudar (até o fim = remove o corte).`
+                    : 'Sem corte: o texto vai até o fim. Corte pela borda direita da faixa na timeline, ou tecla C no playhead (E corta todas).'}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── TEXTOS EXTRAS (camadas livres, mesmo motor) ─────────── */}
           <div style={{ marginTop: 14, borderTop: '1px solid var(--border-1)', paddingTop: 12 }}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
-import { easings, eased, getTextTransition, type TextTransitionId } from './motionEngine';
+import { easings, eased, getTextTransition, type TextTransitionId, effectiveHiddenLayers} from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
@@ -54,7 +54,7 @@ export const YouTubeSubscribe: React.FC<TemplateProps> = (props) => {
   const frame = useCurrentFrame();
   const motion = props.motion ?? {};
   // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
-  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
+  const hiddenL = effectiveHiddenLayers(props.motion as never, frame);
   const durationFrames = (motion.durationSeconds ?? 8) * 30;
   const FINAL_HIT = Math.min(FINAL_HIT_BASE, durationFrames - 14);
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);

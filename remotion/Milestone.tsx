@@ -5,8 +5,7 @@ import {
   scaleInBack,
   previewSafeAnim,
   getTextTransition,
-  type TextTransitionId,
-} from './motionEngine';
+  type TextTransitionId, effectiveHiddenLayers} from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
@@ -33,7 +32,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(60, 220, 130, 0.32)');
   // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
-  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
+  const hiddenL = effectiveHiddenLayers(props.motion as never, frame);
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;
   const labelIn = props.motion?.cta1InFrame ?? LABEL_IN;
@@ -146,7 +145,7 @@ export const Milestone: React.FC<TemplateProps> = (props) => {
         </div>
 
         {/* CAPA */}
-        {props.showCover !== false ? (
+        {props.showCover !== false && !hiddenL.cover ? (
         <div style={{ marginTop: 50 }}>
           <div
 

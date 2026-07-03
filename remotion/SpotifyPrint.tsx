@@ -3,8 +3,7 @@ import { FontFaces } from './FontFaces';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import {
   getTextTransition,
-  type TextTransitionId,
-} from './motionEngine';
+  type TextTransitionId, effectiveHiddenLayers} from './motionEngine';
 import { brazuWiggle } from './motionEffects';
 import { CinematicBackground } from './CinematicBackground';
 import { OverlayLayer } from './OverlayLayer';
@@ -44,7 +43,7 @@ export const SpotifyPrint: React.FC<TemplateProps> = (props) => {
   const FINAL_POSTER = Math.min(FINAL_POSTER_BASE, durationFrames - 2);
   const M = resolveMotion(props.motion, 'rgba(30, 215, 96, 0.40)');
   // Olho estilo Premiere: layers ocultas pelo editor (true = não renderiza).
-  const hiddenL = (props.motion?.hiddenLayers ?? {}) as Record<string, boolean>;
+  const hiddenL = effectiveHiddenLayers(props.motion as never, frame);
   const prefixIn = props.motion?.dateInFrame ?? PREFIX_IN;
   const phoneIn = Math.max(0, Math.round(props.motion?.phoneInFrame ?? PHONE_IN));
   const numberIn = props.motion?.headlineInFrame ?? NUMBER_IN;

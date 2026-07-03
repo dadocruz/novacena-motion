@@ -95,6 +95,13 @@ export type TextTransitionTuning = {
   speed?: number;
   /** Controla espaçamento entre letras/palavras em transições stagger. */
   stagger?: number;
+  /** ── Corte/saída da layer (estilo Premiere) ──
+   *  outFrame: frame onde a layer SAI (undefined = fica até o fim).
+   *  exitId: transição de saída ('none' = corte seco).
+   *  exitDurationFrames: duração da saída (default ~12). */
+  outFrame?: number;
+  exitId?: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom-pop';
+  exitDurationFrames?: number;
 };
 
 export type CoverMotionId =
@@ -410,6 +417,14 @@ export type MotionConfig = {
    *  pelo papel em cada template), logos (fileira de plataformas), phone
    *  (celular do spotify_print). Capa usa o showCover existente. */
   hiddenLayers?: Partial<Record<'headline' | 'date' | 'cta1' | 'cta2' | 'logos' | 'phone', boolean>>;
+  /** Corte da layer na timeline (estilo Premiere): frame onde ela SAI do vídeo.
+   *  undefined = fica até o fim. 'cover' = capa. */
+  layerOutFrames?: Partial<Record<'headline' | 'date' | 'cta1' | 'cta2' | 'cover' | 'logos' | 'phone', number>>;
+  /** Transição de SAÍDA dos textos do template no corte ('none' = corte seco). */
+  layerExits?: Partial<Record<'headline' | 'date' | 'cta1' | 'cta2', {
+    id: 'none' | 'fade' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'zoom-pop';
+    durationFrames?: number;
+  }>>;
   /** Capa = FRAME COMPLETO escolhido (textos/logos/animação no segundo exato),
    *  congelado no início/fim. Só age quando mode === 'composition' (Lambda);
    *  desktop usa ffmpeg. frameSec = segundo do vídeo escolhido como capa. */

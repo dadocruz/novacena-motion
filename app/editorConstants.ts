@@ -193,9 +193,11 @@ export const EDITOR_HISTORY_LIMIT = 100;
 export type TextPreviewRole = 'headline' | 'date' | 'cta1' | 'cta2';
 export type EditPreviewLoop = { startFrame: number; endFrame: number; kind?: 'text' | 'cover'; role?: TextPreviewRole };
 export type EditorHistorySnapshot = Record<string, any>;
-export type TextTransitionTuningState = Record<TextPreviewRole, Required<TextTransitionTuning>>;
+/** Knobs de ENTRADA resolvidos (o corte/saída viaja à parte no tuning). */
+export type ResolvedTextTuning = { intensity: number; speed: number; stagger: number };
+export type TextTransitionTuningState = Record<TextPreviewRole, ResolvedTextTuning>;
 
-export const DEFAULT_TEXT_TRANSITION_TUNING: Required<TextTransitionTuning> = {
+export const DEFAULT_TEXT_TRANSITION_TUNING: ResolvedTextTuning = {
   intensity: 1,
   speed: 1,
   stagger: 1,
@@ -204,7 +206,7 @@ export const DEFAULT_TEXT_TRANSITION_TUNING: Required<TextTransitionTuning> = {
 export const TRANSITION_TUNING_PRESETS: Array<{
   id: string;
   label: string;
-  values: Required<TextTransitionTuning>;
+  values: ResolvedTextTuning;
 }> = [
   { id: 'clean', label: 'Clean', values: { intensity: 0.72, speed: 0.95, stagger: 0.65 } },
   { id: 'impact', label: 'Impacto', values: { intensity: 1.28, speed: 1.05, stagger: 1 } },
@@ -218,7 +220,7 @@ export function clampTuningValue(value: unknown, min: number, max: number, fallb
   return Math.max(min, Math.min(max, next));
 }
 
-export function normalizeTextTransitionTuning(value?: Partial<TextTransitionTuning> | null): Required<TextTransitionTuning> {
+export function normalizeTextTransitionTuning(value?: Partial<TextTransitionTuning> | null): ResolvedTextTuning {
   return {
     intensity: clampTuningValue(value?.intensity, 0.15, 2.4, DEFAULT_TEXT_TRANSITION_TUNING.intensity),
     speed: clampTuningValue(value?.speed, 0.35, 2.4, DEFAULT_TEXT_TRANSITION_TUNING.speed),
